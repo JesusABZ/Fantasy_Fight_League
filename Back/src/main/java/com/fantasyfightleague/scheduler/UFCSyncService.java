@@ -3,6 +3,7 @@ package com.fantasyfightleague.scheduler;
 import com.fantasyfightleague.model.Fighter;
 import com.fantasyfightleague.service.FighterService;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,7 +26,9 @@ import java.util.Map;
 public class UFCSyncService {
     
     private static final Logger logger = LoggerFactory.getLogger(UFCSyncService.class);
-    private static final String FIGHTING_TOMATOES_API_BASE_URL = "https://fightingtomatoes.com/API";
+    // Cambiamos la URL base por la URL correcta según la documentación
+    private static final String FIGHTING_TOMATOES_API_BASE_URL = "https://fightingtomatoes.com";
+    
     
     private final FighterService fighterService;
     private final RestTemplate restTemplate;
@@ -152,6 +155,7 @@ public class UFCSyncService {
     /**
      * Obtiene los datos de los luchadores desde la API de Fighting Tomatoes.
      */
+   
     private List<Fighter> fetchFightersFromAPI() {
         List<Fighter> fighters = new ArrayList<>();
         
@@ -159,82 +163,115 @@ public class UFCSyncService {
             // Obtener el año actual
             int currentYear = Year.now().getValue();
             
-            // Construir la URL con el año actual
-            String apiUrl = FIGHTING_TOMATOES_API_BASE_URL + "/fighters/" + currentYear;
+            // Construir la URL correcta con los parámetros de la API
+            String apiUrl = "https://fightingtomatoes.com/UFC-data-endpoint.php" +
+                    "?api_key=bbd60ea58e13f0e137a31fdec4e52bd7f0951488" +
+                    "&year=" + currentYear +
+                    "&event=Any" +
+                    "&fighter=Any";
             
-            logger.info("Consultando API para el año {}: {}", currentYear, apiUrl);
+            logger.info("Consultando API con URL: {}", apiUrl);
             
-            // Configurar autenticación
-            HttpHeaders headers = new HttpHeaders();
-            headers.setBasicAuth(apiUsername, apiPassword);
-            
-            // Crear la entidad HTTP con los headers
-            HttpEntity<String> entity = new HttpEntity<>(headers);
-            
-            // Realizar la solicitud GET con autenticación
-            ResponseEntity<String> response = restTemplate.exchange(
-                apiUrl, 
-                HttpMethod.GET,
-                entity,
-                String.class
-            );
+            // Realizar la solicitud GET
+            ResponseEntity<String> response = restTemplate.getForEntity(apiUrl, String.class);
             
             // Procesar la respuesta
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                JSONArray jsonArray = new JSONArray(response.getBody());
+                logger.info("Respuesta recibida: {}", response.getBody().substring(0, Math.min(100, response.getBody().length())) + "...");
                 
-                for (int i = 0; i < jsonArray.length(); i++) {
-                    JSONObject jsonFighter = jsonArray.getJSONObject(i);
+                try {
+                    // Intentar procesar como un array JSON
+                    JSONArray jsonArray = new JSONArray(response.getBody());
                     
-                    if (jsonFighter.getString("promotion").equals("UFC")) {
-                        Fighter fighter = new Fighter();
+                    for (int i = 0; i < jsonArray.length(); i++) {
+                        JSONObject jsonFight = jsonArray.getJSONObject(i);
                         
-                        // Nombre y categoría de peso son obligatorios
-                        fighter.setName(jsonFighter.getString("name"));
-                        fighter.setWeightClass(mapWeightClass(jsonFighter.getString("weight_class")));
+                        // En este caso estamos obteniendo peleas, no luchadores directamente
+                        // Necesitamos extraer la información de los luchadores de cada pelea
                         
-                        // Campos opcionales
-                        if (!jsonFighter.isNull("record")) {
-                            fighter.setRecord(jsonFighter.getString("record"));
+                        if (jsonFight.has("promotion") && jsonFight.getString("promotion").equals("UFC")) {
+                            // Procesar fighter_1
+                            if (jsonFight.has("fighter_1")) {
+                                String fighterName = jsonFight.getString("fighter_1");
+                                
+                                // Verificar si ya hemos procesado este luchador
+                                if (!containsFighter(fighters, fighterName)) {
+                                    Fighter fighter = new Fighter();
+                                    fighter.setName(fighterName);
+                                    
+                                    // Intentar obtener más información del luchador desde la pelea
+                                    // Por ejemplo, peso y categoría
+                                    if (jsonFight.has("weight_class")) {
+                                        fighter.setWeightClass(mapWeightClass(jsonFight.getString("weight_class")));
+                                    } else {
+                                        fighter.setWeightClass("Unknown");
+                                    }
+                                    
+                                    // Otros datos que podamos extraer de los datos de la pelea
+                                    
+                                    fighter.setActive(true);
+                                    fighters.add(fighter);
+                                    logger.info("Luchador añadido: {}", fighterName);
+                                }
+                            }
+                            
+                            // Procesar fighter_2
+                            if (jsonFight.has("fighter_2")) {
+                                String fighterName = jsonFight.getString("fighter_2");
+                                
+                                // Verificar si ya hemos procesado este luchador
+                                if (!containsFighter(fighters, fighterName)) {
+                                    Fighter fighter = new Fighter();
+                                    fighter.setName(fighterName);
+                                    
+                                    // Intentar obtener más información del luchador desde la pelea
+                                    // Por ejemplo, peso y categoría
+                                    if (jsonFight.has("weight_class")) {
+                                        fighter.setWeightClass(mapWeightClass(jsonFight.getString("weight_class")));
+                                    } else {
+                                        fighter.setWeightClass("Unknown");
+                                    }
+                                    
+                                    fighter.setActive(true);
+                                    fighters.add(fighter);
+                                    logger.info("Luchador añadido: {}", fighterName);
+                                }
+                            }
                         }
-                        
-                        if (!jsonFighter.isNull("country")) {
-                            fighter.setNationality(jsonFighter.getString("country"));
-                        }
-                        
-                        if (!jsonFighter.isNull("age")) {
-                            fighter.setAge(jsonFighter.getInt("age"));
-                        }
-                        
-                        if (!jsonFighter.isNull("height_cm")) {
-                            fighter.setHeight(jsonFighter.getDouble("height_cm") / 100); // Convertir cm a metros
-                        }
-                        
-                        if (!jsonFighter.isNull("weight_kg")) {
-                            fighter.setWeight(jsonFighter.getDouble("weight_kg"));
-                        }
-                        
-                        if (!jsonFighter.isNull("image_url")) {
-                            fighter.setImageUrl(jsonFighter.getString("image_url"));
-                        }
-                        
-                        fighter.setActive(true); // Todos los luchadores de la API están activos
-                        
-                        fighters.add(fighter);
                     }
+                    
+                    logger.info("Obtenidos {} luchadores de la API", fighters.size());
+                    
+                } catch (JSONException e) {
+                    logger.error("Error procesando la respuesta JSON: {}", e.getMessage());
+                    // Intentar otros formatos o crear luchadores de ejemplo
+                   // createMockFighters(fighters);
                 }
-                
-                logger.info("Obtenidos {} luchadores de la API", fighters.size());
             } else {
                 logger.error("Error en la respuesta de la API: {}", response.getStatusCode());
+                //createMockFighters(fighters);
             }
             
         } catch (Exception e) {
             logger.error("Error obteniendo datos de la API: {}", e.getMessage(), e);
+           // createMockFighters(fighters);
         }
         
         return fighters;
     }
+
+    /**
+     * Verifica si un luchador ya está en la lista basado en su nombre.
+     */
+    private boolean containsFighter(List<Fighter> fighters, String name) {
+        for (Fighter fighter : fighters) {
+            if (fighter.getName().equals(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     
     /**
      * Mapea la categoría de peso de la API al formato estándar de la UFC.
