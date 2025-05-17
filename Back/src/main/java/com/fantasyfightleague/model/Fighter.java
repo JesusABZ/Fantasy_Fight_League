@@ -35,6 +35,9 @@ public class Fighter {
     @Column(name = "base_price")
     private Integer basePrice;
     
+    @Column(name = "active")
+    private boolean active = true;
+    
     @Column(name = "created_at")
     @Temporal(TemporalType.TIMESTAMP)
     private Date createdAt;
@@ -64,6 +67,7 @@ public class Fighter {
     }
     
     // Getters y setters
+    
     public Long getId() {
         return id;
     }
@@ -150,6 +154,14 @@ public class Fighter {
     
     public void setBasePrice(Integer basePrice) {
         this.basePrice = basePrice;
+    }
+    
+    public boolean isActive() {
+        return active;
+    }
+    
+    public void setActive(boolean active) {
+        this.active = active;
     }
     
     public Date getCreatedAt() {

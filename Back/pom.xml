@@ -54,6 +54,14 @@
 			<artifactId>spring-security-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		
+		<!-- Para procesamiento de JSON -->
+		<dependency>
+		    <groupId>org.json</groupId>
+		    <artifactId>json</artifactId>
+		    <version>20230618</version>
+		</dependency>
+		
 	</dependencies>
 
 	<build>
