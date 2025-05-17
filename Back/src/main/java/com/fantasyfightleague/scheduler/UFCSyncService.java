@@ -7,9 +7,15 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.Year;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -19,10 +25,16 @@ import java.util.Map;
 public class UFCSyncService {
     
     private static final Logger logger = LoggerFactory.getLogger(UFCSyncService.class);
-    private static final String FIGHTING_TOMATOES_API_URL = "https://fightingtomatoes.com/API/fighters";
+    private static final String FIGHTING_TOMATOES_API_BASE_URL = "https://fightingtomatoes.com/API";
     
     private final FighterService fighterService;
     private final RestTemplate restTemplate;
+    
+    @Value("${fightingtomatoes.api.username}")
+    private String apiUsername;
+    
+    @Value("${fightingtomatoes.api.password}")
+    private String apiPassword;
     
     @Autowired
     public UFCSyncService(FighterService fighterService, RestTemplate restTemplate) {
@@ -144,51 +156,78 @@ public class UFCSyncService {
         List<Fighter> fighters = new ArrayList<>();
         
         try {
-            String response = restTemplate.getForObject(FIGHTING_TOMATOES_API_URL, String.class);
-            JSONArray jsonArray = new JSONArray(response);
+            // Obtener el año actual
+            int currentYear = Year.now().getValue();
             
-            for (int i = 0; i < jsonArray.length(); i++) {
-                JSONObject jsonFighter = jsonArray.getJSONObject(i);
+            // Construir la URL con el año actual
+            String apiUrl = FIGHTING_TOMATOES_API_BASE_URL + "/fighters/" + currentYear;
+            
+            logger.info("Consultando API para el año {}: {}", currentYear, apiUrl);
+            
+            // Configurar autenticación
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBasicAuth(apiUsername, apiPassword);
+            
+            // Crear la entidad HTTP con los headers
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+            
+            // Realizar la solicitud GET con autenticación
+            ResponseEntity<String> response = restTemplate.exchange(
+                apiUrl, 
+                HttpMethod.GET,
+                entity,
+                String.class
+            );
+            
+            // Procesar la respuesta
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                JSONArray jsonArray = new JSONArray(response.getBody());
                 
-                if (jsonFighter.getString("promotion").equals("UFC")) {
-                    Fighter fighter = new Fighter();
+                for (int i = 0; i < jsonArray.length(); i++) {
+                    JSONObject jsonFighter = jsonArray.getJSONObject(i);
                     
-                    // Nombre y categoría de peso son obligatorios
-                    fighter.setName(jsonFighter.getString("name"));
-                    fighter.setWeightClass(mapWeightClass(jsonFighter.getString("weight_class")));
-                    
-                    // Campos opcionales
-                    if (!jsonFighter.isNull("record")) {
-                        fighter.setRecord(jsonFighter.getString("record"));
+                    if (jsonFighter.getString("promotion").equals("UFC")) {
+                        Fighter fighter = new Fighter();
+                        
+                        // Nombre y categoría de peso son obligatorios
+                        fighter.setName(jsonFighter.getString("name"));
+                        fighter.setWeightClass(mapWeightClass(jsonFighter.getString("weight_class")));
+                        
+                        // Campos opcionales
+                        if (!jsonFighter.isNull("record")) {
+                            fighter.setRecord(jsonFighter.getString("record"));
+                        }
+                        
+                        if (!jsonFighter.isNull("country")) {
+                            fighter.setNationality(jsonFighter.getString("country"));
+                        }
+                        
+                        if (!jsonFighter.isNull("age")) {
+                            fighter.setAge(jsonFighter.getInt("age"));
+                        }
+                        
+                        if (!jsonFighter.isNull("height_cm")) {
+                            fighter.setHeight(jsonFighter.getDouble("height_cm") / 100); // Convertir cm a metros
+                        }
+                        
+                        if (!jsonFighter.isNull("weight_kg")) {
+                            fighter.setWeight(jsonFighter.getDouble("weight_kg"));
+                        }
+                        
+                        if (!jsonFighter.isNull("image_url")) {
+                            fighter.setImageUrl(jsonFighter.getString("image_url"));
+                        }
+                        
+                        fighter.setActive(true); // Todos los luchadores de la API están activos
+                        
+                        fighters.add(fighter);
                     }
-                    
-                    if (!jsonFighter.isNull("country")) {
-                        fighter.setNationality(jsonFighter.getString("country"));
-                    }
-                    
-                    if (!jsonFighter.isNull("age")) {
-                        fighter.setAge(jsonFighter.getInt("age"));
-                    }
-                    
-                    if (!jsonFighter.isNull("height_cm")) {
-                        fighter.setHeight(jsonFighter.getDouble("height_cm") / 100); // Convertir cm a metros
-                    }
-                    
-                    if (!jsonFighter.isNull("weight_kg")) {
-                        fighter.setWeight(jsonFighter.getDouble("weight_kg"));
-                    }
-                    
-                    if (!jsonFighter.isNull("image_url")) {
-                        fighter.setImageUrl(jsonFighter.getString("image_url"));
-                    }
-                    
-                    fighter.setActive(true); // Todos los luchadores de la API están activos
-                    
-                    fighters.add(fighter);
                 }
+                
+                logger.info("Obtenidos {} luchadores de la API", fighters.size());
+            } else {
+                logger.error("Error en la respuesta de la API: {}", response.getStatusCode());
             }
-            
-            logger.info("Obtenidos {} luchadores de la API", fighters.size());
             
         } catch (Exception e) {
             logger.error("Error obteniendo datos de la API: {}", e.getMessage(), e);
