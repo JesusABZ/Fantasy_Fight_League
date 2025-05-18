@@ -1,5 +1,6 @@
 package com.fantasyfightleague.scheduler;
 
+import com.fantasyfightleague.service.SportradarService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,27 +14,27 @@ public class UFCSyncScheduler {
 
     private static final Logger logger = LoggerFactory.getLogger(UFCSyncScheduler.class);
     
-    private final UFCSyncService ufcSyncService;
+    private final SportradarService sportradarService;
     
     @Autowired
-    public UFCSyncScheduler(UFCSyncService ufcSyncService) {
-        this.ufcSyncService = ufcSyncService;
+    public UFCSyncScheduler(SportradarService sportradarService) {
+        this.sportradarService = sportradarService;
     }
     
     /**
-     * Ejecuta la sincronización cada lunes a las 3:00 AM.
-     * La expresión cron "0 0 3 ? * MON" significa:
+     * Ejecuta la sincronización cada domingo a las 23:59 PM.
+     * La expresión cron "0 59 23 ? * SUN" significa:
      * - 0 segundos
-     * - 0 minutos
-     * - 3 horas
+     * - 59 minutos
+     * - 23 horas
      * - Cualquier día del mes
      * - Cualquier mes
-     * - Lunes
+     * - Domingo
      */
-    @Scheduled(cron = "0 0 3 ? * MON")
+    @Scheduled(cron = "0 59 23 ? * SUN")
     public void scheduledSync() {
-        logger.info("Iniciando sincronización programada");
-        ufcSyncService.synchronizeFighters();
+        logger.info("Iniciando sincronización programada para el próximo evento");
+        sportradarService.syncNextEventFighters();
     }
     
     /**
@@ -41,6 +42,6 @@ public class UFCSyncScheduler {
      */
     public void manualSync() {
         logger.info("Iniciando sincronización manual");
-        ufcSyncService.synchronizeFighters();
+        sportradarService.syncNextEventFighters();
     }
 }
