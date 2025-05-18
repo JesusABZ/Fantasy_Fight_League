@@ -47,16 +47,14 @@ public class SeleniumUFCScraperService {
             options.addArguments("--disable-gpu");
             options.addArguments("--no-sandbox");
             options.addArguments("--disable-dev-shm-usage");
-            options.addArguments("--window-size=1920,1080"); // Tamaño grande para ver todo
+            options.addArguments("--window-size=1920,1080");
             
             driver = new ChromeDriver(options);
             driver.get(eventUrl);
             
-            // Primero intentar cerrar el banner de cookies
+            // Intentar cerrar el banner de cookies
             try {
                 WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
-                
-                // Intentar diferentes selectores comunes para botones de aceptar cookies
                 List<String> possibleAcceptButtons = Arrays.asList(
                     "#onetrust-accept-btn-handler",
                     ".accept-cookies",
@@ -87,74 +85,193 @@ public class SeleniumUFCScraperService {
             WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
             wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(".c-listing-fight")));
             
-            // En lugar de hacer clic, vamos a extraer los IDs de las peleas
-            List<String> fightIds = new ArrayList<>();
+            // Extraer todos los bloques de peleas
             List<WebElement> fightBlocks = driver.findElements(By.cssSelector(".c-listing-fight"));
+            logger.info("Encontrados {} bloques de peleas", fightBlocks.size());
+            
+            // Recolectar los IDs de todas las peleas
+            List<String> fightIds = new ArrayList<>();
+            Map<String, String> fightWeightClasses = new HashMap<>();
             
             for (WebElement fightBlock : fightBlocks) {
                 try {
                     String fightId = fightBlock.getAttribute("data-fmid");
                     if (fightId != null && !fightId.isEmpty()) {
                         fightIds.add(fightId);
-                        logger.info("Encontrado ID de pelea: {}", fightId);
+                        
+                        // Intentar extraer la categoría de peso de la pelea
+                        try {
+                            WebElement weightClassElement = fightBlock.findElement(By.cssSelector(".c-listing-fight__class"));
+                            String weightClass = weightClassElement.getText().trim();
+                            fightWeightClasses.put(fightId, weightClass);
+                            logger.info("ID de pelea: {}, Categoría: {}", fightId, weightClass);
+                        } catch (Exception e) {
+                            logger.warn("No se pudo extraer categoría para pelea {}: {}", fightId, e.getMessage());
+                        }
                     }
                 } catch (Exception e) {
                     logger.warn("Error extrayendo ID de pelea: {}", e.getMessage());
                 }
             }
             
-            // Para cada ID de pelea, cargamos la URL directamente
+            // Para cada ID de pelea, visitar la URL específica
             for (String fightId : fightIds) {
                 String fightUrl = eventUrl + "#" + fightId;
-                logger.info("Cargando pelea desde URL: {}", fightUrl);
+                logger.info("Visitando URL de pelea: {}", fightUrl);
                 
+                WebDriver fightDriver = null;
                 try {
-                    // Crear un driver separado para cada pelea
-                    WebDriver fightDriver = new ChromeDriver(options);
+                    // Usar un driver separado para cada pelea para evitar problemas de navegación
+                    fightDriver = new ChromeDriver(options);
                     fightDriver.get(fightUrl);
                     
-                    // Esperar a que la página cargue y el contenido específico aparezca
+                    // Esperar a que cargue los detalles de la pelea
                     WebDriverWait fightWait = new WebDriverWait(fightDriver, Duration.ofSeconds(10));
+                    fightWait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(".c-fight-card, .c-card-event--fight-card")));
+                    
+                    // Intentar extraer con JavaScript primero (más eficiente)
                     try {
-                        fightWait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".c-fight-card")));
-                        
-                        // Ejecutar JavaScript para extraer la información directamente
                         String scriptResult = executeJavaScriptExtraction(fightDriver);
-                        logger.info("Resultado de extracción con JavaScript: {}", scriptResult);
+                        logger.info("Resultado extracción JS: {}", scriptResult);
                         
-                        // Procesar la información extraída
-                        processFightData(scriptResult, fighters);
-                        
-                    } catch (Exception e) {
-                        logger.warn("Error al esperar contenido de la pelea: {}", e.getMessage());
-                        
-                        // Intento alternativo: Extraer la información básica de los peleadores
-                        try {
-                            extractBasicFighterInfo(fightDriver, fighters);
-                        } catch (Exception ex) {
-                            logger.warn("Error en extracción básica: {}", ex.getMessage());
+                        if (scriptResult != null && !scriptResult.equals("[]")) {
+                            // Procesar los datos extraídos con JavaScript
+                            processFightData(scriptResult, fighters);
+                            
+                            // Si se procesaron luchadores correctamente, continuamos con la siguiente pelea
+                            if (fighters.size() > 0) {
+                                continue;
+                            }
                         }
-                    } finally {
-                        fightDriver.quit();
+                    } catch (Exception e) {
+                        logger.warn("Error en extracción JavaScript: {}", e.getMessage());
+                    }
+                    
+                    // Si el método JS no funcionó, intentamos con el método tradicional
+                    List<WebElement> fighterElements = fightDriver.findElements(
+                        By.cssSelector(".c-fight-card--athlete, .c-card-event--athlete-panel"));
+                    
+                    // Obtener la categoría de peso (si se extrajo anteriormente)
+                    String weightClassFromList = fightWeightClasses.getOrDefault(fightId, "");
+                    String mappedWeightClass = mapWeightClass(weightClassFromList);
+                    
+                    for (WebElement fighterElement : fighterElements) {
+                        try {
+                            Fighter fighter = new Fighter();
+                            
+                            // Extraer nombre
+                            WebElement nameElement = fighterElement.findElement(
+                                By.cssSelector(".c-fight-card--athlete-name, .c-card-event--athlete-name"));
+                            String name = nameElement.getText().trim();
+                            fighter.setName(name);
+                            
+                            // Extraer récord
+                            try {
+                                WebElement recordElement = fighterElement.findElement(
+                                    By.cssSelector(".c-record__promoted, .c-card-event--record"));
+                                String record = recordElement.getText().trim();
+                                fighter.setRecord(record);
+                            } catch (Exception e) {
+                                fighter.setRecord(generateRealisticRecord(null));
+                                logger.warn("No se pudo extraer récord para {}: {}", name, e.getMessage());
+                            }
+                            
+                            // Extraer nacionalidad
+                            try {
+                                WebElement countryElement = fighterElement.findElement(
+                                    By.cssSelector(".c-fight-card--athlete-country, .c-card-event--country"));
+                                String nationality = countryElement.getText().trim();
+                                fighter.setNationality(nationality);
+                            } catch (Exception e) {
+                                fighter.setNationality("España");
+                                logger.warn("No se pudo extraer nacionalidad para {}: {}", name, e.getMessage());
+                            }
+                            
+                            // Usar la categoría de peso extraída de la lista principal
+                            if (!mappedWeightClass.isEmpty()) {
+                                fighter.setWeightClass(mappedWeightClass);
+                            } else {
+                                // Intentar extraer del detalle de la pelea
+                                try {
+                                    List<WebElement> weightClassElements = fightDriver.findElements(
+                                        By.cssSelector(".c-fight-card--class, .c-listing-fight__class"));
+                                    if (!weightClassElements.isEmpty()) {
+                                        String weightClass = weightClassElements.get(0).getText().trim();
+                                        fighter.setWeightClass(mapWeightClass(weightClass));
+                                    } else {
+                                        fighter.setWeightClass("Peso Wélter"); // Valor por defecto
+                                    }
+                                } catch (Exception e) {
+                                    fighter.setWeightClass("Peso Wélter"); // Valor por defecto
+                                    logger.warn("No se pudo extraer categoría para {}: {}", name, e.getMessage());
+                                }
+                            }
+                            
+                            // Extraer altura y peso
+                            try {
+                                List<WebElement> heightElements = fightDriver.findElements(
+                                    By.cssSelector("[data-label='ALTO'] .c-stat-compare--number, .c-stat-3col__number:has(+ .c-stat-3col__label:contains('Alto'))"));
+                                if (!heightElements.isEmpty()) {
+                                    String heightText = heightElements.get(0).getText().trim();
+                                    parseHeight(heightText, fighter);
+                                } else {
+                                    fighter.setHeight(getDefaultHeightForClass(fighter.getWeightClass()));
+                                }
+                            } catch (Exception e) {
+                                fighter.setHeight(getDefaultHeightForClass(fighter.getWeightClass()));
+                                logger.warn("No se pudo extraer altura para {}: {}", name, e.getMessage());
+                            }
+                            
+                            try {
+                                List<WebElement> weightElements = fightDriver.findElements(
+                                    By.cssSelector("[data-label='PESO'] .c-stat-compare--number, .c-stat-3col__number:has(+ .c-stat-3col__label:contains('Peso'))"));
+                                if (!weightElements.isEmpty()) {
+                                    String weightText = weightElements.get(0).getText().trim();
+                                    parseWeight(weightText, fighter);
+                                } else {
+                                    fighter.setWeight(getDefaultWeightForClass(fighter.getWeightClass()));
+                                }
+                            } catch (Exception e) {
+                                fighter.setWeight(getDefaultWeightForClass(fighter.getWeightClass()));
+                                logger.warn("No se pudo extraer peso para {}: {}", name, e.getMessage());
+                            }
+                            
+                            // Establecer otros valores predeterminados
+                            fighter.setAge(30);
+                            fighter.setBasePrice(60);
+                            fighter.setPrice(60);
+                            fighter.setActive(true);
+                            
+                            // Añadir a la lista
+                            fighters.add(fighter);
+                            logger.info("Luchador extraído por método estándar: {}, Categoría: {}", 
+                                name, fighter.getWeightClass());
+                            
+                        } catch (Exception e) {
+                            logger.error("Error extrayendo información del luchador: {}", e.getMessage(), e);
+                        }
                     }
                     
                 } catch (Exception e) {
-                    logger.warn("Error al cargar pelea {}: {}", fightId, e.getMessage());
+                    logger.error("Error procesando pelea {}: {}", fightId, e.getMessage(), e);
+                } finally {
+                    if (fightDriver != null) {
+                        fightDriver.quit();
+                    }
                 }
             }
             
-            // Si no se encontraron peleadores con el método anterior, volver al método original
-            if (fighters.isEmpty()) {
-                logger.info("No se encontraron peleadores con método directo, volviendo al método original");
-                fighters = extractFightersFromMainPage(driver);
-            }
+            logger.info("Extracción con Selenium completada. Se encontraron {} luchadores", fighters.size());
             
-            logger.info("Extracción con Selenium completada. Se encontraron {} peleadores", fighters.size());
+            // Si no se encontraron luchadores, intentar con el método alternativo
+            if (fighters.isEmpty()) {
+                logger.info("No se encontraron luchadores con método detallado, intentando con método alternativo");
+                return extractFightersFromMainPage(driver);
+            }
             
         } catch (Exception e) {
             logger.error("Error durante la extracción con Selenium: {}", e.getMessage(), e);
         } finally {
-            // Cerrar el navegador
             if (driver != null) {
                 driver.quit();
             }
