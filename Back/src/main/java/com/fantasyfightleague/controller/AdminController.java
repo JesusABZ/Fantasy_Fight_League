@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -66,6 +67,19 @@ public class AdminController {
             return ResponseEntity.ok(activeFighters);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(null);
+        }
+    }
+    
+    /**
+     * Endpoint para sincronizar manualmente los luchadores desde una URL específica de UFC.
+     */
+    @PostMapping("/sync-fighters-from-url")
+    public ResponseEntity<String> syncFightersFromUrl(@RequestParam("url") String url) {
+        try {
+            sportradarService.syncFightersFromUFCWebsite(url);
+            return ResponseEntity.ok("Sincronización de luchadores desde " + url + " iniciada correctamente");
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Error al iniciar la sincronización: " + e.getMessage());
         }
     }
 }

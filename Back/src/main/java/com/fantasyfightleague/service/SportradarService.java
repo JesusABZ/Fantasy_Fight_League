@@ -2,245 +2,478 @@ package com.fantasyfightleague.service;
 
 import com.fantasyfightleague.model.Event;
 import com.fantasyfightleague.model.Fighter;
-import com.fantasyfightleague.model.Fight;
-import org.json.JSONArray;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class SportradarService {
 
     private static final Logger logger = LoggerFactory.getLogger(SportradarService.class);
-    private static final String API_BASE_URL = "https://api.sportradar.us/mma/trial/v2/en";
     
-    @Value("${sportradar.api.key}")
-    private String apiKey;
-    
-    private final RestTemplate restTemplate;
     private final FighterService fighterService;
     private final EventService eventService;
     
     @Autowired
-    public SportradarService(RestTemplate restTemplate, FighterService fighterService, EventService eventService) {
-        this.restTemplate = restTemplate;
+    public SportradarService(FighterService fighterService, EventService eventService) {
         this.fighterService = fighterService;
         this.eventService = eventService;
     }
     
     /**
-     * Obtiene el próximo evento de UFC programado
+     * Desactiva todos los luchadores activos en la base de datos
      */
-    public Event getNextUFCEvent() {
-        try {
-            // La URL correcta es simplemente /schedules.json según la documentación
-            String url = String.format("%s/schedules.json?api_key=%s", API_BASE_URL, apiKey);
-            logger.info("Consultando programación de eventos: {}", url);
-            
-            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
-            
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                JSONObject jsonData = new JSONObject(response.getBody());
-                
-                // Para depuración, veamos toda la respuesta
-                logger.debug("Respuesta completa: {}", response.getBody());
-                
-                if (jsonData.has("schedules")) {
-                    JSONArray schedules = jsonData.getJSONArray("schedules");
-                    logger.info("Se encontraron {} eventos programados", schedules.length());
-                    
-                    // Fecha actual para comparar
-                    LocalDate currentDate = LocalDate.now();
-                    
-                    // Buscar el primer evento de UFC
-                    for (int i = 0; i < schedules.length(); i++) {
-                        JSONObject scheduleItem = schedules.getJSONObject(i);
-                        JSONObject sportEvent = scheduleItem.getJSONObject("sport_event");
-                        
-                        // Verificar si es un evento de UFC
-                        if (sportEvent.has("sport_event_context") && 
-                            sportEvent.getJSONObject("sport_event_context").has("competition") &&
-                            sportEvent.getJSONObject("sport_event_context").getJSONObject("competition").getString("name").contains("UFC")) {
-                            
-                            // Crear objeto Event
-                            Event event = new Event();
-                            event.setName(sportEvent.getString("name"));
-                            
-                            // Guardar el ID externo como descripción para futuras referencias
-                            event.setDescription("SportradarID: " + sportEvent.getString("id"));
-                            
-                            // Convertir fecha ISO 8601 a Date
-                            String scheduledStr = sportEvent.getString("scheduled");
-                            LocalDate eventDate = LocalDate.parse(scheduledStr.substring(0, 10));
-                            event.setDate(Date.from(eventDate.atStartOfDay(ZoneId.systemDefault()).toInstant()));
-                            
-                            if (sportEvent.has("venue")) {
-                                JSONObject venue = sportEvent.getJSONObject("venue");
-                                event.setLocation(venue.getString("name") + ", " + venue.getString("city_name"));
-                            }
-                            
-                            event.setStatus("SCHEDULED");
-                            
-                            // Solo devolver eventos futuros
-                            if (eventDate.isAfter(currentDate) || eventDate.isEqual(currentDate)) {
-                                logger.info("Próximo evento UFC encontrado: {}, fecha: {}", event.getName(), eventDate);
-                                return event;
-                            }
-                        }
-                    }
-                }
-                
-                logger.warn("No se encontraron eventos próximos de UFC en la respuesta");
-            } else {
-                logger.warn("Error en la respuesta de la API: {}", response.getStatusCode());
-            }
-            
-        } catch (Exception e) {
-            logger.error("Error obteniendo próximo evento UFC: {}", e.getMessage(), e);
+    public int deactivateAllFighters() {
+        List<Fighter> activeFighters = fighterService.findAllActiveFighters();
+        for (Fighter fighter : activeFighters) {
+            fighter.setActive(false);
+            fighterService.saveFighter(fighter);
         }
-        
-        return null;
-    } 
+        return activeFighters.size();
+    }
+    
     /**
-     * Obtiene los luchadores que participan en un evento específico
+     * Sincronización completa desde la página de UFC
      */
-    public List<Fighter> getEventFighters(String eventId) {
-        List<Fighter> fighters = new ArrayList<>();
-        Set<String> processedFighterIds = new HashSet<>();
-        
+    public void syncNextEventFighters() {
+        syncFightersFromUFCWebsite("https://www.ufcespanol.com/event/ufc-fight-night-may-31-2025");
+    }
+    
+    /**
+     * Sincronización desde una URL específica de la UFC
+     */
+    public void syncFightersFromUFCWebsite(String eventUrl) {
         try {
-            // Obtener detalles del evento
-            String url = String.format("%s/sport_events/%s/summary.json?api_key=%s", 
-                    API_BASE_URL, eventId, apiKey);
-            logger.info("Consultando detalles del evento: {}", url);
+            logger.info("Iniciando sincronización de luchadores desde {}", eventUrl);
             
-            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+            // 1. Desactivar todos los luchadores actuales
+            int deactivatedCount = deactivateAllFighters();
+            logger.info("Desactivados {} luchadores anteriores", deactivatedCount);
             
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                JSONObject eventData = new JSONObject(response.getBody());
+            // 2. Crear el evento
+            Event nextEvent = createEventFromUFCWebsite(eventUrl);
+            
+            if (nextEvent != null) {
+                // 3. Guardar el evento en la base de datos
+                nextEvent = eventService.saveEvent(nextEvent);
                 
-                if (eventData.has("fights")) {
-                    JSONArray fights = eventData.getJSONArray("fights");
+                // 4. Obtener luchadores del evento
+                List<Fighter> eventFighters = extractFightersFromUFC(eventUrl);
+                
+                // 5. Procesar y guardar cada luchador
+                int addedCount = 0;
+                int updatedCount = 0;
+                
+                for (Fighter newFighter : eventFighters) {
+                    // Buscar si ya existe el luchador
+                    List<Fighter> existingFighters = fighterService.findByName(newFighter.getName());
                     
-                    // Procesar cada pelea
-                    for (int i = 0; i < fights.length(); i++) {
-                        JSONObject fight = fights.getJSONObject(i);
-                        String weightClass = fight.optString("weight_class", "Unknown");
+                    if (!existingFighters.isEmpty()) {
+                        // Actualizar luchador existente
+                        Fighter existingFighter = existingFighters.get(0);
                         
-                        // Procesar luchadores
-                        if (fight.has("competitors")) {
-                            JSONArray competitors = fight.getJSONArray("competitors");
+                        // Actualizar los campos necesarios
+                        existingFighter.setWeightClass(newFighter.getWeightClass());
+                        existingFighter.setRecord(newFighter.getRecord());
+                        existingFighter.setNationality(newFighter.getNationality());
+                        existingFighter.setAge(newFighter.getAge());
+                        existingFighter.setHeight(newFighter.getHeight());
+                        existingFighter.setWeight(newFighter.getWeight());
+                        existingFighter.setActive(true); // Marcar como activo
+                        
+                        fighterService.saveFighter(existingFighter);
+                        updatedCount++;
+                    } else {
+                        // Añadir nuevo luchador
+                        fighterService.saveFighter(newFighter);
+                        addedCount++;
+                    }
+                }
+                
+                logger.info("Sincronización desde UFC website completada. Evento: {}, Luchadores - Añadidos: {}, Actualizados: {}", 
+                        nextEvent.getName(), addedCount, updatedCount);
+            } else {
+                logger.warn("No se pudo crear el evento desde el sitio de UFC");
+            }
+            
+        } catch (Exception e) {
+            logger.error("Error en la sincronización de luchadores desde UFC website: {}", e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Extrae información del evento desde el sitio de UFC
+     */
+    private Event createEventFromUFCWebsite(String eventUrl) {
+        try {
+            String html = fetchWebContent(eventUrl);
+            
+            // Extraer nombre del evento
+            Pattern eventNamePattern = Pattern.compile("<title>(.*?)</title>");
+            Matcher eventNameMatcher = eventNamePattern.matcher(html);
+            
+            String eventName = "UFC Event";
+            if (eventNameMatcher.find()) {
+                eventName = eventNameMatcher.group(1).trim();
+                // Limpiar el nombre si es necesario
+                if (eventName.contains("|")) {
+                    eventName = eventName.substring(0, eventName.indexOf("|")).trim();
+                }
+            }
+            
+            // Extraer fecha del evento
+            Pattern datePattern = Pattern.compile("data-event-date=\"(.*?)\"");
+            Matcher dateMatcher = datePattern.matcher(html);
+            
+            Date eventDate = new Date();
+            if (dateMatcher.find()) {
+                String dateStr = dateMatcher.group(1).trim();
+                try {
+                    // Convertir formato de fecha (pueden ser varios formatos)
+                    if (dateStr.contains("-")) {
+                        LocalDate localDate = LocalDate.parse(dateStr.substring(0, 10));
+                        eventDate = Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
+                    }
+                } catch (Exception e) {
+                    logger.warn("Error al parsear la fecha del evento: {}", e.getMessage());
+                }
+            } else {
+                // Si no encontramos la fecha, intentamos extraerla de la URL
+                Pattern urlDatePattern = Pattern.compile("ufc-fight-night-([a-z]+-\\d+-\\d+)");
+                Matcher urlDateMatcher = urlDatePattern.matcher(eventUrl);
+                
+                if (urlDateMatcher.find()) {
+                    String dateUrlPart = urlDateMatcher.group(1);
+                    try {
+                        String[] dateParts = dateUrlPart.split("-");
+                        if (dateParts.length >= 3) {
+                            int month = getMonthNumber(dateParts[0]);
+                            int day = Integer.parseInt(dateParts[1]);
+                            int year = Integer.parseInt(dateParts[2]);
                             
-                            // Obtener detalles de cada luchador
-                            for (int j = 0; j < competitors.length(); j++) {
-                                JSONObject competitor = competitors.getJSONObject(j);
-                                String fighterId = competitor.getString("id");
-                                
-                                // Evitar procesar el mismo luchador dos veces
-                                if (!processedFighterIds.contains(fighterId)) {
-                                    processedFighterIds.add(fighterId);
-                                    
-                                    // Obtener detalles completos del luchador
-                                    Fighter fighter = getFighterDetails(fighterId, weightClass);
-                                    if (fighter != null) {
-                                        fighters.add(fighter);
-                                    }
-                                }
-                            }
+                            Calendar cal = Calendar.getInstance();
+                            cal.set(year, month - 1, day);
+                            eventDate = cal.getTime();
                         }
+                    } catch (Exception e) {
+                        logger.warn("Error al parsear la fecha de la URL: {}", e.getMessage());
                     }
                 }
             }
             
-            logger.info("Obtenidos {} luchadores para el evento", fighters.size());
+            // Extraer ubicación del evento
+            Pattern locationPattern = Pattern.compile("<div class=\"event-info-location\">(.*?)</div>");
+            Matcher locationMatcher = locationPattern.matcher(html);
+            
+            String location = "UFC Apex, Las Vegas, Nevada";
+            if (locationMatcher.find()) {
+                location = locationMatcher.group(1).trim()
+                    .replaceAll("<[^>]*>", "") // Eliminar etiquetas HTML
+                    .replaceAll("\\s+", " "); // Limpiar espacios extras
+            }
+            
+            // Crear el objeto Event
+            Event event = new Event();
+            event.setName(eventName);
+            event.setDescription("Evento extraído de: " + eventUrl);
+            event.setDate(eventDate);
+            event.setLocation(location);
+            event.setStatus("SCHEDULED");
+            
+            return event;
             
         } catch (Exception e) {
-            logger.error("Error obteniendo luchadores del evento: {}", e.getMessage(), e);
+            logger.error("Error creando evento desde UFC website: {}", e.getMessage(), e);
+            return null;
+        }
+    }
+    
+    /**
+     * Helper para convertir nombre de mes a número
+     */
+    private int getMonthNumber(String monthName) {
+        Map<String, Integer> monthMap = new HashMap<>();
+        monthMap.put("january", 1);
+        monthMap.put("february", 2);
+        monthMap.put("march", 3);
+        monthMap.put("april", 4);
+        monthMap.put("may", 5);
+        monthMap.put("june", 6);
+        monthMap.put("july", 7);
+        monthMap.put("august", 8);
+        monthMap.put("september", 9);
+        monthMap.put("october", 10);
+        monthMap.put("november", 11);
+        monthMap.put("december", 12);
+        
+        return monthMap.getOrDefault(monthName.toLowerCase(), 1);
+    }
+    
+    /**
+     * Extrae luchadores desde el sitio web de UFC
+     */
+    private List<Fighter> extractFightersFromUFC(String eventUrl) {
+        List<Fighter> fighters = new ArrayList<>();
+        
+        try {
+            String html = fetchWebContent(eventUrl);
+            
+            // Extraer bloques de cada pelea
+            Pattern fightBlockPattern = Pattern.compile("<div class=\"c-listing-fight\">(.*?)</div>\\s*</div>\\s*</div>", Pattern.DOTALL);
+            Matcher fightBlockMatcher = fightBlockPattern.matcher(html);
+            
+            while (fightBlockMatcher.find()) {
+                String fightBlockHtml = fightBlockMatcher.group(1);
+                
+                // Extraer categoría de peso
+                String weightClass = "Unknown";
+                Pattern weightClassPattern = Pattern.compile("<div class=\"c-listing-fight__class\">(.*?)</div>");
+                Matcher weightClassMatcher = weightClassPattern.matcher(fightBlockHtml);
+                if (weightClassMatcher.find()) {
+                    weightClass = weightClassMatcher.group(1).trim();
+                }
+                
+                // Extraer información de los luchadores
+                Pattern fighterPattern = Pattern.compile("<div class=\"c-listing-fight__corner-name\">(.*?)</div>");
+                Matcher fighterMatcher = fighterPattern.matcher(fightBlockHtml);
+                
+                while (fighterMatcher.find()) {
+                    String fighterName = fighterMatcher.group(1).trim()
+                        .replaceAll("<[^>]*>", "") // Eliminar etiquetas HTML
+                        .trim();
+                    
+                    // Crear luchador
+                    Fighter fighter = new Fighter();
+                    fighter.setName(fighterName);
+                    fighter.setWeightClass(mapWeightClass(weightClass));
+                    fighter.setActive(true);
+                    
+                    // Valores por defecto
+                    fighter.setRecord("0-0");
+                    fighter.setNationality("Unknown");
+                    fighter.setAge(30);
+                    fighter.setHeight(1.80);
+                    fighter.setWeight(getDefaultWeightForClass(fighter.getWeightClass()));
+                    
+                    // Buscar página de perfil para obtener más datos
+                    String profileUrl = findFighterProfileUrl(fighterName, fightBlockHtml);
+                    if (profileUrl != null && !profileUrl.isEmpty()) {
+                        try {
+                            enrichFighterFromProfile(fighter, profileUrl);
+                        } catch (Exception e) {
+                            logger.warn("Error obteniendo detalles del perfil para {}: {}", fighterName, e.getMessage());
+                        }
+                    }
+                    
+                    // Establecer precio estándar
+                    fighter.setBasePrice(60);
+                    fighter.setPrice(60);
+                    
+                    fighters.add(fighter);
+                }
+            }
+            
+            logger.info("Extraídos {} luchadores del sitio web de UFC", fighters.size());
+            
+        } catch (Exception e) {
+            logger.error("Error extrayendo luchadores desde UFC website: {}", e.getMessage(), e);
         }
         
         return fighters;
     }
     
     /**
-     * Obtiene los detalles completos de un luchador
+     * Intenta encontrar la URL del perfil de un luchador
      */
-    private Fighter getFighterDetails(String fighterId, String weightClass) {
+    private String findFighterProfileUrl(String fighterName, String html) {
         try {
-            String url = String.format("%s/competitors/%s/profile.json?api_key=%s", 
-                    API_BASE_URL, fighterId, apiKey);
+            // Buscar enlaces en el bloque HTML
+            Pattern linkPattern = Pattern.compile("<a href=\"([^\"]+)\"[^>]*>\\s*" + Pattern.quote(fighterName) + "\\s*</a>");
+            Matcher linkMatcher = linkPattern.matcher(html);
             
-            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+            if (linkMatcher.find()) {
+                String profileUrl = linkMatcher.group(1);
+                if (!profileUrl.startsWith("http")) {
+                    // Si es una URL relativa, convertirla a absoluta
+                    profileUrl = "https://www.ufcespanol.com" + profileUrl;
+                }
+                return profileUrl;
+            }
             
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                JSONObject fighterData = new JSONObject(response.getBody());
-                JSONObject competitor = fighterData.getJSONObject("competitor");
-                
-                Fighter fighter = new Fighter();
-                fighter.setName(competitor.getString("name"));
-                
-                // Guardar ID externo en algún campo (para futuras referencias)
-                // Por ejemplo, podemos usar el campo imageUrl temporalmente 
-                // o crear un nuevo campo en el modelo Fighter
-                fighter.setImageUrl("SportradarID: " + fighterId);
-                
-                // Establecer categoría de peso
-                fighter.setWeightClass(mapWeightClass(weightClass));
-                
-                // Obtener nacionalidad si está disponible
-                if (competitor.has("nationality")) {
-                    fighter.setNationality(competitor.getString("nationality"));
+            // Si no se encuentra, buscar de manera más flexible
+            String cleanName = fighterName.toLowerCase()
+                .replaceAll("[^a-z ]", "")
+                .replaceAll("\\s+", "-");
+            
+            Pattern altLinkPattern = Pattern.compile("<a href=\"([^\"]+/" + cleanName + "[^\"]*)\">", Pattern.CASE_INSENSITIVE);
+            Matcher altLinkMatcher = altLinkPattern.matcher(html);
+            
+            if (altLinkMatcher.find()) {
+                String profileUrl = altLinkMatcher.group(1);
+                if (!profileUrl.startsWith("http")) {
+                    profileUrl = "https://www.ufcespanol.com" + profileUrl;
                 }
-                
-                // Obtener récord
-                if (fighterData.has("statistics") && fighterData.getJSONObject("statistics").has("record")) {
-                    JSONObject record = fighterData.getJSONObject("statistics").getJSONObject("record");
-                    String recordStr = record.getInt("wins") + "-" + record.getInt("losses");
-                    if (record.has("draws") && record.getInt("draws") > 0) {
-                        recordStr += "-" + record.getInt("draws");
-                    }
-                    fighter.setRecord(recordStr);
-                }
-                
-                // Datos físicos
-                if (competitor.has("height_cm")) {
-                    fighter.setHeight(competitor.getDouble("height_cm") / 100); // cm a metros
-                }
-                
-                if (competitor.has("weight_kg")) {
-                    fighter.setWeight(competitor.getDouble("weight_kg"));
-                }
-                
-                // Calcular edad si hay fecha de nacimiento
-                if (competitor.has("date_of_birth")) {
-                    String dobStr = competitor.getString("date_of_birth");
-                    LocalDate dob = LocalDate.parse(dobStr.substring(0, 10));
-                    int age = LocalDate.now().getYear() - dob.getYear();
-                    fighter.setAge(age);
-                }
-                
-                // Calcular precio base
-                int basePrice = calculateBasePrice(fighter);
-                fighter.setBasePrice(basePrice);
-                fighter.setPrice(basePrice);
-                fighter.setActive(true); // Marcar como activo para el próximo evento
-                
-                return fighter;
+                return profileUrl;
             }
         } catch (Exception e) {
-            logger.error("Error obteniendo detalles del luchador {}: {}", fighterId, e.getMessage());
+            logger.warn("Error buscando URL de perfil para {}: {}", fighterName, e.getMessage());
         }
         
         return null;
+    }
+    
+    /**
+     * Enriquece la información de un luchador desde su página de perfil
+     */
+    private void enrichFighterFromProfile(Fighter fighter, String profileUrl) throws Exception {
+        String profileHtml = fetchWebContent(profileUrl);
+        
+        // Extraer récord
+        extractRecord(fighter, profileHtml);
+        
+        // Extraer nacionalidad
+        extractNationality(fighter, profileHtml);
+        
+        // Extraer edad
+        extractAge(fighter, profileHtml);
+        
+        // Extraer altura
+        extractHeight(fighter, profileHtml);
+        
+        // Extraer peso
+        extractWeight(fighter, profileHtml);
+    }
+    
+    /**
+     * Extrae el récord del luchador del HTML
+     */
+    private void extractRecord(Fighter fighter, String html) {
+        try {
+            Pattern recordPattern = Pattern.compile("<div class=\"c-record__promoted\">(.*?)</div>");
+            Matcher recordMatcher = recordPattern.matcher(html);
+            if (recordMatcher.find()) {
+                String recordText = recordMatcher.group(1).trim()
+                    .replaceAll("<[^>]*>", "")
+                    .replaceAll("\\s+", " ");
+                
+                // Formatear a "W-L" 
+                if (recordText.contains("-")) {
+                    fighter.setRecord(recordText);
+                } else {
+                    fighter.setRecord("0-0");
+                }
+            }
+        } catch (Exception e) {
+            logger.warn("Error extrayendo récord: {}", e.getMessage());
+        }
+    }
+    
+    /**
+     * Extrae la nacionalidad del luchador del HTML
+     */
+    private void extractNationality(Fighter fighter, String html) {
+        try {
+            // Intentar extraer de "Lugar de nacimiento"
+            Pattern countryPattern = Pattern.compile("<div class=\"c-bio__field\">\\s*<div class=\"c-bio__label\">Lugar de nacimiento</div>\\s*<div class=\"c-bio__text\">(.*?)</div>");
+            Matcher countryMatcher = countryPattern.matcher(html);
+            if (countryMatcher.find()) {
+                String country = countryMatcher.group(1).trim();
+                if (country.contains(",")) {
+                    country = country.substring(country.lastIndexOf(",") + 1).trim();
+                }
+                fighter.setNationality(country);
+                return;
+            }
+            
+            // Intentar extraer del país de la bandera
+            Pattern flagPattern = Pattern.compile("<div class=\"field field--name-country.*?title=\"([^\"]+)\"");
+            Matcher flagMatcher = flagPattern.matcher(html);
+            if (flagMatcher.find()) {
+                fighter.setNationality(flagMatcher.group(1).trim());
+            }
+        } catch (Exception e) {
+            logger.warn("Error extrayendo nacionalidad: {}", e.getMessage());
+        }
+    }
+    
+    /**
+     * Extrae la edad del luchador del HTML
+     */
+    private void extractAge(Fighter fighter, String html) {
+        try {
+            Pattern agePattern = Pattern.compile("<div class=\"c-bio__field\">\\s*<div class=\"c-bio__label\">Edad</div>\\s*<div class=\"c-bio__text\">(\\d+)</div>");
+            Matcher ageMatcher = agePattern.matcher(html);
+            if (ageMatcher.find()) {
+                fighter.setAge(Integer.parseInt(ageMatcher.group(1).trim()));
+            }
+        } catch (Exception e) {
+            logger.warn("Error extrayendo edad: {}", e.getMessage());
+        }
+    }
+    
+    /**
+     * Extrae la altura del luchador del HTML
+     */
+    private void extractHeight(Fighter fighter, String html) {
+        try {
+            Pattern heightPattern = Pattern.compile("<div class=\"c-bio__field\">\\s*<div class=\"c-bio__label\">Altura</div>\\s*<div class=\"c-bio__text\">(.*?)</div>");
+            Matcher heightMatcher = heightPattern.matcher(html);
+            if (heightMatcher.find()) {
+                String heightText = heightMatcher.group(1).trim();
+                
+                // Convertir altura en el formato que venga
+                if (heightText.contains("'")) {
+                    // Formato pies/pulgadas (5' 10")
+                    String[] parts = heightText.split("'");
+                    int feet = Integer.parseInt(parts[0].trim());
+                    int inches = Integer.parseInt(parts[1].replaceAll("\"", "").trim());
+                    double heightInMeters = (feet * 30.48 + inches * 2.54) / 100; // Convertir a metros
+                    fighter.setHeight(heightInMeters);
+                } else if (heightText.contains("cm")) {
+                    // Formato centímetros
+                    double heightInCm = Double.parseDouble(heightText.replaceAll("[^0-9.]", ""));
+                    fighter.setHeight(heightInCm / 100); // Convertir a metros
+                }
+            }
+        } catch (Exception e) {
+            logger.warn("Error extrayendo altura: {}", e.getMessage());
+        }
+    }
+    
+    /**
+     * Extrae el peso del luchador del HTML
+     */
+    private void extractWeight(Fighter fighter, String html) {
+        try {
+            Pattern weightPattern = Pattern.compile("<div class=\"c-bio__field\">\\s*<div class=\"c-bio__label\">Peso</div>\\s*<div class=\"c-bio__text\">(.*?)</div>");
+            Matcher weightMatcher = weightPattern.matcher(html);
+            if (weightMatcher.find()) {
+                String weightText = weightMatcher.group(1).trim();
+                
+                // Convertir el peso al formato que venga
+                if (weightText.contains("lbs")) {
+                    // Libras -> kg
+                    double weightInLbs = Double.parseDouble(weightText.replaceAll("[^0-9.]", ""));
+                    fighter.setWeight(weightInLbs * 0.453592); // Convertir a kg
+                } else if (weightText.contains("kg")) {
+                    // Ya está en kg
+                    fighter.setWeight(Double.parseDouble(weightText.replaceAll("[^0-9.]", "")));
+                }
+            }
+        } catch (Exception e) {
+            logger.warn("Error extrayendo peso: {}", e.getMessage());
+        }
     }
     
     /**
@@ -267,133 +500,42 @@ public class SportradarService {
     }
     
     /**
-     * Calcula precio base para un luchador
+     * Devuelve peso predeterminado para una categoría de peso
      */
-    private int calculateBasePrice(Fighter fighter) {
-        int basePrice = 50; // Precio base mínimo
+    private double getDefaultWeightForClass(String weightClass) {
+        weightClass = weightClass.toLowerCase();
         
-        // Ajustar según categoría de peso
-        String weightClass = fighter.getWeightClass() != null ? fighter.getWeightClass().toLowerCase() : "";
-        if (weightClass.contains("heavyweight")) {
-            basePrice += 20;
-        } else if (weightClass.contains("middleweight") || weightClass.contains("welterweight")) {
-            basePrice += 15;
-        } else if (weightClass.contains("lightweight") || weightClass.contains("featherweight")) {
-            basePrice += 10;
-        } else {
-            basePrice += 5;
-        }
+        if (weightClass.contains("heavyweight")) return 120.0;
+        if (weightClass.contains("light heavyweight")) return 93.0;
+        if (weightClass.contains("middleweight")) return 84.0;
+        if (weightClass.contains("welterweight")) return 77.0;
+        if (weightClass.contains("lightweight")) return 70.0;
+        if (weightClass.contains("featherweight")) return 66.0;
+        if (weightClass.contains("bantamweight")) return 61.0;
+        if (weightClass.contains("flyweight")) return 57.0;
+        if (weightClass.contains("strawweight")) return 52.0;
         
-        // Ajustar según récord
-        if (fighter.getRecord() != null) {
-            String[] parts = fighter.getRecord().split("-");
-            if (parts.length >= 2) {
-                try {
-                    int wins = Integer.parseInt(parts[0]);
-                    int losses = Integer.parseInt(parts[1]);
-                    
-                    // Más victorias, mayor precio
-                    basePrice += wins * 2;
-                    
-                    // Mejor ratio victoria/derrota, mayor precio
-                    if (losses > 0) {
-                        double ratio = (double) wins / losses;
-                        if (ratio > 5) basePrice += 15;
-                        else if (ratio > 3) basePrice += 10;
-                        else if (ratio > 1) basePrice += 5;
-                    } else if (wins > 0) {
-                        // Invicto
-                        basePrice += 20;
-                    }
-                } catch (NumberFormatException e) {
-                    logger.warn("Error analizando récord para luchador: {}", fighter.getName());
-                }
-            }
-        }
-        
-        // Limitar el precio entre 50 y 100
-        return Math.min(100, Math.max(50, basePrice));
+        return 77.0; // Welterweight como valor por defecto
     }
     
     /**
-     * Desactiva todos los luchadores activos en la base de datos
+     * Obtiene el contenido HTML de una URL
      */
-    public int deactivateAllFighters() {
-        List<Fighter> activeFighters = fighterService.findAllActiveFighters();
-        for (Fighter fighter : activeFighters) {
-            fighter.setActive(false);
-            fighterService.saveFighter(fighter);
-        }
-        return activeFighters.size();
-    }
-    
-    /**
-     * Sincronización completa:
-     * 1. Desactiva todos los luchadores activos
-     * 2. Obtiene el próximo evento UFC
-     * 3. Obtiene y activa los luchadores de ese evento
-     */
-    public void syncNextEventFighters() {
-        try {
-            logger.info("Iniciando sincronización de luchadores del próximo evento UFC");
-            
-            // 1. Desactivar todos los luchadores actuales
-            int deactivatedCount = deactivateAllFighters();
-            logger.info("Desactivados {} luchadores anteriores", deactivatedCount);
-            
-            // 2. Obtener el próximo evento UFC
-            Event nextEvent = getNextUFCEvent();
-            
-            if (nextEvent != null) {
-                // 3. Guardar el evento en la base de datos
-                nextEvent = eventService.saveEvent(nextEvent);
-                
-                // 4. Obtener el ID externo del evento desde la descripción
-                String externalEventId = nextEvent.getDescription().replace("SportradarID: ", "");
-                
-                // 5. Obtener luchadores del evento
-                List<Fighter> eventFighters = getEventFighters(externalEventId);
-                
-                // 6. Procesar y guardar cada luchador
-                int addedCount = 0;
-                int updatedCount = 0;
-                
-                for (Fighter newFighter : eventFighters) {
-                    // Buscar si ya existe el luchador
-                    List<Fighter> existingFighters = fighterService.findByName(newFighter.getName());
-                    
-                    if (!existingFighters.isEmpty()) {
-                        // Actualizar luchador existente
-                        Fighter existingFighter = existingFighters.get(0);
-                        
-                        // Actualizar los campos necesarios
-                        existingFighter.setWeightClass(newFighter.getWeightClass());
-                        existingFighter.setRecord(newFighter.getRecord());
-                        existingFighter.setNationality(newFighter.getNationality());
-                        existingFighter.setAge(newFighter.getAge());
-                        existingFighter.setHeight(newFighter.getHeight());
-                        existingFighter.setWeight(newFighter.getWeight());
-                        existingFighter.setActive(true); // Marcar como activo
-                        existingFighter.setPrice(newFighter.getPrice());
-                        existingFighter.setBasePrice(newFighter.getBasePrice());
-                        
-                        fighterService.saveFighter(existingFighter);
-                        updatedCount++;
-                    } else {
-                        // Añadir nuevo luchador
-                        fighterService.saveFighter(newFighter);
-                        addedCount++;
-                    }
-                }
-                
-                logger.info("Sincronización completada. Evento: {}, Luchadores - Añadidos: {}, Actualizados: {}", 
-                        nextEvent.getName(), addedCount, updatedCount);
-            } else {
-                logger.warn("No se encontró ningún evento próximo de UFC");
+    private String fetchWebContent(String urlString) throws Exception {
+        StringBuilder content = new StringBuilder();
+        
+        URL url = new URL(urlString);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("GET");
+        connection.setRequestProperty("User-Agent", "Mozilla/5.0");
+        
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                content.append(line).append("\n");
             }
-            
-        } catch (Exception e) {
-            logger.error("Error en la sincronización de luchadores: {}", e.getMessage(), e);
         }
+        
+        return content.toString();
     }
 }
