@@ -62,6 +62,19 @@
 		    <version>20230618</version>
 		</dependency>
 		
+		<!-- Selenium WebDriver -->
+		<dependency>
+		    <groupId>org.seleniumhq.selenium</groupId>
+		    <artifactId>selenium-java</artifactId>
+		</dependency>
+		
+		<!-- WebDriverManager para gestionar automáticamente los drivers de los navegadores -->
+		<dependency>
+		    <groupId>io.github.bonigarcia</groupId>
+		    <artifactId>webdrivermanager</artifactId>
+		    <version>5.4.0</version>
+		</dependency>
+		
 	</dependencies>
 
 	<build>

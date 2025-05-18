@@ -7,10 +7,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.*;
@@ -24,11 +20,13 @@ public class SportradarService {
     
     private final FighterService fighterService;
     private final EventService eventService;
+    private final SeleniumUFCScraperService seleniumUFCScraperService;
     
     @Autowired
-    public SportradarService(FighterService fighterService, EventService eventService) {
+    public SportradarService(FighterService fighterService, EventService eventService, SeleniumUFCScraperService seleniumUFCScraperService) {
         this.fighterService = fighterService;
         this.eventService = eventService;
+        this.seleniumUFCScraperService = seleniumUFCScraperService;
     }
     
     /**
@@ -221,301 +219,15 @@ public class SportradarService {
     }
     
     /**
-     * Extrae luchadores desde el sitio web de UFC
+     * Extrae luchadores desde el sitio web de UFC usando Selenium
      */
     private List<Fighter> extractFightersFromUFC(String eventUrl) {
-        List<Fighter> fighters = new ArrayList<>();
-        
         try {
-            String html = fetchWebContent(eventUrl);
-            
-            // Extraer bloques de cada pelea
-            Pattern fightBlockPattern = Pattern.compile("<div class=\"c-listing-fight\">(.*?)</div>\\s*</div>\\s*</div>", Pattern.DOTALL);
-            Matcher fightBlockMatcher = fightBlockPattern.matcher(html);
-            
-            while (fightBlockMatcher.find()) {
-                String fightBlockHtml = fightBlockMatcher.group(1);
-                
-                // Extraer categoría de peso
-                String weightClass = "Unknown";
-                Pattern weightClassPattern = Pattern.compile("<div class=\"c-listing-fight__class\">(.*?)</div>");
-                Matcher weightClassMatcher = weightClassPattern.matcher(fightBlockHtml);
-                if (weightClassMatcher.find()) {
-                    weightClass = weightClassMatcher.group(1).trim();
-                }
-                
-                // Extraer información de los luchadores
-                Pattern fighterPattern = Pattern.compile("<div class=\"c-listing-fight__corner-name\">(.*?)</div>");
-                Matcher fighterMatcher = fighterPattern.matcher(fightBlockHtml);
-                
-                while (fighterMatcher.find()) {
-                    String fighterName = fighterMatcher.group(1).trim()
-                        .replaceAll("<[^>]*>", "") // Eliminar etiquetas HTML
-                        .trim();
-                    
-                    // Crear luchador
-                    Fighter fighter = new Fighter();
-                    fighter.setName(fighterName);
-                    fighter.setWeightClass(mapWeightClass(weightClass));
-                    fighter.setActive(true);
-                    
-                    // Valores por defecto
-                    fighter.setRecord("0-0");
-                    fighter.setNationality("Unknown");
-                    fighter.setAge(30);
-                    fighter.setHeight(1.80);
-                    fighter.setWeight(getDefaultWeightForClass(fighter.getWeightClass()));
-                    
-                    // Buscar página de perfil para obtener más datos
-                    String profileUrl = findFighterProfileUrl(fighterName, fightBlockHtml);
-                    if (profileUrl != null && !profileUrl.isEmpty()) {
-                        try {
-                            enrichFighterFromProfile(fighter, profileUrl);
-                        } catch (Exception e) {
-                            logger.warn("Error obteniendo detalles del perfil para {}: {}", fighterName, e.getMessage());
-                        }
-                    }
-                    
-                    // Establecer precio estándar
-                    fighter.setBasePrice(60);
-                    fighter.setPrice(60);
-                    
-                    fighters.add(fighter);
-                }
-            }
-            
-            logger.info("Extraídos {} luchadores del sitio web de UFC", fighters.size());
-            
+            return seleniumUFCScraperService.extractFightersFromUFC(eventUrl);
         } catch (Exception e) {
-            logger.error("Error extrayendo luchadores desde UFC website: {}", e.getMessage(), e);
+            logger.error("Error al extraer peleadores con Selenium: {}", e.getMessage(), e);
+            return new ArrayList<>();
         }
-        
-        return fighters;
-    }
-    
-    /**
-     * Intenta encontrar la URL del perfil de un luchador
-     */
-    private String findFighterProfileUrl(String fighterName, String html) {
-        try {
-            // Buscar enlaces en el bloque HTML
-            Pattern linkPattern = Pattern.compile("<a href=\"([^\"]+)\"[^>]*>\\s*" + Pattern.quote(fighterName) + "\\s*</a>");
-            Matcher linkMatcher = linkPattern.matcher(html);
-            
-            if (linkMatcher.find()) {
-                String profileUrl = linkMatcher.group(1);
-                if (!profileUrl.startsWith("http")) {
-                    // Si es una URL relativa, convertirla a absoluta
-                    profileUrl = "https://www.ufcespanol.com" + profileUrl;
-                }
-                return profileUrl;
-            }
-            
-            // Si no se encuentra, buscar de manera más flexible
-            String cleanName = fighterName.toLowerCase()
-                .replaceAll("[^a-z ]", "")
-                .replaceAll("\\s+", "-");
-            
-            Pattern altLinkPattern = Pattern.compile("<a href=\"([^\"]+/" + cleanName + "[^\"]*)\">", Pattern.CASE_INSENSITIVE);
-            Matcher altLinkMatcher = altLinkPattern.matcher(html);
-            
-            if (altLinkMatcher.find()) {
-                String profileUrl = altLinkMatcher.group(1);
-                if (!profileUrl.startsWith("http")) {
-                    profileUrl = "https://www.ufcespanol.com" + profileUrl;
-                }
-                return profileUrl;
-            }
-        } catch (Exception e) {
-            logger.warn("Error buscando URL de perfil para {}: {}", fighterName, e.getMessage());
-        }
-        
-        return null;
-    }
-    
-    /**
-     * Enriquece la información de un luchador desde su página de perfil
-     */
-    private void enrichFighterFromProfile(Fighter fighter, String profileUrl) throws Exception {
-        String profileHtml = fetchWebContent(profileUrl);
-        
-        // Extraer récord
-        extractRecord(fighter, profileHtml);
-        
-        // Extraer nacionalidad
-        extractNationality(fighter, profileHtml);
-        
-        // Extraer edad
-        extractAge(fighter, profileHtml);
-        
-        // Extraer altura
-        extractHeight(fighter, profileHtml);
-        
-        // Extraer peso
-        extractWeight(fighter, profileHtml);
-    }
-    
-    /**
-     * Extrae el récord del luchador del HTML
-     */
-    private void extractRecord(Fighter fighter, String html) {
-        try {
-            Pattern recordPattern = Pattern.compile("<div class=\"c-record__promoted\">(.*?)</div>");
-            Matcher recordMatcher = recordPattern.matcher(html);
-            if (recordMatcher.find()) {
-                String recordText = recordMatcher.group(1).trim()
-                    .replaceAll("<[^>]*>", "")
-                    .replaceAll("\\s+", " ");
-                
-                // Formatear a "W-L" 
-                if (recordText.contains("-")) {
-                    fighter.setRecord(recordText);
-                } else {
-                    fighter.setRecord("0-0");
-                }
-            }
-        } catch (Exception e) {
-            logger.warn("Error extrayendo récord: {}", e.getMessage());
-        }
-    }
-    
-    /**
-     * Extrae la nacionalidad del luchador del HTML
-     */
-    private void extractNationality(Fighter fighter, String html) {
-        try {
-            // Intentar extraer de "Lugar de nacimiento"
-            Pattern countryPattern = Pattern.compile("<div class=\"c-bio__field\">\\s*<div class=\"c-bio__label\">Lugar de nacimiento</div>\\s*<div class=\"c-bio__text\">(.*?)</div>");
-            Matcher countryMatcher = countryPattern.matcher(html);
-            if (countryMatcher.find()) {
-                String country = countryMatcher.group(1).trim();
-                if (country.contains(",")) {
-                    country = country.substring(country.lastIndexOf(",") + 1).trim();
-                }
-                fighter.setNationality(country);
-                return;
-            }
-            
-            // Intentar extraer del país de la bandera
-            Pattern flagPattern = Pattern.compile("<div class=\"field field--name-country.*?title=\"([^\"]+)\"");
-            Matcher flagMatcher = flagPattern.matcher(html);
-            if (flagMatcher.find()) {
-                fighter.setNationality(flagMatcher.group(1).trim());
-            }
-        } catch (Exception e) {
-            logger.warn("Error extrayendo nacionalidad: {}", e.getMessage());
-        }
-    }
-    
-    /**
-     * Extrae la edad del luchador del HTML
-     */
-    private void extractAge(Fighter fighter, String html) {
-        try {
-            Pattern agePattern = Pattern.compile("<div class=\"c-bio__field\">\\s*<div class=\"c-bio__label\">Edad</div>\\s*<div class=\"c-bio__text\">(\\d+)</div>");
-            Matcher ageMatcher = agePattern.matcher(html);
-            if (ageMatcher.find()) {
-                fighter.setAge(Integer.parseInt(ageMatcher.group(1).trim()));
-            }
-        } catch (Exception e) {
-            logger.warn("Error extrayendo edad: {}", e.getMessage());
-        }
-    }
-    
-    /**
-     * Extrae la altura del luchador del HTML
-     */
-    private void extractHeight(Fighter fighter, String html) {
-        try {
-            Pattern heightPattern = Pattern.compile("<div class=\"c-bio__field\">\\s*<div class=\"c-bio__label\">Altura</div>\\s*<div class=\"c-bio__text\">(.*?)</div>");
-            Matcher heightMatcher = heightPattern.matcher(html);
-            if (heightMatcher.find()) {
-                String heightText = heightMatcher.group(1).trim();
-                
-                // Convertir altura en el formato que venga
-                if (heightText.contains("'")) {
-                    // Formato pies/pulgadas (5' 10")
-                    String[] parts = heightText.split("'");
-                    int feet = Integer.parseInt(parts[0].trim());
-                    int inches = Integer.parseInt(parts[1].replaceAll("\"", "").trim());
-                    double heightInMeters = (feet * 30.48 + inches * 2.54) / 100; // Convertir a metros
-                    fighter.setHeight(heightInMeters);
-                } else if (heightText.contains("cm")) {
-                    // Formato centímetros
-                    double heightInCm = Double.parseDouble(heightText.replaceAll("[^0-9.]", ""));
-                    fighter.setHeight(heightInCm / 100); // Convertir a metros
-                }
-            }
-        } catch (Exception e) {
-            logger.warn("Error extrayendo altura: {}", e.getMessage());
-        }
-    }
-    
-    /**
-     * Extrae el peso del luchador del HTML
-     */
-    private void extractWeight(Fighter fighter, String html) {
-        try {
-            Pattern weightPattern = Pattern.compile("<div class=\"c-bio__field\">\\s*<div class=\"c-bio__label\">Peso</div>\\s*<div class=\"c-bio__text\">(.*?)</div>");
-            Matcher weightMatcher = weightPattern.matcher(html);
-            if (weightMatcher.find()) {
-                String weightText = weightMatcher.group(1).trim();
-                
-                // Convertir el peso al formato que venga
-                if (weightText.contains("lbs")) {
-                    // Libras -> kg
-                    double weightInLbs = Double.parseDouble(weightText.replaceAll("[^0-9.]", ""));
-                    fighter.setWeight(weightInLbs * 0.453592); // Convertir a kg
-                } else if (weightText.contains("kg")) {
-                    // Ya está en kg
-                    fighter.setWeight(Double.parseDouble(weightText.replaceAll("[^0-9.]", "")));
-                }
-            }
-        } catch (Exception e) {
-            logger.warn("Error extrayendo peso: {}", e.getMessage());
-        }
-    }
-    
-    /**
-     * Normaliza nombres de categorías de peso a formato estándar de UFC
-     */
-    private String mapWeightClass(String apiWeightClass) {
-        Map<String, String> weightClassMap = new HashMap<>();
-        weightClassMap.put("flyweight", "Flyweight");
-        weightClassMap.put("bantamweight", "Bantamweight");
-        weightClassMap.put("featherweight", "Featherweight");
-        weightClassMap.put("lightweight", "Lightweight");
-        weightClassMap.put("welterweight", "Welterweight");
-        weightClassMap.put("middleweight", "Middleweight");
-        weightClassMap.put("light heavyweight", "Light Heavyweight");
-        weightClassMap.put("light_heavyweight", "Light Heavyweight");
-        weightClassMap.put("heavyweight", "Heavyweight");
-        weightClassMap.put("women's strawweight", "Women's Strawweight");
-        weightClassMap.put("women's flyweight", "Women's Flyweight");
-        weightClassMap.put("women's bantamweight", "Women's Bantamweight");
-        weightClassMap.put("women's featherweight", "Women's Featherweight");
-        
-        String normalizedClass = apiWeightClass.toLowerCase().trim();
-        return weightClassMap.getOrDefault(normalizedClass, apiWeightClass);
-    }
-    
-    /**
-     * Devuelve peso predeterminado para una categoría de peso
-     */
-    private double getDefaultWeightForClass(String weightClass) {
-        weightClass = weightClass.toLowerCase();
-        
-        if (weightClass.contains("heavyweight")) return 120.0;
-        if (weightClass.contains("light heavyweight")) return 93.0;
-        if (weightClass.contains("middleweight")) return 84.0;
-        if (weightClass.contains("welterweight")) return 77.0;
-        if (weightClass.contains("lightweight")) return 70.0;
-        if (weightClass.contains("featherweight")) return 66.0;
-        if (weightClass.contains("bantamweight")) return 61.0;
-        if (weightClass.contains("flyweight")) return 57.0;
-        if (weightClass.contains("strawweight")) return 52.0;
-        
-        return 77.0; // Welterweight como valor por defecto
     }
     
     /**
@@ -524,12 +236,12 @@ public class SportradarService {
     private String fetchWebContent(String urlString) throws Exception {
         StringBuilder content = new StringBuilder();
         
-        URL url = new URL(urlString);
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        java.net.URL url = new java.net.URL(urlString);
+        java.net.HttpURLConnection connection = (java.net.HttpURLConnection) url.openConnection();
         connection.setRequestMethod("GET");
         connection.setRequestProperty("User-Agent", "Mozilla/5.0");
         
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
+        try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(connection.getInputStream()))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 content.append(line).append("\n");
