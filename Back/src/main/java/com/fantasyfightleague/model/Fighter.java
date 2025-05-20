@@ -24,16 +24,7 @@ public class Fighter {
     
     private String nationality;
     
-    private Integer age;
-    
-    private Double height;
-    
-    private Double weight;
-    
     private Integer price;
-    
-    @Column(name = "base_price")
-    private Integer basePrice;
     
     @Column(name = "active")
     private boolean active = true;
@@ -116,44 +107,12 @@ public class Fighter {
         this.nationality = nationality;
     }
     
-    public Integer getAge() {
-        return age;
-    }
-    
-    public void setAge(Integer age) {
-        this.age = age;
-    }
-    
-    public Double getHeight() {
-        return height;
-    }
-    
-    public void setHeight(Double height) {
-        this.height = height;
-    }
-    
-    public Double getWeight() {
-        return weight;
-    }
-    
-    public void setWeight(Double weight) {
-        this.weight = weight;
-    }
-    
     public Integer getPrice() {
         return price;
     }
     
     public void setPrice(Integer price) {
         this.price = price;
-    }
-    
-    public Integer getBasePrice() {
-        return basePrice;
-    }
-    
-    public void setBasePrice(Integer basePrice) {
-        this.basePrice = basePrice;
     }
     
     public boolean isActive() {
