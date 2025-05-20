@@ -1,5 +1,6 @@
 package com.fantasyfightleague.controller;
 
+import com.fantasyfightleague.dto.CompleteFighterDTO;
 import com.fantasyfightleague.dto.FighterDTO;
 import com.fantasyfightleague.dto.FighterImageDTO;
 import com.fantasyfightleague.dto.FighterPriceDTO;
@@ -305,6 +306,98 @@ public class AdminController {
             return ResponseEntity.ok("Se actualizaron " + updatedCount + " luchadores\n" + results.toString());
         } catch (Exception e) {
             logger.error("Error al actualizar precios de luchadores: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
+        }
+    }
+    
+    @PostMapping("/import-complete-fighters")
+    public ResponseEntity<String> importCompleteFighters(@RequestBody List<CompleteFighterDTO> fighterDTOs) {
+        try {
+            logger.info("Iniciando importación completa de {} luchadores", fighterDTOs.size());
+            
+            // 1. Desactivar todos los luchadores actuales si se está haciendo una importación completa
+            int deactivatedCount = sportradarService.deactivateAllFighters();
+            logger.info("Desactivados {} luchadores anteriores", deactivatedCount);
+            
+            // 2. Procesar e importar los nuevos luchadores
+            int importedCount = 0;
+            StringBuilder results = new StringBuilder("Resultados de la importación:\n");
+            
+            for (CompleteFighterDTO dto : fighterDTOs) {
+                // Buscar si ya existe un luchador con ese nombre
+                List<Fighter> existingFighters = fighterService.findByName(dto.getName());
+                Fighter fighter;
+                boolean isNewFighter = existingFighters.isEmpty();
+                
+                if (!isNewFighter) {
+                    // Actualizar luchador existente
+                    fighter = existingFighters.get(0);
+                    fighter.setRecord(dto.getRecord());
+                    fighter.setNationality(dto.getNationality());
+                    fighter.setWeightClass(dto.getWeightClass());
+                    fighter.setActive(true);
+                    
+                    results.append("- Actualizado: ").append(dto.getName()).append("\n");
+                } else {
+                    // Crear nuevo luchador
+                    fighter = new Fighter();
+                    fighter.setName(dto.getName());
+                    fighter.setRecord(dto.getRecord());
+                    fighter.setNationality(dto.getNationality());
+                    fighter.setWeightClass(dto.getWeightClass());
+                    fighter.setActive(true);
+                    
+                    results.append("- Creado: ").append(dto.getName()).append("\n");
+                }
+                
+                // Establecer la imagen si se proporciona
+                if (dto.getImageUrl() != null && !dto.getImageUrl().isEmpty()) {
+                    fighter.setImageUrl(dto.getImageUrl());
+                    results.append("   Imagen: ").append(dto.getImageUrl()).append("\n");
+                }
+                
+                // Calcular y establecer el precio
+                int price;
+                if (dto.getPrice() != null) {
+                    // Si se proporciona un precio explícito, lo usamos
+                    price = dto.getPrice();
+                    results.append("   Precio explícito: ").append(price).append("\n");
+                } else if (dto.getPosition() != null) {
+                    // Si no hay precio pero sí datos para calcularlo, usamos el servicio de cálculo
+                    FighterPriceDTO priceDTO = new FighterPriceDTO();
+                    priceDTO.setPosition(dto.getPosition());
+                    priceDTO.setIsFavorite(dto.getIsFavorite());
+                    priceDTO.setRanking(dto.getRanking());
+                    
+                    price = fighterPricingService.calculatePriceFromDTO(priceDTO);
+                    results.append("   Precio calculado: ").append(price)
+                           .append(" (Posición: ").append(dto.getPosition())
+                           .append(", Favorito: ").append(dto.getIsFavorite())
+                           .append(", Ranking: ").append(dto.getRanking()).append(")\n");
+                } else if (isNewFighter) {
+                    // Si es un nuevo luchador y no hay datos de precio, usamos un valor por defecto
+                    price = 60; // Precio por defecto para nuevos luchadores
+                    results.append("   Precio por defecto: ").append(price).append("\n");
+                } else {
+                    // Si es un luchador existente y no hay datos de precio, mantenemos el actual
+                    price = fighter.getPrice() != null ? fighter.getPrice() : 60;
+                    results.append("   Precio mantenido: ").append(price).append("\n");
+                }
+                
+                fighter.setPrice(price);
+                
+                // Guardar el luchador
+                fighterService.saveFighter(fighter);
+                importedCount++;
+            }
+            
+            logger.info("Importación completa finalizada. {} luchadores importados/actualizados", importedCount);
+            
+            return ResponseEntity.ok("Proceso completado. Luchadores desactivados: " + deactivatedCount + 
+                                    ", Luchadores importados/actualizados: " + importedCount + "\n" + results.toString());
+        } catch (Exception e) {
+            logger.error("Error al importar luchadores completos: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
