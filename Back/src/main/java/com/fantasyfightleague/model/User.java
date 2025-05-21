@@ -33,6 +33,9 @@ public class User {
     @Column(name = "email_confirmed")
     private boolean emailConfirmed = false;
     
+    @Column(name = "profile_image_url")
+    private String profileImageUrl;
+    
     @PrePersist
     protected void onCreate() {
         createdAt = new Date();
@@ -111,5 +114,13 @@ public class User {
     
     public void setEmailConfirmed(boolean emailConfirmed) {
         this.emailConfirmed = emailConfirmed;
+    }
+    
+    public String getProfileImageUrl() {
+        return profileImageUrl;
+    }
+
+    public void setProfileImageUrl(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
     }
 }
