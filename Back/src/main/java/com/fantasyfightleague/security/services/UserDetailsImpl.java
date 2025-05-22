@@ -1,9 +1,10 @@
-// Crear este archivo en: src/main/java/com/fantasyfightleague/security/services/UserDetailsImpl.java
+// Actualizar: src/main/java/com/fantasyfightleague/security/services/UserDetailsImpl.java
 package com.fantasyfightleague.security.services;
 
 import java.util.Collection;
-import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -23,22 +24,33 @@ public class UserDetailsImpl implements UserDetails {
     private boolean emailConfirmed;
     private Collection<? extends GrantedAuthority> authorities;
 
-    public UserDetailsImpl(Long id, String username, String email, String password, boolean emailConfirmed) {
+    public UserDetailsImpl(Long id, String username, String email, String password, 
+                          boolean emailConfirmed, Collection<? extends GrantedAuthority> authorities) {
         this.id = id;
         this.username = username;
         this.email = email;
         this.password = password;
         this.emailConfirmed = emailConfirmed;
-        this.authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"));
+        this.authorities = authorities;
     }
 
     public static UserDetailsImpl build(User user) {
+        List<GrantedAuthority> authorities = user.getRoles().stream()
+                .map(role -> new SimpleGrantedAuthority(role.getName().name()))
+                .collect(Collectors.toList());
+
         return new UserDetailsImpl(
                 user.getId(),
                 user.getUsername(),
                 user.getEmail(),
                 user.getPassword(),
-                user.isEmailConfirmed());
+                user.isEmailConfirmed(),
+                authorities);
+    }
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return authorities;
     }
 
     public Long getId() {
@@ -51,11 +63,6 @@ public class UserDetailsImpl implements UserDetails {
     
     public boolean isEmailConfirmed() {
         return emailConfirmed;
-    }
-
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        return authorities;
     }
 
     @Override

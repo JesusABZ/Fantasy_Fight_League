@@ -21,38 +21,30 @@ public class League {
     @Column(nullable = false)
     private String type;  // "PUBLIC" o "PRIVATE"
     
-    @Column(name = "initial_budget", nullable = false)
-    private Integer initialBudget = 100;
-    
-    @Column(name = "max_fighters")
-    private Integer maxFighters = 5;
-    
-    @Column(name = "min_fighters_event")
-    private Integer minFightersEvent = 1;
-    
-    @Column(name = "max_fighters_event")
-    private Integer maxFightersEvent = 3;
-    
+    // Para ligas públicas: referencia al evento específico
     @ManyToOne
     @JoinColumn(name = "event_id")
-    private Event event;  // Solo para ligas públicas
+    private Event event;  // Obligatorio para ligas públicas, null para privadas
     
-    @Column(name = "invitation_code")
+    // Para ligas privadas: código de invitación
+    @Column(name = "invitation_code", unique = true)
     private String invitationCode;  // Solo para ligas privadas
     
     @ManyToOne
-    @JoinColumn(name = "creator_id")
+    @JoinColumn(name = "creator_id", nullable = false)
     private User creator;
-    
-    @Column(name = "end_date")
-    @Temporal(TemporalType.TIMESTAMP)
-    private Date endDate;
     
     @Column(name = "created_at")
     @Temporal(TemporalType.TIMESTAMP)
     private Date createdAt;
     
+    @Column(name = "active")
     private boolean active = true;
+    
+    // Para ligas públicas: fecha de eliminación automática
+    @Column(name = "auto_delete_date")
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date autoDeleteDate;
     
     @ManyToMany
     @JoinTable(
@@ -110,38 +102,6 @@ public class League {
         this.type = type;
     }
     
-    public Integer getInitialBudget() {
-        return initialBudget;
-    }
-    
-    public void setInitialBudget(Integer initialBudget) {
-        this.initialBudget = initialBudget;
-    }
-    
-    public Integer getMaxFighters() {
-        return maxFighters;
-    }
-    
-    public void setMaxFighters(Integer maxFighters) {
-        this.maxFighters = maxFighters;
-    }
-    
-    public Integer getMinFightersEvent() {
-        return minFightersEvent;
-    }
-    
-    public void setMinFightersEvent(Integer minFightersEvent) {
-        this.minFightersEvent = minFightersEvent;
-    }
-    
-    public Integer getMaxFightersEvent() {
-        return maxFightersEvent;
-    }
-    
-    public void setMaxFightersEvent(Integer maxFightersEvent) {
-        this.maxFightersEvent = maxFightersEvent;
-    }
-    
     public Event getEvent() {
         return event;
     }
@@ -166,14 +126,6 @@ public class League {
         this.creator = creator;
     }
     
-    public Date getEndDate() {
-        return endDate;
-    }
-    
-    public void setEndDate(Date endDate) {
-        this.endDate = endDate;
-    }
-    
     public Date getCreatedAt() {
         return createdAt;
     }
@@ -190,6 +142,14 @@ public class League {
         this.active = active;
     }
     
+    public Date getAutoDeleteDate() {
+        return autoDeleteDate;
+    }
+    
+    public void setAutoDeleteDate(Date autoDeleteDate) {
+        this.autoDeleteDate = autoDeleteDate;
+    }
+    
     public Set<User> getMembers() {
         return members;
     }
@@ -204,5 +164,9 @@ public class League {
     
     public void removeMember(User user) {
         this.members.remove(user);
+    }
+    
+    public int getMemberCount() {
+        return members.size();
     }
 }

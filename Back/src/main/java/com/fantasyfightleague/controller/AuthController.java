@@ -1,7 +1,11 @@
-// Crear este archivo en: src/main/java/com/fantasyfightleague/controller/AuthController.java
+// Actualizar: src/main/java/com/fantasyfightleague/controller/AuthController.java
 package com.fantasyfightleague.controller;
 
 import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import jakarta.validation.Valid;
 
@@ -17,8 +21,11 @@ import com.fantasyfightleague.dto.JwtResponseDTO;
 import com.fantasyfightleague.dto.LoginRequestDTO;
 import com.fantasyfightleague.dto.MessageResponseDTO;
 import com.fantasyfightleague.dto.SignupRequestDTO;
+import com.fantasyfightleague.model.ERole;
+import com.fantasyfightleague.model.Role;
 import com.fantasyfightleague.model.User;
 import com.fantasyfightleague.model.VerificationToken;
+import com.fantasyfightleague.repository.RoleRepository;
 import com.fantasyfightleague.security.jwt.JwtUtils;
 import com.fantasyfightleague.security.services.UserDetailsImpl;
 import com.fantasyfightleague.service.EmailVerificationService;
@@ -35,6 +42,9 @@ public class AuthController {
     UserService userService;
 
     @Autowired
+    RoleRepository roleRepository;
+
+    @Autowired
     EmailVerificationService emailVerificationService;
 
     @Autowired
@@ -49,12 +59,16 @@ public class AuthController {
         String jwt = jwtUtils.generateJwtToken(authentication);
         
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        List<String> roles = userDetails.getAuthorities().stream()
+                .map(item -> item.getAuthority())
+                .collect(Collectors.toList());
         
         return ResponseEntity.ok(new JwtResponseDTO(jwt,
                                                  userDetails.getId(),
                                                  userDetails.getUsername(),
                                                  userDetails.getEmail(),
-                                                 userDetails.isEmailConfirmed()));
+                                                 userDetails.isEmailConfirmed(),
+                                                 roles));
     }
 
     @PostMapping("/signup")
@@ -79,7 +93,14 @@ public class AuthController {
         
         user.setFirstName(signUpRequest.getFirstName());
         user.setLastName(signUpRequest.getLastName());
-        user.setEmailConfirmed(false); // Por defecto, email no confirmado
+        user.setEmailConfirmed(false);
+
+        // Asignar rol de usuario por defecto
+        Set<Role> roles = new HashSet<>();
+        Role userRole = roleRepository.findByName(ERole.ROLE_USER)
+                .orElseThrow(() -> new RuntimeException("Error: Rol no encontrado."));
+        roles.add(userRole);
+        user.setRoles(roles);
 
         userService.saveUser(user);
 
@@ -107,5 +128,10 @@ public class AuthController {
         userService.saveUser(user);
         
         return ResponseEntity.ok(new MessageResponseDTO("Email verificado correctamente. Ya puedes iniciar sesión."));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logoutUser() {
+        return ResponseEntity.ok(new MessageResponseDTO("¡Logout exitoso!"));
     }
 }

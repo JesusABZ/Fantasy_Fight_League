@@ -1,6 +1,9 @@
+// Actualizar: src/main/java/com/fantasyfightleague/model/User.java
 package com.fantasyfightleague.model;
 
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 import jakarta.persistence.*;
 
 @Entity
@@ -36,6 +39,13 @@ public class User {
     @Column(name = "profile_image_url")
     private String profileImageUrl;
     
+    // NUEVA RELACIÓN CON ROLES
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "user_roles",
+               joinColumns = @JoinColumn(name = "user_id"),
+               inverseJoinColumns = @JoinColumn(name = "role_id"))
+    private Set<Role> roles = new HashSet<>();
+    
     @PrePersist
     protected void onCreate() {
         createdAt = new Date();
@@ -51,7 +61,7 @@ public class User {
         this.email = email;
     }
     
-    // Getters y setters
+    // Getters y setters existentes...
     public Long getId() {
         return id;
     }
@@ -122,5 +132,22 @@ public class User {
 
     public void setProfileImageUrl(String profileImageUrl) {
         this.profileImageUrl = profileImageUrl;
+    }
+    
+    // NUEVOS GETTERS Y SETTERS PARA ROLES
+    public Set<Role> getRoles() {
+        return roles;
+    }
+    
+    public void setRoles(Set<Role> roles) {
+        this.roles = roles;
+    }
+    
+    public void addRole(Role role) {
+        this.roles.add(role);
+    }
+    
+    public void removeRole(Role role) {
+        this.roles.remove(role);
     }
 }

@@ -1,4 +1,7 @@
+// Actualizar: src/main/java/com/fantasyfightleague/dto/JwtResponseDTO.java
 package com.fantasyfightleague.dto;
+
+import java.util.List;
 
 public class JwtResponseDTO {
     private String token;
@@ -7,16 +10,19 @@ public class JwtResponseDTO {
     private String username;
     private String email;
     private boolean emailConfirmed;
+    private List<String> roles;
     
-    public JwtResponseDTO(String token, Long id, String username, String email, boolean emailConfirmed) {
+    public JwtResponseDTO(String token, Long id, String username, String email, 
+                         boolean emailConfirmed, List<String> roles) {
         this.token = token;
         this.id = id;
         this.username = username;
         this.email = email;
         this.emailConfirmed = emailConfirmed;
+        this.roles = roles;
     }
     
-    // Getters y setters...
+    // Getters y setters
     public String getToken() {
         return token;
     }
@@ -63,5 +69,13 @@ public class JwtResponseDTO {
     
     public void setEmailConfirmed(boolean emailConfirmed) {
         this.emailConfirmed = emailConfirmed;
+    }
+    
+    public List<String> getRoles() {
+        return roles;
+    }
+    
+    public void setRoles(List<String> roles) {
+        this.roles = roles;
     }
 }

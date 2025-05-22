@@ -63,7 +63,7 @@ public class Team {
         this.name = name;
         this.user = user;
         this.league = league;
-        this.currentBudget = league.getInitialBudget();
+        //this.currentBudget = league.getInitialBudget();
     }
     
     // Getters y setters
