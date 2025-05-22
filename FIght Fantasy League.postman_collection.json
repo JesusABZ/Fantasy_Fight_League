@@ -1,0 +1,623 @@
+{
+	"info": {
+		"_postman_id": "8e738278-4479-4113-9751-53544f050e70",
+		"name": "FIght Fantasy League",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "45053269",
+		"_collection_link": "https://jesusalvarez-8639603.postman.co/workspace/Jesus-Alvarez's-Workspace~46b8eb55-f98b-4938-8e7e-757c5618e589/collection/45053269-8e738278-4479-4113-9751-53544f050e70?action=share&source=collection_link&creator=45053269"
+	},
+	"item": [
+		{
+			"name": "Administracion de Peleadores",
+			"item": [
+				{
+					"name": "Importar Peleadores",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "[\r\n  {\r\n    \"name\": \"Jon Jones\",\r\n    \"record\": \"27-1\",\r\n    \"nationality\": \"USA\",\r\n    \"weightClass\": \"Peso Completo\"\r\n  },\r\n  {\r\n    \"name\": \"Ilia Topuria\",\r\n    \"record\": \"14-0\",\r\n    \"nationality\": \"España\",\r\n    \"weightClass\": \"Peso Pluma\"\r\n  }\r\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{URL}}/api/admin/import-fighters",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"import-fighters"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Peleadores Activos",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{URL}}/api/admin/active-fighters",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"active-fighters"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Añadir Imagen Peleador",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"fighterId\": 45,\r\n  \"imageUrl\": \"https://dynl.mktgcdn.com/p/xnYGAGWMpbap_gSsJDIFPvBDPsTv5j_W3V0gCeAFyIQ/200x1.png\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{URL}}/api/admin/update-fighter-image",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"update-fighter-image"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Precio Luchador",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"fighterId\": 45,\r\n  \"position\": \"MAIN_EVENT\",\r\n  \"isFavorite\": true,\r\n  \"ranking\": \"12\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{URL}}/api/admin/update-fighter-price",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"update-fighter-price"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Precio Luchador Masivo",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "[\r\n  {\r\n    \"fighterId\": 101,\r\n    \"position\": \"MAIN_EVENT\",\r\n    \"isFavorite\": true,\r\n    \"isRanked\": true\r\n  },\r\n  {\r\n    \"fighterId\": 102,\r\n    \"position\": \"MAIN_EVENT\",\r\n    \"isFavorite\": false,\r\n    \"isRanked\": true\r\n  }\r\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{URL}}/api/admin/update-event-prices",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"update-event-prices"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Importar Peleadores al completo",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "[\r\n  {\r\n    \"name\": \"Jon Jones\",\r\n    \"record\": \"27-1\",\r\n    \"nationality\": \"USA\",\r\n    \"weightClass\": \"Heavyweight\",\r\n    \"imageUrl\": \"https://dynl.mktgcdn.com/p/xnYGAGWMpbap_gSsJDIFPvBDPsTv5j_W3V0gCeAFyIQ/200x1.png\",\r\n    \"position\": \"MAIN_EVENT\",\r\n    \"isFavorite\": true,\r\n    \"ranking\": \"C\"\r\n  },\r\n  {\r\n    \"name\": \"Ciryl Gane\",\r\n    \"record\": \"11-2\",\r\n    \"nationality\": \"France\",\r\n    \"weightClass\": \"Heavyweight\",\r\n    \"imageUrl\": \"https://dynl.mktgcdn.com/p/HREUg-pySQqB86Xxda5JUqmFInPekYteFBioxw1yUJw/200x1.png\",\r\n    \"price\": 45000\r\n  },\r\n  {\r\n    \"name\": \"Ilia Topuria\",\r\n    \"record\": \"14-0\",\r\n    \"nationality\": \"Spain\",\r\n    \"weightClass\": \"Featherweight\",\r\n    \"imageUrl\": \"https://dynl.mktgcdn.com/p/jMTyWWXdzwWDaswQzek-X6JLObRd1otuQaU4KQZElfw/200x1.png\",\r\n    \"position\": \"MAIN_EVENT\",\r\n    \"isFavorite\": true,\r\n    \"ranking\": \"C\"\r\n  }\r\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{URL}}/api/admin/import-complete-fighters",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"import-complete-fighters"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Administracion de usuarios",
+			"item": [
+				{
+					"name": "Alta de usuario",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"username\": \"usuario_prueba2\",\r\n    \"email\": \"usuario@yopmail.com\",\r\n    \"password\": \"miPassword123\",\r\n    \"firstName\": \"Juan\",\r\n    \"lastName\": \"Pérez\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{URL}}/api/auth/signup",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"signup"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"username\": \"usuario_prueba2\",\r\n    \"password\": \"nuevaPassword456\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{URL}}/api/auth/signin",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"signin"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Verificacion de Email",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{URL}}/api/auth/confirm?token=80a487d3-4005-4a3e-a5f5-7ed0fcfa58b0",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"confirm"
+							],
+							"query": [
+								{
+									"key": "token",
+									"value": "80a487d3-4005-4a3e-a5f5-7ed0fcfa58b0"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Perfil de usuario",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ1c3VhcmlvX3BydWViYTIiLCJpYXQiOjE3NDc4NjkyNTMsImV4cCI6MTc0Nzk1NTY1M30.p29SqQf-MTKgTHevjgW_HRpPtzzj7M5KND4_iRpLj84Hiv6DBGG2Tn9BiIv9BIHz",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{URL}}/api/user/profile",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"api",
+								"user",
+								"profile"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Editar perfil",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ1c3VhcmlvX3BydWViYTIiLCJpYXQiOjE3NDc4NjkyNTMsImV4cCI6MTc0Nzk1NTY1M30.p29SqQf-MTKgTHevjgW_HRpPtzzj7M5KND4_iRpLj84Hiv6DBGG2Tn9BiIv9BIHz",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"firstName\": \"Juan Carlos\",\r\n    \"lastName\": \"Pérez García\",\r\n    \"profileImageUrl\": \"http://localhost:8080/uploads/imagen_perfil.jpg\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{URL}}/api/user/profile",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"api",
+								"user",
+								"profile"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Cambiar contraseña",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ1c3VhcmlvX3BydWViYTIiLCJpYXQiOjE3NDc4NjkyNTMsImV4cCI6MTc0Nzk1NTY1M30.p29SqQf-MTKgTHevjgW_HRpPtzzj7M5KND4_iRpLj84Hiv6DBGG2Tn9BiIv9BIHz",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"currentPassword\": \"miPassword123\",\r\n    \"newPassword\": \"nuevaPassword456\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{URL}}/api/user/change-password",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"api",
+								"user",
+								"change-password"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{URL}}/api/auth/logout",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"logout"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Hacer ADMIN",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{URL}}/api/admin/roles/promote/{userId}",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"roles",
+								"promote",
+								"{userId}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Quitar ADMIN",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{URL}}/api/admin/roles/demote/{userId}",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"roles",
+								"demote",
+								"{userId}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Administracion de Ligas",
+			"item": [
+				{
+					"name": "Crear liga publica",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"name\": \"UFC 300 - Liga Oficial\",\r\n    \"description\": \"Liga oficial para el evento UFC 300\",\r\n    \"eventId\": 1\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{URL}}/api/admin/leagues/public",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"leagues",
+								"public"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Crear liga privada",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"name\": \"Liga de Amigos\",\r\n    \"description\": \"Liga privada entre amigos\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{URL}}/api/leagues/private",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"api",
+								"leagues",
+								"private"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener ligas publicas activas",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{URL}}/api/leagues/public",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"api",
+								"leagues",
+								"public"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Unirse a liga publica",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{URL}}/api/leagues/{leagueId}/join",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"api",
+								"leagues",
+								"{leagueId}",
+								"join"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Unirse a liga privada",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"invitationCode\": \"A1B2C3D4\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{URL}}/api/leagues/join-private",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"api",
+								"leagues",
+								"join-private"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener mis ligas",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{URL}}api/leagues/my-leagues",
+							"host": [
+								"{{URL}}api"
+							],
+							"path": [
+								"leagues",
+								"my-leagues"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Salir de una liga",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{URL}}/api/leagues/{leagueId}/leave",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"api",
+								"leagues",
+								"{leagueId}",
+								"leave"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "URL",
+			"value": "http://localhost:8080",
+			"type": "string"
+		}
+	]
+}
