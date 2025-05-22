@@ -9,6 +9,8 @@ import com.fantasyfightleague.scheduler.UFCSyncScheduler;
 import com.fantasyfightleague.service.FighterPricingService;
 import com.fantasyfightleague.service.FighterService;
 import com.fantasyfightleague.service.SportradarService;
+import com.fantasyfightleague.service.FightResultsService;
+import com.fantasyfightleague.dto.EventResultsDTO;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -36,18 +38,20 @@ public class AdminController {
     private final FighterService fighterService;
     private final SportradarService sportradarService;
     private final FighterPricingService fighterPricingService;
+    private final FightResultsService fightResultsService;
     
     @Autowired
     public AdminController(UFCSyncScheduler ufcSyncScheduler, 
                           FighterService fighterService,
                           SportradarService sportradarService,
-                          FighterPricingService fighterPricingService) {
+                          FighterPricingService fighterPricingService,
+                          FightResultsService fightResultsService) {
         this.ufcSyncScheduler = ufcSyncScheduler;
         this.fighterService = fighterService;
         this.sportradarService = sportradarService;
         this.fighterPricingService = fighterPricingService;
+        this.fightResultsService = fightResultsService;
     }
-    
     /**
      * Endpoint para importar luchadores manualmente mediante un JSON
      */
@@ -398,6 +402,42 @@ public class AdminController {
                                     ", Luchadores importados/actualizados: " + importedCount + "\n" + results.toString());
         } catch (Exception e) {
             logger.error("Error al importar luchadores completos: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Endpoint para procesar resultados de un evento UFC completo
+     */
+    @PostMapping("/process-event-results")
+    public ResponseEntity<String> processEventResults(@RequestBody EventResultsDTO eventResults) {
+        try {
+            logger.info("Procesando resultados del evento: {}", eventResults.getNombreEvento());
+            
+            int processedFighters = fightResultsService.processEventResults(eventResults);
+            
+            return ResponseEntity.ok("Evento procesado exitosamente. " +
+                                    "Luchadores procesados: " + processedFighters + ". " +
+                                    "Todas las puntuaciones de picks han sido actualizadas.");
+            
+        } catch (Exception e) {
+            logger.error("Error al procesar resultados del evento: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al procesar evento: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Endpoint para obtener resumen de puntuaciones de un evento
+     */
+    @GetMapping("/event-scoring-summary/{eventId}")
+    public ResponseEntity<String> getEventScoringSummary(@PathVariable Long eventId) {
+        try {
+            String summary = fightResultsService.getEventScoringSummary(eventId);
+            return ResponseEntity.ok(summary);
+        } catch (Exception e) {
+            logger.error("Error al obtener resumen de puntuaciones: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
         }
