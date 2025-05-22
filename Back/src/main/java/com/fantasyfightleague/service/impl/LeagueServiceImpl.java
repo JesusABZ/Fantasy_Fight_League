@@ -36,7 +36,7 @@ public class LeagueServiceImpl implements LeagueService {
         
         // Las ligas públicas se eliminan automáticamente 2 días después del evento
         Calendar cal = Calendar.getInstance();
-        cal.setTime(event.getDate());
+        cal.setTime(event.getEndDate()); // ✅ CAMBIO AQUÍ
         cal.add(Calendar.DAY_OF_MONTH, 2);
         league.setAutoDeleteDate(cal.getTime());
         

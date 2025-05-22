@@ -15,10 +15,15 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.fantasyfightleague.security.jwt.AuthEntryPointJwt;
 import com.fantasyfightleague.security.jwt.AuthTokenFilter;
 import com.fantasyfightleague.security.services.UserDetailsServiceImpl;
+
+import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
@@ -55,18 +60,36 @@ public class SecurityConfig {
     }
     
     @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setAllowCredentials(true);
+        return new UrlBasedCorsConfigurationSource() {{
+            registerCorsConfiguration("/**", configuration);
+        }};
+    }
+    
+    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.cors().and().csrf().disable()
-            .exceptionHandling().authenticationEntryPoint(unauthorizedHandler).and()
-            .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS).and()
+        http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .csrf(csrf -> csrf.disable())
+            .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authz -> authz
                 // Endpoints públicos
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/public/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
                 .requestMatchers("/error").permitAll()
+                
+                // Endpoints públicos de ligas (pueden ver ligas públicas sin autenticarse)
+                .requestMatchers("/api/leagues/public").permitAll()
+                
                 // Endpoints de administración - SOLO ADMINS
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                
                 // Todos los demás endpoints requieren autenticación
                 .anyRequest().authenticated()
             );

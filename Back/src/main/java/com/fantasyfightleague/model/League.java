@@ -41,6 +41,23 @@ public class League {
     @Column(name = "active")
     private boolean active = true;
     
+    // CAMPOS NUEVOS que están en la BD
+    @Column(name = "initial_budget", nullable = false)
+    private Integer initialBudget = 100000; // Presupuesto por defecto de 100,000
+    
+    @Column(name = "max_fighters")
+    private Integer maxFighters = 10; // Máximo de luchadores por equipo
+    
+    @Column(name = "max_fighters_event")
+    private Integer maxFightersEvent = 3; // Máximo de luchadores por evento
+    
+    @Column(name = "min_fighters_event")
+    private Integer minFightersEvent = 1; // Mínimo de luchadores por evento
+    
+    @Column(name = "end_date")
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date endDate; // Fecha de fin de la liga
+    
     // Para ligas públicas: fecha de eliminación automática
     @Column(name = "auto_delete_date")
     @Temporal(TemporalType.TIMESTAMP)
@@ -67,6 +84,10 @@ public class League {
         this.name = name;
         this.type = type;
         this.creator = creator;
+        this.initialBudget = 100000; // Valor por defecto
+        this.maxFighters = 10;
+        this.maxFightersEvent = 3;
+        this.minFightersEvent = 1;
     }
     
     // Getters y setters
@@ -140,6 +161,46 @@ public class League {
     
     public void setActive(boolean active) {
         this.active = active;
+    }
+    
+    public Integer getInitialBudget() {
+        return initialBudget;
+    }
+    
+    public void setInitialBudget(Integer initialBudget) {
+        this.initialBudget = initialBudget;
+    }
+    
+    public Integer getMaxFighters() {
+        return maxFighters;
+    }
+    
+    public void setMaxFighters(Integer maxFighters) {
+        this.maxFighters = maxFighters;
+    }
+    
+    public Integer getMaxFightersEvent() {
+        return maxFightersEvent;
+    }
+    
+    public void setMaxFightersEvent(Integer maxFightersEvent) {
+        this.maxFightersEvent = maxFightersEvent;
+    }
+    
+    public Integer getMinFightersEvent() {
+        return minFightersEvent;
+    }
+    
+    public void setMinFightersEvent(Integer minFightersEvent) {
+        this.minFightersEvent = minFightersEvent;
+    }
+    
+    public Date getEndDate() {
+        return endDate;
+    }
+    
+    public void setEndDate(Date endDate) {
+        this.endDate = endDate;
     }
     
     public Date getAutoDeleteDate() {
