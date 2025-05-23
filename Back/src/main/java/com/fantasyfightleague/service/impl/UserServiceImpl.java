@@ -1,3 +1,4 @@
+// CORREGIR: src/main/java/com/fantasyfightleague/service/impl/UserServiceImpl.java
 package com.fantasyfightleague.service.impl;
 
 import com.fantasyfightleague.model.User;
@@ -24,9 +25,19 @@ public class UserServiceImpl implements UserService {
     
     @Override
     public User saveUser(User user) {
-        // Encripta la contraseña antes de guardar
-        if (user.getId() == null || user.getPassword() != null) {
+        // ✅ SOLO encriptar si es un usuario NUEVO o si se está cambiando la contraseña
+        if (user.getId() == null) {
+            // Usuario nuevo - encriptar contraseña
             user.setPassword(passwordEncoder.encode(user.getPassword()));
+        } else {
+            // Usuario existente - verificar si se está actualizando la contraseña
+            Optional<User> existingUser = userRepository.findById(user.getId());
+            if (existingUser.isPresent() && !existingUser.get().getPassword().equals(user.getPassword())) {
+                // Solo encriptar si la contraseña ha cambiado y no está ya encriptada
+                if (!user.getPassword().startsWith("$2a$")) {
+                    user.setPassword(passwordEncoder.encode(user.getPassword()));
+                }
+            }
         }
         return userRepository.save(user);
     }

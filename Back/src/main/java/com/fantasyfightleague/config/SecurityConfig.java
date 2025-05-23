@@ -4,6 +4,7 @@ package com.fantasyfightleague.config;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy; // ✅ AGREGAR IMPORT
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -19,9 +20,11 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import com.fantasyfightleague.security.EmailVerifiedFilter;
 import com.fantasyfightleague.security.jwt.AuthEntryPointJwt;
 import com.fantasyfightleague.security.jwt.AuthTokenFilter;
 import com.fantasyfightleague.security.services.UserDetailsServiceImpl;
+import com.fantasyfightleague.service.UserService;
 
 import java.util.Arrays;
 
@@ -35,6 +38,16 @@ public class SecurityConfig {
     
     @Autowired
     private AuthEntryPointJwt unauthorizedHandler;
+    
+    // ✅ AGREGAR @Lazy AQUÍ
+    @Autowired
+    @Lazy
+    private UserService userService;
+    
+    @Bean
+    public EmailVerifiedFilter emailVerifiedFilter() {
+        return new EmailVerifiedFilter(userService);
+    }
     
     @Bean
     public AuthTokenFilter authenticationJwtTokenFilter() {
@@ -96,6 +109,7 @@ public class SecurityConfig {
         
         http.authenticationProvider(authenticationProvider());
         http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterAfter(emailVerifiedFilter(), AuthTokenFilter.class);
         
         return http.build();
     }
