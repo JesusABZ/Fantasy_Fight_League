@@ -28,7 +28,7 @@
           </p>
           
           <!-- Info del usuario -->
-          <div class="user-info" v-if="userEmail">
+          <div v-if="userEmail" class="user-info">
             <div class="user-icon">👤</div>
             <div class="user-details">
               <p><strong>Tu cuenta:</strong></p>
@@ -317,7 +317,7 @@ export default {
 .unverified-card {
   background: var(--gradient-card);
   backdrop-filter: blur(15px);
-  border: 2px solid rgba(255, 193, 7, 0.3); /* Color warning */
+  border: 2px solid rgba(255, 193, 7, 0.3);
   border-radius: var(--radius-xl);
   padding: var(--space-2xl);
   box-shadow: var(--shadow-lg);
@@ -754,3 +754,4 @@ export default {
     font-size: 2.5rem;
   }
 }
+</style>

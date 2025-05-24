@@ -244,9 +244,9 @@ export default {
   position: relative;
   min-height: 100vh;
   display: flex;
-  align-items: flex-start; /* Cambiar de center a flex-start */
+  align-items: center; /* Cambio: volver a center para mejor centrado */
   justify-content: center;
-  padding-top: var(--space-2xl); /* Agregar padding superior */
+  padding: var(--space-xl) 0; /* Padding vertical para evitar que toque los bordes */
 }
 
 /* === FONDO (igual que en Register) === */
@@ -295,7 +295,7 @@ export default {
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 500px;
+  max-width: 650px; /* CAMBIADO: de 500px a 650px */
   margin: 0 auto;
   padding: var(--space-lg);
 }
@@ -306,8 +306,11 @@ export default {
   backdrop-filter: blur(15px);
   border: 2px solid rgba(255, 107, 53, 0.2);
   border-radius: var(--radius-xl);
-  padding: var(--space-2xl);
+  padding: var(--space-2xl) 3rem; /* CAMBIADO: padding horizontal más grande */
   box-shadow: var(--shadow-lg);
+  min-height: 600px; /* NUEVO: altura mínima para hacer el formulario más alto */
+  display: flex;
+  align-items: center; /* NUEVO: centrar contenido verticalmente */
 }
 
 .login-form {
@@ -316,11 +319,11 @@ export default {
 
 .form-title {
   font-family: var(--font-impact);
-  font-size: 2.2rem;
+  font-size: 2.8rem; /* CAMBIADO: de 2.2rem a 2.8rem */
   font-weight: 400;
   color: var(--white);
   text-align: center;
-  margin-bottom: var(--space-sm);
+  margin-bottom: var(--space-lg); /* CAMBIADO: más espacio */
   text-transform: uppercase;
   letter-spacing: 0.02em;
 }
@@ -328,38 +331,39 @@ export default {
 .form-subtitle {
   color: var(--gray-light);
   text-align: center;
-  margin-bottom: var(--space-2xl);
-  font-size: 1.1rem;
+  margin-bottom: 3rem; /* CAMBIADO: de var(--space-2xl) a 3rem para más espacio */
+  font-size: 1.2rem; /* CAMBIADO: texto más grande */
 }
 
 .form-group {
-  margin-bottom: var(--space-lg);
+  margin-bottom: 2rem; /* CAMBIADO: de var(--space-lg) a 2rem para más espacio */
 }
 
 .form-label {
   display: block;
   font-weight: 600;
   color: var(--white);
-  margin-bottom: var(--space-sm);
-  font-size: 0.9rem;
+  margin-bottom: var(--space-md); /* CAMBIADO: más espacio */
+  font-size: 1rem; /* CAMBIADO: de 0.9rem a 1rem */
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .form-input {
   width: 100%;
-  padding: var(--space-md);
+  padding: 1.2rem; /* CAMBIADO: de var(--space-md) a 1.2rem para inputs más grandes */
   background: rgba(255, 255, 255, 0.1);
   border: 2px solid rgba(255, 255, 255, 0.2);
   border-radius: var(--radius-md);
   color: var(--white);
-  font-size: 1rem;
+  font-size: 1.1rem; /* CAMBIADO: de 1rem a 1.1rem */
   transition: all 0.3s ease;
   backdrop-filter: blur(10px);
 }
 
 .form-input::placeholder {
   color: var(--gray-light);
+  font-size: 1rem; /* NUEVO: tamaño específico para placeholder */
 }
 
 .form-input:focus {
@@ -381,15 +385,15 @@ export default {
 
 .password-toggle {
   position: absolute;
-  right: var(--space-md);
+  right: 1rem; /* CAMBIADO: de var(--space-md) a 1rem */
   top: 50%;
   transform: translateY(-50%);
   background: none;
   border: none;
   color: var(--gray-light);
   cursor: pointer;
-  font-size: 1.2rem;
-  padding: var(--space-xs);
+  font-size: 1.3rem; /* CAMBIADO: botón más grande */
+  padding: var(--space-sm);
   border-radius: var(--radius-sm);
   transition: all 0.2s ease;
 }
@@ -402,19 +406,19 @@ export default {
 /* === OPCIONES DEL FORMULARIO === */
 .forgot-password-container {
   text-align: right;
-  margin-bottom: var(--space-lg);
+  margin-bottom: 2rem; /* CAMBIADO: más espacio */
 }
 
 .forgot-password {
-  font-size: 0.9rem;
+  font-size: 1rem; /* CAMBIADO: de 0.9rem a 1rem */
 }
 
 /* === MENSAJES === */
 .error-message {
   display: block;
   color: var(--error);
-  font-size: 0.8rem;
-  margin-top: var(--space-xs);
+  font-size: 0.9rem; /* CAMBIADO: de 0.8rem a 0.9rem */
+  margin-top: var(--space-sm);
   font-weight: 500;
 }
 
@@ -422,34 +426,37 @@ export default {
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid var(--error);
   color: var(--error);
-  padding: var(--space-md);
+  padding: 1rem; /* CAMBIADO: padding más grande */
   border-radius: var(--radius-md);
-  margin-bottom: var(--space-lg);
+  margin-bottom: 1.5rem;
   text-align: center;
+  font-size: 1rem; /* NUEVO: texto más grande */
 }
 
 .success-banner {
   background: rgba(16, 185, 129, 0.1);
   border: 1px solid var(--success);
   color: var(--success);
-  padding: var(--space-md);
+  padding: 1rem; /* CAMBIADO: padding más grande */
   border-radius: var(--radius-md);
-  margin-bottom: var(--space-lg);
+  margin-bottom: 1.5rem;
   text-align: center;
+  font-size: 1rem; /* NUEVO: texto más grande */
 }
 
 /* === BOTONES Y ACCIONES === */
 .form-actions {
-  margin-bottom: var(--space-lg);
+  margin-bottom: 2rem; /* CAMBIADO: más espacio */
 }
 
 .btn-large {
   width: 100%;
-  padding: var(--space-lg);
-  font-size: 1.1rem;
+  padding: 1.2rem; /* CAMBIADO: botón más grande */
+  font-size: 1.2rem; /* CAMBIADO: de 1.1rem a 1.2rem */
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  min-height: 56px; /* NUEVO: altura mínima más grande */
 }
 
 .btn.loading {
@@ -473,14 +480,14 @@ export default {
 
 .form-footer {
   text-align: center;
-  padding-top: var(--space-lg);
+  padding-top: 1.5rem; /* CAMBIADO: más padding */
   border-top: 1px solid rgba(255, 255, 255, 0.1);
-  margin-bottom: var(--space-lg);
+  margin-bottom: 1.5rem;
 }
 
 .register-link {
   color: var(--gray-light);
-  font-size: 0.9rem;
+  font-size: 1rem; /* CAMBIADO: de 0.9rem a 1rem */
 }
 
 .link {
@@ -497,7 +504,7 @@ export default {
 
 /* === BOTÓN VOLVER === */
 .back-button-container {
-  margin-top: var(--space-lg);
+  margin-top: 1.5rem;
   text-align: center;
 }
 
@@ -505,8 +512,8 @@ export default {
   background: transparent;
   color: var(--gray-light);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: var(--space-sm) var(--space-lg);
-  font-size: 0.9rem;
+  padding: var(--space-md) var(--space-xl); /* CAMBIADO: padding más grande */
+  font-size: 1rem; /* CAMBIADO: de 0.9rem a 1rem */
   font-weight: 500;
   transition: all 0.3s ease;
 }
@@ -521,19 +528,21 @@ export default {
 /* === RESPONSIVE === */
 @media (max-width: 768px) {
   .login {
-    padding-top: var(--space-xl); /* Menos padding en móvil */
+    padding: var(--space-lg) 0; /* Reducir padding en móvil */
   }
 
   .login-container {
+    max-width: 90%; /* CAMBIADO: usar porcentaje en móvil */
     padding: var(--space-md);
   }
 
   .login-form-container {
-    padding: var(--space-xl);
+    padding: var(--space-xl) var(--space-lg); /* CAMBIADO: reducir padding horizontal en móvil */
+    min-height: auto; /* NUEVO: permitir altura automática en móvil */
   }
 
   .form-title {
-    font-size: 2rem;
+    font-size: 2.2rem; /* CAMBIADO: reducir en móvil pero mantener más grande que antes */
   }
 
   .forgot-password-container {
@@ -543,11 +552,15 @@ export default {
 
 @media (max-width: 480px) {
   .login-container {
-    padding: var(--space-md);
+    padding: var(--space-sm);
   }
 
   .login-form-container {
     padding: var(--space-lg);
+  }
+
+  .form-title {
+    font-size: 2rem;
   }
 }
 </style>
