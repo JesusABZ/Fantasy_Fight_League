@@ -1,13 +1,37 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-// Importaremos las vistas cuando las creemos
-// Por ahora creamos una vista temporal
-
 const routes = [
   {
     path: '/',
     name: 'Home',
     component: () => import('../views/HomeView.vue')
+  },
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('../views/LoginView.vue'),
+    meta: {
+      requiresGuest: true, // Solo usuarios no autenticados
+      title: 'Iniciar Sesión - Fantasy Fight League'
+    }
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: () => import('../views/RegisterView.vue'),
+    meta: {
+      requiresGuest: true, // Solo usuarios no autenticados
+      title: 'Crear Cuenta - Fantasy Fight League'
+    }
+  },
+  {
+    path: '/verify-email',
+    name: 'VerifyEmail',
+    component: () => import('../views/VerifyEmailView.vue'),
+    meta: {
+      requiresGuest: true, // Solo usuarios no autenticados
+      title: 'Verificar Email - Fantasy Fight League'
+    }
   },
   {
     path: '/about',
@@ -19,6 +43,18 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes
+})
+
+// Guard de navegación para manejar títulos de página
+router.beforeEach((to, from, next) => {
+  // Actualizar título de la página
+  if (to.meta.title) {
+    document.title = to.meta.title
+  } else {
+    document.title = 'Fantasy Fight League'
+  }
+  
+  next()
 })
 
 export default router

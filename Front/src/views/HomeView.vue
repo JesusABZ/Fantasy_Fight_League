@@ -76,18 +76,20 @@
 </template>
 
 <script>
+import { useRouter } from 'vue-router'
+
 export default {
   name: 'HomeView',
   setup() {
-    // Funciones para navegación (las implementaremos después)
+    const router = useRouter()
+
+    // Funciones para navegación
     const goToLogin = () => {
-      console.log('Ir a login')
-      // TODO: Implementar navegación al login
+      router.push('/login')
     }
 
     const goToRegister = () => {
-      console.log('Ir a registro')
-      // TODO: Implementar navegación al registro
+      router.push('/register')
     }
 
     const goToUFCEvents = () => {
