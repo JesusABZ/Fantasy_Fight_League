@@ -11,7 +11,6 @@ const routes = [
     name: 'Login',
     component: () => import('../views/LoginView.vue'),
     meta: {
-      requiresGuest: true, // Solo usuarios no autenticados
       title: 'Iniciar Sesión - Fantasy Fight League'
     }
   },
@@ -20,7 +19,6 @@ const routes = [
     name: 'Register',
     component: () => import('../views/RegisterView.vue'),
     meta: {
-      requiresGuest: true, // Solo usuarios no autenticados
       title: 'Crear Cuenta - Fantasy Fight League'
     }
   },
@@ -29,7 +27,6 @@ const routes = [
     name: 'VerifyEmail',
     component: () => import('../views/VerifyEmailView.vue'),
     meta: {
-      requiresGuest: true, // Solo usuarios no autenticados
       title: 'Verificar Email - Fantasy Fight League'
     }
   },
@@ -38,7 +35,6 @@ const routes = [
     name: 'ForgotPassword',
     component: () => import('../views/ForgotPasswordView.vue'),
     meta: {
-      requiresGuest: true, // Solo usuarios no autenticados
       title: 'Recuperar Contraseña - Fantasy Fight League'
     }
   },
@@ -47,8 +43,31 @@ const routes = [
     name: 'EmailUnverified',
     component: () => import('../views/EmailUnverifiedView.vue'),
     meta: {
-      requiresGuest: true, // Solo usuarios no autenticados
       title: 'Email No Verificado - Fantasy Fight League'
+    }
+  },
+  {
+    path: '/support',
+    name: 'Support',
+    component: () => import('../views/SupportView.vue'),
+    meta: {
+      title: 'Contactar Soporte - Fantasy Fight League'
+    }
+  },
+  {
+    path: '/dashboard',
+    name: 'Dashboard',
+    component: () => import('../views/HomeLoggedView.vue'),
+    meta: {
+      title: 'Dashboard - Fantasy Fight League'
+    }
+  },
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: () => import('../views/ProfileView.vue'),
+    meta: {
+      title: 'Mi Perfil - Fantasy Fight League'
     }
   },
   {
@@ -63,7 +82,7 @@ const router = createRouter({
   routes
 })
 
-// Guard de navegación para manejar títulos de página
+// Guard de navegación simple
 router.beforeEach((to, from, next) => {
   // Actualizar título de la página
   if (to.meta.title) {

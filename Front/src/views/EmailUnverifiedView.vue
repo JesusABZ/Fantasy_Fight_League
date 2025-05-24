@@ -217,8 +217,7 @@ export default {
 
     // Contactar soporte
     const contactSupport = () => {
-      // TODO: Implementar sistema de soporte
-      alert('Esta función se implementará próximamente. Por ahora puedes escribir a support@fantasyfightleague.com')
+        router.push('/support')
     }
 
     // Crear nueva cuenta
