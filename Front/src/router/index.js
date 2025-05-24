@@ -34,6 +34,24 @@ const routes = [
     }
   },
   {
+    path: '/forgot-password',
+    name: 'ForgotPassword',
+    component: () => import('../views/ForgotPasswordView.vue'),
+    meta: {
+      requiresGuest: true, // Solo usuarios no autenticados
+      title: 'Recuperar Contraseña - Fantasy Fight League'
+    }
+  },
+  {
+    path: '/email-unverified',
+    name: 'EmailUnverified',
+    component: () => import('../views/EmailUnverifiedView.vue'),
+    meta: {
+      requiresGuest: true, // Solo usuarios no autenticados
+      title: 'Email No Verificado - Fantasy Fight League'
+    }
+  },
+  {
     path: '/about',
     name: 'About',
     component: () => import('../views/AboutView.vue')

@@ -61,7 +61,7 @@
 
           <!-- Link olvidaste contraseña -->
           <div class="forgot-password-container">
-            <a href="#" class="link forgot-password">¿Olvidaste tu contraseña?</a>
+            <router-link to="/forgot-password" class="link forgot-password">¿Olvidaste tu contraseña?</router-link>
           </div>
 
           <!-- Mensaje de error general -->
