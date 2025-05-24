@@ -9,9 +9,12 @@ import java.util.stream.Collectors;
 
 import jakarta.validation.Valid;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -35,6 +38,9 @@ import com.fantasyfightleague.service.UserService;
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
+    
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
+    
     @Autowired
     AuthenticationManager authenticationManager;
 
@@ -52,23 +58,44 @@ public class AuthController {
 
     @PostMapping("/signin")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequestDTO loginRequest) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
+        try {
+            logger.info("Intento de login para usuario: {}", loginRequest.getUsername());
+            
+            // Verificar que el usuario existe
+            if (!userService.existsByUsername(loginRequest.getUsername())) {
+                logger.warn("Usuario no encontrado: {}", loginRequest.getUsername());
+                return ResponseEntity.badRequest()
+                    .body(new MessageResponseDTO("Error: Usuario no encontrado"));
+            }
+            
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        String jwt = jwtUtils.generateJwtToken(authentication);
-        
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        List<String> roles = userDetails.getAuthorities().stream()
-                .map(item -> item.getAuthority())
-                .collect(Collectors.toList());
-        
-        return ResponseEntity.ok(new JwtResponseDTO(jwt,
-                                                 userDetails.getId(),
-                                                 userDetails.getUsername(),
-                                                 userDetails.getEmail(),
-                                                 userDetails.isEmailConfirmed(),
-                                                 roles));
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            String jwt = jwtUtils.generateJwtToken(authentication);
+            
+            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+            List<String> roles = userDetails.getAuthorities().stream()
+                    .map(item -> item.getAuthority())
+                    .collect(Collectors.toList());
+            
+            logger.info("Login exitoso para usuario: {}", loginRequest.getUsername());
+            
+            return ResponseEntity.ok(new JwtResponseDTO(jwt,
+                                                     userDetails.getId(),
+                                                     userDetails.getUsername(),
+                                                     userDetails.getEmail(),
+                                                     userDetails.isEmailConfirmed(),
+                                                     roles));
+        } catch (BadCredentialsException e) {
+            logger.error("Credenciales incorrectas para usuario: {}", loginRequest.getUsername());
+            return ResponseEntity.badRequest()
+                .body(new MessageResponseDTO("Error: Credenciales incorrectas"));
+        } catch (Exception e) {
+            logger.error("Error durante el login: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest()
+                .body(new MessageResponseDTO("Error durante el login: " + e.getMessage()));
+        }
     }
 
     @PostMapping("/signup")
@@ -105,7 +132,12 @@ public class AuthController {
         userService.saveUser(user);
 
         // Enviar email de verificación
-        emailVerificationService.sendVerificationEmail(user);
+        try {
+            emailVerificationService.sendVerificationEmail(user);
+        } catch (Exception e) {
+            logger.warn("No se pudo enviar el email de verificación: {}", e.getMessage());
+            // Continuar con el registro aunque falle el email
+        }
 
         return ResponseEntity.ok(new MessageResponseDTO("¡Usuario registrado con éxito! Por favor, verifica tu correo electrónico"));
     }

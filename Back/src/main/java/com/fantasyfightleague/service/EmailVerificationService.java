@@ -1,4 +1,4 @@
-// Crear este archivo en: src/main/java/com/fantasyfightleague/service/EmailVerificationService.java
+// Actualizar: src/main/java/com/fantasyfightleague/service/EmailVerificationService.java
 package com.fantasyfightleague.service;
 
 import java.util.UUID;
@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.fantasyfightleague.model.User;
 import com.fantasyfightleague.model.VerificationToken;
@@ -25,7 +26,11 @@ public class EmailVerificationService {
     @Value("${app.baseUrl}")
     private String baseUrl;
     
+    @Transactional
     public void sendVerificationEmail(User user) {
+        // ✅ ELIMINAR TOKENS EXISTENTES ANTES DE CREAR UNO NUEVO
+        deleteExistingTokensForUser(user);
+        
         String token = UUID.randomUUID().toString();
         createVerificationToken(user, token);
         
@@ -43,30 +48,17 @@ public class EmailVerificationService {
         mailSender.send(email);
     }
     
-    private void createVerificationToken(User user, String token) {
-        VerificationToken myToken = new VerificationToken();
-        myToken.setToken(token);
-        myToken.setUser(user);
-        tokenRepository.save(myToken);
-    }
-    
-    public VerificationToken getVerificationToken(String token) {
-        return tokenRepository.findByToken(token);
-    }
-    
+    @Transactional
     public void sendEmailChangeVerification(User user, String oldEmail) {
+        // ✅ ELIMINAR TOKENS EXISTENTES ANTES DE CREAR UNO NUEVO
+        deleteExistingTokensForUser(user);
+        
         String token = UUID.randomUUID().toString();
-        
-        // Eliminar token anterior si existe
-        VerificationToken existingToken = tokenRepository.findByToken(token);
-        if (existingToken != null) {
-            tokenRepository.delete(existingToken);
-        }
-        
         createVerificationToken(user, token);
         
         String confirmationUrl = baseUrl + "/api/auth/confirm?token=" + token;
         
+        // Email al nuevo email
         SimpleMailMessage email = new SimpleMailMessage();
         email.setTo(user.getEmail()); // Enviar al nuevo email
         email.setSubject("Fantasy Fight League - Confirmación de Cambio de Email");
@@ -82,14 +74,45 @@ public class EmailVerificationService {
         mailSender.send(email);
         
         // Opcional: Enviar notificación al email anterior
-        SimpleMailMessage notificationEmail = new SimpleMailMessage();
-        notificationEmail.setTo(oldEmail);
-        notificationEmail.setSubject("Fantasy Fight League - Cambio de Email Solicitado");
-        notificationEmail.setText("Hola " + user.getUsername() + ",\n\n"
-                + "Se ha solicitado un cambio de email para tu cuenta.\n\n"
-                + "Si no has sido tú, contacta inmediatamente con nuestro soporte.\n\n"
-                + "Saludos,\nEl equipo de Fantasy Fight League");
-        
-        mailSender.send(notificationEmail);
+        try {
+            SimpleMailMessage notificationEmail = new SimpleMailMessage();
+            notificationEmail.setTo(oldEmail);
+            notificationEmail.setSubject("Fantasy Fight League - Cambio de Email Solicitado");
+            notificationEmail.setText("Hola " + user.getUsername() + ",\n\n"
+                    + "Se ha solicitado un cambio de email para tu cuenta.\n\n"
+                    + "Nuevo email: " + user.getEmail() + "\n\n"
+                    + "Si no has sido tú, contacta inmediatamente con nuestro soporte.\n\n"
+                    + "Saludos,\nEl equipo de Fantasy Fight League");
+            
+            mailSender.send(notificationEmail);
+        } catch (Exception e) {
+            // Si falla el envío al email anterior, continuar sin error
+            System.out.println("No se pudo enviar notificación al email anterior: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * ✅ NUEVO MÉTODO: Elimina todos los tokens existentes para un usuario
+     */
+    @Transactional
+    private void deleteExistingTokensForUser(User user) {
+        try {
+            // Usar el método del repositorio para eliminar tokens existentes
+            tokenRepository.deleteByUserId(user.getId());
+        } catch (Exception e) {
+            // Si hay error, continuar sin problema
+            System.out.println("Error eliminando tokens existentes: " + e.getMessage());
+        }
+    }
+    
+    private void createVerificationToken(User user, String token) {
+        VerificationToken myToken = new VerificationToken();
+        myToken.setToken(token);
+        myToken.setUser(user);
+        tokenRepository.save(myToken);
+    }
+    
+    public VerificationToken getVerificationToken(String token) {
+        return tokenRepository.findByToken(token);
     }
 }

@@ -25,21 +25,24 @@ public class UserServiceImpl implements UserService {
     
     @Override
     public User saveUser(User user) {
-        // ✅ SOLO encriptar si es un usuario NUEVO o si se está cambiando la contraseña
-        if (user.getId() == null) {
-            // Usuario nuevo - encriptar contraseña
+        // ✅ LÓGICA CORREGIDA: Solo encriptar contraseñas no encriptadas
+        if (user.getPassword() != null && !isPasswordEncrypted(user.getPassword())) {
             user.setPassword(passwordEncoder.encode(user.getPassword()));
-        } else {
-            // Usuario existente - verificar si se está actualizando la contraseña
-            Optional<User> existingUser = userRepository.findById(user.getId());
-            if (existingUser.isPresent() && !existingUser.get().getPassword().equals(user.getPassword())) {
-                // Solo encriptar si la contraseña ha cambiado y no está ya encriptada
-                if (!user.getPassword().startsWith("$2a$")) {
-                    user.setPassword(passwordEncoder.encode(user.getPassword()));
-                }
-            }
         }
         return userRepository.save(user);
+    }
+    
+    /**
+     * Verifica si una contraseña ya está encriptada con BCrypt
+     * @param password la contraseña a verificar
+     * @return true si está encriptada, false en caso contrario
+     */
+    private boolean isPasswordEncrypted(String password) {
+        // Las contraseñas de BCrypt siempre empiezan con $2a$, $2b$, o $2y$
+        // y tienen una longitud de 60 caracteres
+        return password != null && 
+               password.length() == 60 && 
+               (password.startsWith("$2a$") || password.startsWith("$2b$") || password.startsWith("$2y$"));
     }
     
     @Override
