@@ -1,16 +1,9 @@
 <template>
   <div class="home">
-    <!-- Carrusel de fondo -->
-    <div class="background-carousel">
-      <div 
-        v-for="(image, index) in carouselImages" 
-        :key="index"
-        class="carousel-slide"
-        :class="{ active: currentSlide === index }"
-        :style="{ backgroundImage: `url(${image})` }"
-      ></div>
-      <!-- Overlay para mantener la estética -->
-      <div class="carousel-overlay"></div>
+    <!-- Fondo estático con overlay mejorado -->
+    <div class="background-static">
+      <div class="background-image"></div>
+      <div class="background-overlay"></div>
     </div>
 
     <!-- Contenido principal -->
@@ -20,7 +13,7 @@
         Crea tu equipo de luchadores favoritos y compite en ligas épicas
       </p>
       
-      <!-- Botones actualizados -->
+      <!-- Botones -->
       <div class="hero-buttons">
         <button @click="goToLogin" class="btn btn-primary">
           Iniciar Sesión
@@ -31,28 +24,51 @@
       </div>
     </div>
 
-    <!-- Sección de características (mantenemos las tarjetas) -->
+    <!-- Sección de características -->
     <div class="features-section">
       <div class="grid">
         <div class="card">
-          <h3 class="title-card">🏆 Crea tu Liga</h3>
+          <h3 class="title-card">Crea tu Liga</h3>
           <p class="card-text">
             Forma ligas públicas o privadas y compite contra otros fanáticos de la UFC
           </p>
         </div>
         
         <div class="card">
-          <h3 class="title-card">⚔️ Elige Luchadores</h3>
+          <h3 class="title-card">Elige Luchadores</h3>
           <p class="card-text">
             Selecciona hasta 3 luchadores por evento con un presupuesto limitado
           </p>
         </div>
         
         <div class="card">
-          <h3 class="title-card">📊 Gana Puntos</h3>
+          <h3 class="title-card">Gana Puntos</h3>
           <p class="card-text">
             Obtén puntos basados en el rendimiento real de tus luchadores
           </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección del próximo evento UFC -->
+    <div class="next-event-section">
+      <h3 class="title-card text-center">Próximo Evento UFC</h3>
+      <div class="event-card" @click="goToUFCEvents">
+        <div class="event-image">
+          <!-- Usar la imagen correcta que ya tienes -->
+          <img src="/images/ufc-event-vegas-107.jpg" alt="UFC Vegas 107" />
+          <div class="event-overlay">
+            <div class="event-badge">UFC VEGAS 107</div>
+          </div>
+        </div>
+        <div class="event-content">
+          <h4 class="event-title">BLANCHFIELD VS BARBER</h4>
+          <p class="event-subtitle">El top de peso mosca femenil tendrá movimiento el 31 de mayo</p>
+          <div class="event-date">
+            <span class="date-text">31 de Mayo, 2025</span>
+            <span class="location-text">Las Vegas, Nevada</span>
+          </div>
+          <button class="btn-event" @click="goToUFCEvents">Ver Cartelera del Evento</button>
         </div>
       </div>
     </div>
@@ -60,21 +76,9 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted } from 'vue'
-
 export default {
   name: 'HomeView',
   setup() {
-    const currentSlide = ref(0)
-    let slideInterval = null
-
-    // URLs de imágenes de UFC (puedes cambiarlas por las que prefieras)
-    const carouselImages = [
-      '/images/carrusel1.jpg',
-      '/images/carrusel2.jpg',
-      '/images/carrusel3.jpg'
-    ]
-
     // Funciones para navegación (las implementaremos después)
     const goToLogin = () => {
       console.log('Ir a login')
@@ -86,28 +90,15 @@ export default {
       // TODO: Implementar navegación al registro
     }
 
-    // Lógica del carrusel
-    const nextSlide = () => {
-      currentSlide.value = (currentSlide.value + 1) % carouselImages.length
+    const goToUFCEvents = () => {
+      // Abrir la URL de UFC en una nueva pestaña
+      window.open('https://www.ufc.com/events', '_blank')
     }
 
-    onMounted(() => {
-      // Iniciar el carrusel automático
-      slideInterval = setInterval(nextSlide, 5000)
-    })
-
-    onUnmounted(() => {
-      // Limpiar el intervalo al desmontar el componente
-      if (slideInterval) {
-        clearInterval(slideInterval)
-      }
-    })
-
     return {
-      currentSlide,
-      carouselImages,
       goToLogin,
-      goToRegister
+      goToRegister,
+      goToUFCEvents
     }
   }
 }
@@ -119,8 +110,8 @@ export default {
   min-height: 100vh;
 }
 
-/* === CARRUSEL DE FONDO === */
-.background-carousel {
+/* === FONDO ESTÁTICO CON OVERLAY MEJORADO === */
+.background-static {
   position: fixed;
   top: 0;
   left: 0;
@@ -130,35 +121,50 @@ export default {
   overflow: hidden;
 }
 
-.carousel-slide {
+.background-image {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
+  background-image: url('/images/carrusel3.jpg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  opacity: 0;
-  transition: opacity 1s ease-in-out;
+  /* Filtro para oscurecer y reducir el contraste de la imagen */
+  filter: brightness(0.3) contrast(0.8) grayscale(0.2);
 }
 
-.carousel-slide.active {
-  opacity: 1;
-}
-
-.carousel-overlay {
+.background-overlay {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
+  /* Gradiente más intenso que se fusiona con el fondo oscuro */
   background: linear-gradient(
     135deg,
-    rgba(10, 10, 10, 0.85) 0%,
-    rgba(26, 26, 26, 0.90) 50%,
-    rgba(10, 10, 10, 0.85) 100%
+    rgba(10, 10, 10, 0.95) 0%,
+    rgba(26, 26, 26, 0.85) 30%,
+    rgba(42, 42, 42, 0.75) 50%,
+    rgba(26, 26, 26, 0.85) 70%,
+    rgba(10, 10, 10, 0.95) 100%
   );
+  /* Overlay adicional para mantener la consistencia del tema */
+  backdrop-filter: blur(1px);
+}
+
+/* Overlay adicional solo en los bordes para una mejor transición */
+.background-static::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: 
+    radial-gradient(ellipse at center, transparent 20%, rgba(10, 10, 10, 0.3) 70%),
+    linear-gradient(to bottom, rgba(10, 10, 10, 0.6) 0%, transparent 20%, transparent 80%, rgba(10, 10, 10, 0.6) 100%);
   z-index: -1;
 }
 
@@ -168,16 +174,18 @@ export default {
   z-index: 1;
   text-align: center;
   padding: var(--space-2xl) 0;
-  margin-bottom: var(--space-2xl);
+  margin-bottom: var(--space-lg); /* Reducido de 2xl a lg */
 }
 
 .hero-subtitle {
   font-size: 1.2rem;
   color: var(--gray-light);
-  margin-bottom: var(--space-2xl);
+  margin-bottom: var(--space-lg); /* Reducido de 2xl a lg */
   max-width: 600px;
   margin-left: auto;
   margin-right: auto;
+  /* Sombra de texto para mejor legibilidad */
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
 }
 
 .hero-buttons {
@@ -185,14 +193,153 @@ export default {
   align-items: center;
   justify-content: center;
   gap: var(--space-lg);
-  margin-bottom: var(--space-2xl);
+  margin-bottom: var(--space-lg); /* Reducido de 2xl a lg */
+}
+
+/* Mejorar la legibilidad del título principal */
+.title-section {
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.9);
+}
+
+/* === SECCIÓN DEL PRÓXIMO EVENTO UFC === */
+.next-event-section {
+  position: relative;
+  z-index: 1;
+  margin: var(--space-2xl) 0;
+  padding: 0 var(--space-lg);
+}
+
+.event-card {
+  background: var(--gradient-card);
+  backdrop-filter: blur(15px);
+  border: 2px solid rgba(255, 107, 53, 0.3);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.4s ease;
+  box-shadow: var(--shadow-lg);
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.event-card:hover {
+  transform: translateY(-8px);
+  border-color: var(--primary);
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
+}
+
+.event-image {
+  position: relative;
+  height: 300px;
+  overflow: hidden;
+}
+
+.event-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.event-card:hover .event-image img {
+  transform: scale(1.05);
+}
+
+.event-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    45deg,
+    rgba(0,0,0,0.7) 0%,
+    rgba(0,0,0,0.3) 50%,
+    rgba(255,107,53,0.2) 100%
+  );
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: var(--space-lg);
+}
+
+.event-badge {
+  background: var(--gradient-primary);
+  color: var(--white);
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-full);
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.event-content {
+  padding: var(--space-xl);
+  text-align: center;
+}
+
+.event-title {
+  font-family: var(--font-impact); /* Aplicar Bebas Neue */
+  font-size: 2rem;
+  font-weight: 400; /* Bebas Neue no necesita font-weight alto */
+  color: var(--white);
+  margin-bottom: var(--space-md);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.event-subtitle {
+  color: var(--gray-light);
+  font-size: 1.1rem;
+  margin-bottom: var(--space-lg);
+  line-height: 1.5;
+}
+
+.event-date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+
+.date-text {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.location-text {
+  font-size: 1rem;
+  color: var(--gray-light);
+}
+
+.btn-event {
+  background: transparent;
+  color: var(--primary);
+  border: 2px solid var(--primary);
+  padding: var(--space-sm) var(--space-xl);
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.btn-event:hover {
+  background: var(--primary);
+  color: var(--white);
+  transform: translateY(-2px);
 }
 
 /* === SECCIÓN DE CARACTERÍSTICAS === */
 .features-section {
   position: relative;
   z-index: 1;
-  margin-top: var(--space-2xl);
+  margin-top: 0; /* Eliminado el margen superior */
+  padding: var(--space-xl) 0;
 }
 
 .grid {
@@ -201,12 +348,36 @@ export default {
   gap: var(--space-lg);
 }
 
+.card {
+  /* Mantener el estilo original de las tarjetas sin cambios */
+  background: var(--gradient-card);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 .card-text {
   color: var(--gray-light);
 }
 
 /* === RESPONSIVE === */
 @media (max-width: 768px) {
+  .event-image {
+    height: 200px;
+  }
+
+  .event-title {
+    font-size: 1.5rem; /* Responsive para móvil */
+  }
+
+  .event-content {
+    padding: var(--space-lg);
+  }
+
+  .event-date {
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
   .hero-buttons {
     flex-direction: column;
     gap: var(--space-md);

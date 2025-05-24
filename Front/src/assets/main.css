@@ -10,33 +10,38 @@
 
 /* === TÍTULOS Y TEXTOS === */
 .title-hero {
-    font-family: var(--font-display);
-    font-size: clamp(2.5rem, 5vw, 4rem);
-    font-weight: 900;
+    font-family: var(--font-impact); /* Cambio a Bebas Neue */
+    font-size: clamp(3rem, 6vw, 5rem); /* Aumentado de 2.5-4rem a 3-5rem */
+    font-weight: 400; /* Bebas Neue no necesita font-weight alto */
     background: var(--gradient-primary);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
     text-align: center;
     margin-bottom: var(--space-2xl);
-    letter-spacing: -0.02em;
+    letter-spacing: 0.02em; /* Ajustado para Bebas Neue */
+    text-transform: uppercase;
 }
 
 .title-section {
-    font-family: var(--font-display);
-    font-size: 2.5rem;
-    font-weight: 700;
+    font-family: var(--font-impact); /* Cambio a Bebas Neue */
+    font-size: 3rem; /* Aumentado de 2.5rem a 3rem */
+    font-weight: 400; /* Bebas Neue no necesita font-weight alto */
     color: var(--white);
     margin-bottom: var(--space-xl);
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.02em;
+    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.9);
 }
 
 .title-card {
-    font-size: 1.5rem;
-    font-weight: 600;
+    font-family: var(--font-impact); /* Cambio a Bebas Neue */
+    font-size: 1.8rem; /* Aumentado de 1.5rem a 1.8rem */
+    font-weight: 400; /* Bebas Neue no necesita font-weight alto */
     color: var(--white);
     margin-bottom: var(--space-md);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
 }
 
 .text-gradient {
@@ -134,11 +139,15 @@
     }
 
     .title-hero {
-        font-size: 2.5rem;
+        font-size: 3rem; /* Ajustado para móvil */
     }
 
     .title-section {
-        font-size: 2rem;
+        font-size: 2.2rem; /* Ajustado para móvil */
+    }
+
+    .title-card {
+        font-size: 1.6rem; /* Ajustado para móvil */
     }
 
     .card {

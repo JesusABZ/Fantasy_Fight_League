@@ -1,5 +1,5 @@
 /* Importar fuentes de Google */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Orbitron:wght@400;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Orbitron:wght@400;700;900&family=Bebas+Neue&display=swap');
 
 /* Variables CSS del sistema de diseño */
 :root {
@@ -42,6 +42,7 @@
     /* Tipografía */
     --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-display: 'Orbitron', monospace;
+    --font-impact: 'Bebas Neue', cursive; /* Nueva fuente para títulos principales */
     
     /* Espaciado */
     --space-xs: 0.25rem;
