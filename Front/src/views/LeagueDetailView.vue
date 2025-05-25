@@ -1470,3 +1470,4 @@ export default {
     max-width: none;
   }
 }
+</style>
