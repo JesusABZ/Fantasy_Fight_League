@@ -6,255 +6,198 @@
       <div class="background-overlay"></div>
     </div>
 
-    <!-- Header del usuario más compacto -->
+    <!-- Header del usuario -->
     <div class="user-header">
       <div class="container">
         <div class="header-content">
           <div class="welcome-section">
             <h1 class="title-hero">¡BIENVENIDO, {{ userDisplayName }}!</h1>
-            <div class="user-stats">
-              <div class="stat-item">
-                <span class="stat-icon">🏆</span>
-                <span class="stat-text">5 Ligas</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-icon">⚔️</span>
-                <span class="stat-text">2,450 Puntos</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-icon">🥇</span>
-                <span class="stat-text">#3 Global</span>
-              </div>
-            </div>
+            <p class="welcome-subtitle">Selecciona una liga o únete a una nueva</p>
           </div>
           <div class="user-actions">
             <button class="btn btn-profile" @click="goToProfile">
               <span class="profile-avatar">{{ userInitials }}</span>
               Mi Perfil
             </button>
-            <button class="btn btn-logout" @click="handleLogout">
-              🚪 Salir
-            </button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Dashboard Grid Layout -->
-    <div class="dashboard-content">
+    <!-- Contenido principal -->
+    <div class="main-content">
       <div class="container">
-        <div class="dashboard-grid">
-          
-          <!-- Card 1: Próximo Evento -->
-          <div class="dashboard-card next-event-card">
-            <div class="card-header">
-              <h3 class="card-title">🔥 Próximo Evento</h3>
-              <span class="event-date">31 MAY</span>
-            </div>
-            <div class="event-preview">
-              <div class="event-image">
-                <img src="/images/ufc-event-vegas-107.jpg" alt="UFC Vegas 107" />
-                <div class="event-badge">UFC VEGAS 107</div>
+        
+        <!-- Próximo Evento UFC - Destacado -->
+        <div class="next-event-section">
+          <div class="event-card-featured" @click="goToUFCEvents">
+            <div class="event-image">
+              <img src="/images/ufc-event-vegas-107.jpg" alt="UFC Vegas 107" />
+              <div class="event-overlay">
+                <div class="event-badge">PRÓXIMO EVENTO</div>
               </div>
-              <div class="event-info">
-                <h4 class="event-title">BLANCHFIELD VS BARBER</h4>
-                <p class="event-time">⏰ 21:00 GMT</p>
+            </div>
+            <div class="event-info">
+              <div class="event-details">
+                <h3 class="event-title">UFC VEGAS 107</h3>
+                <h4 class="event-subtitle">BLANCHFIELD VS BARBER</h4>
+                <div class="event-meta">
+                  <span class="event-date">📅 31 de Mayo, 2025</span>
+                  <span class="event-location">📍 Las Vegas, Nevada</span>
+                </div>
+              </div>
+              <div class="event-action">
                 <button class="btn btn-event">Ver Cartelera</button>
               </div>
             </div>
           </div>
-
-          <!-- Card 2: Mis Ligas Resumen -->
-          <div class="dashboard-card my-leagues-summary">
-            <div class="card-header">
-              <h3 class="card-title">⚔️ Mis Ligas</h3>
-              <button class="btn-see-all" @click="scrollToMyLeagues">Ver todas</button>
-            </div>
-            <div class="leagues-summary">
-              <div class="league-quick-stats">
-                <div class="quick-stat">
-                  <span class="quick-number">5</span>
-                  <span class="quick-label">Ligas Activas</span>
-                </div>
-                <div class="quick-stat">
-                  <span class="quick-number">#1</span>
-                  <span class="quick-label">Mejor Posición</span>
-                </div>
-                <div class="quick-stat">
-                  <span class="quick-number">89%</span>
-                  <span class="quick-label">Win Rate</span>
-                </div>
-              </div>
-              <div class="top-league">
-                <div class="league-mini">
-                  <span class="league-rank">#1</span>
-                  <div class="league-details">
-                    <span class="league-name">Liga Oficina</span>
-                    <span class="league-points">1,890 pts</span>
-                  </div>
-                  <span class="league-badge">🔥</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Card 3: Unirse a Ligas Rápido -->
-          <div class="dashboard-card join-quick">
-            <div class="card-header">
-              <h3 class="card-title">🏆 Unirse Rápido</h3>
-            </div>
-            <div class="quick-join">
-              <div class="join-option" @click="joinPublicLeague">
-                <div class="join-icon">🌍</div>
-                <div class="join-text">
-                  <span class="join-title">Liga Pública</span>
-                  <span class="join-subtitle">Únete a una liga existente</span>
-                </div>
-                <div class="join-arrow">→</div>
-              </div>
-              <div class="join-separator"></div>
-              <div class="private-join-form">
-                <input
-                  v-model="privateCode"
-                  type="text"
-                  class="quick-input"
-                  placeholder="Código de invitación"
-                  maxlength="8"
-                  @keyup.enter="joinPrivateQuick"
-                />
-                <button 
-                  class="btn btn-join-private"
-                  @click="joinPrivateQuick"
-                  :disabled="!privateCode.trim()"
-                >
-                  🔐
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Card 4: Últimos Resultados -->
-          <div class="dashboard-card recent-results">
-            <div class="card-header">
-              <h3 class="card-title">📊 Últimos Resultados</h3>
-            </div>
-            <div class="results-list">
-              <div class="result-item">
-                <div class="result-event">UFC 297</div>
-                <div class="result-score">+185 pts</div>
-                <div class="result-position">#2</div>
-              </div>
-              <div class="result-item">
-                <div class="result-event">UFC Vegas 85</div>
-                <div class="result-score">+92 pts</div>
-                <div class="result-position">#7</div>
-              </div>
-              <div class="result-item">
-                <div class="result-event">UFC 296</div>
-                <div class="result-score">+234 pts</div>
-                <div class="result-position">#1</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Card 5: Leaderboard Global -->
-          <div class="dashboard-card global-leaderboard">
-            <div class="card-header">
-              <h3 class="card-title">🌟 Top Fighters Global</h3>
-            </div>
-            <div class="leaderboard-mini">
-              <div class="leader-item">
-                <span class="leader-rank">1</span>
-                <div class="leader-info">
-                  <span class="leader-name">FighterKing</span>
-                  <span class="leader-points">3,456 pts</span>
-                </div>
-                <span class="leader-badge">👑</span>
-              </div>
-              <div class="leader-item">
-                <span class="leader-rank">2</span>
-                <div class="leader-info">
-                  <span class="leader-name">MMAExpert</span>
-                  <span class="leader-points">3,234 pts</span>
-                </div>
-                <span class="leader-badge">🥈</span>
-              </div>
-              <div class="leader-item you">
-                <span class="leader-rank">3</span>
-                <div class="leader-info">
-                  <span class="leader-name">{{ userDisplayName }} (Tú)</span>
-                  <span class="leader-points">2,450 pts</span>
-                </div>
-                <span class="leader-badge">🔥</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Card 6: Estadísticas Rápidas -->
-          <div class="dashboard-card quick-stats">
-            <div class="card-header">
-              <h3 class="card-title">📈 Tus Stats</h3>
-            </div>
-            <div class="stats-grid">
-              <div class="stat-box">
-                <span class="stat-value">23</span>
-                <span class="stat-label">Eventos</span>
-              </div>
-              <div class="stat-box">
-                <span class="stat-value">67%</span>
-                <span class="stat-label">Top 3</span>
-              </div>
-              <div class="stat-box">
-                <span class="stat-value">12</span>
-                <span class="stat-label">Victorias</span>
-              </div>
-              <div class="stat-box">
-                <span class="stat-value">156</span>
-                <span class="stat-label">Avg Points</span>
-              </div>
-            </div>
-          </div>
-
         </div>
 
-        <!-- Sección expandida: Mis Ligas (si se necesita ver todas) -->
-        <div id="my-leagues-section" class="expanded-section" v-if="showExpandedLeagues">
-          <div class="section-header">
-            <h2 class="section-title">⚔️ Todas Mis Ligas</h2>
-            <button class="btn-collapse" @click="showExpandedLeagues = false">
-              Ocultar
-            </button>
-          </div>
+        <!-- Grid principal: Mis Ligas y Unirse a Liga -->
+        <div class="main-grid">
           
-          <div class="leagues-grid">
-            <div 
-              v-for="league in myLeagues" 
-              :key="league.id"
-              class="league-card-detailed"
-              @click="goToLeague(league)"
-            >
-              <div class="league-header">
-                <h4 class="league-name">{{ league.name }}</h4>
-                <span class="league-type" :class="league.type.toLowerCase()">
-                  {{ league.type === 'PUBLIC' ? '🌍' : '🔒' }}
-                </span>
+          <!-- Sección: Mis Ligas -->
+          <div class="section-card my-leagues-section">
+            <div class="section-header">
+              <h2 class="section-title">⚔️ Mis Ligas</h2>
+              <span class="leagues-count">{{ myLeagues.length }} liga{{ myLeagues.length !== 1 ? 's' : '' }}</span>
+            </div>
+            
+            <div class="leagues-list">
+              <!-- Liga individual -->
+              <div 
+                v-for="league in myLeagues" 
+                :key="league.id"
+                class="league-item"
+                @click="enterLeague(league)"
+              >
+                <div class="league-main-info">
+                  <div class="league-header">
+                    <h3 class="league-name">{{ league.name }}</h3>
+                    <div class="league-badges">
+                      <span class="league-type" :class="league.type.toLowerCase()">
+                        {{ league.type === 'PUBLIC' ? '🌍' : '🔒' }}
+                      </span>
+                      <span v-if="league.userPosition <= 3" class="position-badge" :class="getPositionClass(league.userPosition)">
+                        #{{ league.userPosition }}
+                      </span>
+                    </div>
+                  </div>
+                  <p class="league-description">{{ league.description || 'Liga de fantasy de UFC' }}</p>
+                </div>
+                
+                <div class="league-stats">
+                  <div class="stat-item">
+                    <span class="stat-label">Posición</span>
+                    <span class="stat-value">#{{ league.userPosition }}</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-label">Puntos</span>
+                    <span class="stat-value">{{ league.userPoints }}</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-label">Miembros</span>
+                    <span class="stat-value">{{ league.memberCount }}</span>
+                  </div>
+                </div>
+                
+                <div class="league-action">
+                  <button class="btn btn-enter">Entrar a Liga →</button>
+                </div>
               </div>
-              <div class="league-stats-detailed">
-                <div class="stat-detailed">
-                  <span class="stat-icon">👥</span>
-                  <span class="stat-text">{{ league.memberCount }} miembros</span>
+
+              <!-- Estado vacío -->
+              <div v-if="myLeagues.length === 0" class="empty-state">
+                <div class="empty-icon">🏆</div>
+                <h3 class="empty-title">No tienes ligas</h3>
+                <p class="empty-description">Únete a una liga para empezar a competir</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sección: Unirse a Liga -->
+          <div class="section-card join-league-section">
+            <div class="section-header">
+              <h2 class="section-title">🏆 Unirse a Liga</h2>
+            </div>
+            
+            <div class="join-options">
+              
+              <!-- Unirse a Liga Privada -->
+              <div class="join-option private-join">
+                <div class="option-header">
+                  <div class="option-icon">🔐</div>
+                  <div class="option-info">
+                    <h3 class="option-title">Liga Privada</h3>
+                    <p class="option-description">Usa un código de invitación</p>
+                  </div>
                 </div>
-                <div class="stat-detailed">
-                  <span class="stat-icon">🏆</span>
-                  <span class="stat-text">Posición #{{ league.userPosition }}</span>
-                </div>
-                <div class="stat-detailed">
-                  <span class="stat-icon">⭐</span>
-                  <span class="stat-text">{{ league.userPoints }} puntos</span>
+                
+                <div class="private-form">
+                  <div class="input-group">
+                    <input
+                      v-model="privateCode"
+                      type="text"
+                      class="private-input"
+                      placeholder="Código de invitación (ej: ABC12DEF)"
+                      maxlength="8"
+                      @keyup.enter="joinPrivateLeague"
+                    />
+                    <button 
+                      class="btn btn-join-private"
+                      @click="joinPrivateLeague"
+                      :disabled="!privateCode.trim()"
+                    >
+                      Unirse
+                    </button>
+                  </div>
                 </div>
               </div>
-              <div class="league-action">
-                <button class="btn btn-enter-league">Entrar a Liga</button>
+
+              <!-- Separador -->
+              <div class="separator">
+                <span class="separator-text">O</span>
+              </div>
+
+              <!-- Ligas Públicas Disponibles -->
+              <div class="join-option public-join">
+                <div class="option-header">
+                  <div class="option-icon">🌍</div>
+                  <div class="option-info">
+                    <h3 class="option-title">Ligas Públicas</h3>
+                    <p class="option-description">Únete a una liga abierta</p>
+                  </div>
+                </div>
+                
+                <div class="public-leagues-list">
+                  <!-- Liga pública individual -->
+                  <div 
+                    v-for="league in publicLeagues" 
+                    :key="league.id"
+                    class="public-league-item"
+                    @click="joinPublicLeague(league)"
+                  >
+                    <div class="public-league-info">
+                      <h4 class="public-league-name">{{ league.name }}</h4>
+                      <p class="public-league-description">{{ league.description }}</p>
+                      <div class="public-league-meta">
+                        <span class="member-count">👥 {{ league.memberCount }} miembros</span>
+                        <span class="event-name">🎯 {{ league.eventName }}</span>
+                      </div>
+                    </div>
+                    <div class="public-league-action">
+                      <button class="btn btn-join-public">Unirse</button>
+                    </div>
+                  </div>
+
+                  <!-- Estado vacío para ligas públicas -->
+                  <div v-if="publicLeagues.length === 0" class="empty-public">
+                    <p class="empty-text">No hay ligas públicas disponibles</p>
+                    <button class="btn btn-refresh" @click="loadPublicLeagues">
+                      🔄 Actualizar
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -262,13 +205,13 @@
       </div>
     </div>
 
-    <!-- Mensaje flotante -->
-    <div v-if="showMessage" class="floating-message" :class="messageType" @click="hideMessage">
-      <div class="message-icon">
-        <span v-if="messageType === 'success'">✅</span>
+    <!-- Notificación flotante -->
+    <div v-if="showNotification" class="notification" :class="notificationType" @click="hideNotification">
+      <div class="notification-icon">
+        <span v-if="notificationType === 'success'">✅</span>
         <span v-else>❌</span>
       </div>
-      <div class="message-text">{{ messageText }}</div>
+      <div class="notification-text">{{ notificationText }}</div>
     </div>
   </div>
 </template>
@@ -293,16 +236,16 @@ export default {
 
     // Estados
     const privateCode = ref('')
-    const showExpandedLeagues = ref(false)
-    const showMessage = ref(false)
-    const messageType = ref('success')
-    const messageText = ref('')
+    const showNotification = ref(false)
+    const notificationType = ref('success')
+    const notificationText = ref('')
 
-    // Datos simulados de ligas
+    // Datos simulados de mis ligas
     const myLeagues = ref([
       {
         id: 1,
         name: 'Liga Oficina',
+        description: 'Liga entre compañeros de trabajo',
         type: 'PRIVATE',
         memberCount: 12,
         userPosition: 1,
@@ -311,6 +254,7 @@ export default {
       {
         id: 2,
         name: 'Amigos Luchadores',
+        description: 'Liga con mis amigos de toda la vida',
         type: 'PRIVATE',
         memberCount: 8,
         userPosition: 3,
@@ -318,11 +262,37 @@ export default {
       },
       {
         id: 3,
-        name: 'UFC Vegas 107',
+        name: 'UFC Vegas 107 - Global',
+        description: 'Liga pública para el evento UFC Vegas 107',
         type: 'PUBLIC',
         memberCount: 156,
         userPosition: 5,
         userPoints: 980
+      }
+    ])
+
+    // Datos simulados de ligas públicas disponibles
+    const publicLeagues = ref([
+      {
+        id: 4,
+        name: 'UFC Vegas 107 - Élite',
+        description: 'Liga para los mejores fighters',
+        memberCount: 89,
+        eventName: 'UFC Vegas 107'
+      },
+      {
+        id: 5,
+        name: 'Novatos UFC',
+        description: 'Liga perfecta para principiantes',
+        memberCount: 34,
+        eventName: 'UFC Vegas 107'
+      },
+      {
+        id: 6,
+        name: 'España Fantasy UFC',
+        description: 'Liga en español para fans de UFC',
+        memberCount: 67,
+        eventName: 'UFC Vegas 107'
       }
     ])
 
@@ -342,23 +312,70 @@ export default {
     })
 
     // Funciones
-    const joinPublicLeague = () => {
-      showFloatingMessage('success', '¡Te has unido a la liga pública!')
+    const getPositionClass = (position) => {
+      if (position === 1) return 'gold'
+      if (position === 2) return 'silver'
+      if (position === 3) return 'bronze'
+      return ''
     }
 
-    const joinPrivateQuick = () => {
+    const enterLeague = (league) => {
+      console.log('Entrando a liga:', league.name)
+      showFloatingNotification('success', `Abriendo liga: ${league.name}`)
+    }
+
+    const joinPrivateLeague = () => {
       if (!privateCode.value.trim()) return
-      showFloatingMessage('success', `¡Te has unido usando el código: ${privateCode.value}!`)
+      
+      console.log('Uniéndose a liga privada con código:', privateCode.value)
+      showFloatingNotification('success', `¡Te has unido a la liga con código: ${privateCode.value}!`)
       privateCode.value = ''
+      
+      // Simular que se añade una nueva liga
+      setTimeout(() => {
+        myLeagues.value.push({
+          id: Date.now(),
+          name: 'Nueva Liga Privada',
+          description: 'Liga recién agregada',
+          type: 'PRIVATE',
+          memberCount: 5,
+          userPosition: 1,
+          userPoints: 0
+        })
+      }, 1000)
     }
 
-    const scrollToMyLeagues = () => {
-      showExpandedLeagues.value = !showExpandedLeagues.value
+    const joinPublicLeague = (league) => {
+      console.log('Uniéndose a liga pública:', league.name)
+      showFloatingNotification('success', `¡Te has unido a ${league.name}!`)
+      
+      // Simular que se añade la liga a mis ligas
+      setTimeout(() => {
+        myLeagues.value.push({
+          id: league.id,
+          name: league.name,
+          description: league.description,
+          type: 'PUBLIC',
+          memberCount: league.memberCount + 1,
+          userPosition: league.memberCount + 1,
+          userPoints: 0
+        })
+        
+        // Remover de ligas públicas disponibles
+        const index = publicLeagues.value.findIndex(l => l.id === league.id)
+        if (index > -1) {
+          publicLeagues.value.splice(index, 1)
+        }
+      }, 1000)
     }
 
-    const goToLeague = (league) => {
-      console.log('Navegando a liga:', league.name)
-      showFloatingMessage('success', `Abriendo liga: ${league.name}`)
+    const loadPublicLeagues = () => {
+      console.log('Actualizando ligas públicas...')
+      showFloatingNotification('success', 'Ligas públicas actualizadas')
+    }
+
+    const goToUFCEvents = () => {
+      window.open('https://www.ufc.com/events', '_blank')
     }
 
     const goToProfile = () => {
@@ -370,18 +387,18 @@ export default {
       router.push('/')
     }
 
-    const showFloatingMessage = (type, text) => {
-      messageType.value = type
-      messageText.value = text
-      showMessage.value = true
+    const showFloatingNotification = (type, text) => {
+      notificationType.value = type
+      notificationText.value = text
+      showNotification.value = true
       
       setTimeout(() => {
-        hideMessage()
+        hideNotification()
       }, 3000)
     }
 
-    const hideMessage = () => {
-      showMessage.value = false
+    const hideNotification = () => {
+      showNotification.value = false
     }
 
     return {
@@ -389,18 +406,20 @@ export default {
       userDisplayName,
       userInitials,
       privateCode,
-      showExpandedLeagues,
       myLeagues,
-      showMessage,
-      messageType,
-      messageText,
+      publicLeagues,
+      showNotification,
+      notificationType,
+      notificationText,
+      getPositionClass,
+      enterLeague,
+      joinPrivateLeague,
       joinPublicLeague,
-      joinPrivateQuick,
-      scrollToMyLeagues,
-      goToLeague,
+      loadPublicLeagues,
+      goToUFCEvents,
       goToProfile,
       handleLogout,
-      hideMessage
+      hideNotification
     }
   }
 }
@@ -453,7 +472,7 @@ export default {
   backdrop-filter: blur(1px);
 }
 
-/* === HEADER COMPACTO === */
+/* === HEADER === */
 .user-header {
   position: relative;
   z-index: 1;
@@ -487,30 +506,9 @@ export default {
   letter-spacing: 0.02em;
 }
 
-.user-stats {
-  display: flex;
-  gap: var(--space-lg);
-  margin-top: var(--space-sm);
-}
-
-.stat-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  background: rgba(255, 255, 255, 0.1);
-  padding: var(--space-xs) var(--space-sm);
-  border-radius: var(--radius-full);
-  border: 1px solid rgba(255, 107, 53, 0.3);
-}
-
-.stat-icon {
-  font-size: 1rem;
-}
-
-.stat-text {
-  color: var(--white);
-  font-size: 0.9rem;
-  font-weight: 600;
+.welcome-subtitle {
+  color: var(--gray-light);
+  font-size: 1.1rem;
 }
 
 .user-actions {
@@ -531,6 +529,7 @@ export default {
   cursor: pointer;
   transition: all 0.3s ease;
   font-size: 0.9rem;
+  text-decoration: none;
 }
 
 .btn-profile {
@@ -565,79 +564,43 @@ export default {
   color: var(--white);
 }
 
-/* === DASHBOARD GRID === */
-.dashboard-content {
+/* === CONTENIDO PRINCIPAL === */
+.main-content {
   position: relative;
   z-index: 1;
   padding: var(--space-xl) 0;
 }
 
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  gap: var(--space-lg);
+/* === PRÓXIMO EVENTO === */
+.next-event-section {
   margin-bottom: var(--space-2xl);
 }
 
-/* === DASHBOARD CARDS === */
-.dashboard-card {
+.event-card-featured {
   background: var(--gradient-card);
   backdrop-filter: blur(15px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 107, 53, 0.3);
   border-radius: var(--radius-xl);
-  padding: var(--space-xl);
-  box-shadow: var(--shadow-lg);
-  transition: all 0.3s ease;
-  position: relative;
   overflow: hidden;
-}
-
-.dashboard-card:hover {
-  transform: translateY(-3px);
-  border-color: rgba(255, 107, 53, 0.3);
-  box-shadow: var(--shadow-lg), 0 0 20px rgba(255, 107, 53, 0.1);
-}
-
-.card-header {
+  cursor: pointer;
+  transition: all 0.4s ease;
+  box-shadow: var(--shadow-lg);
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--space-lg);
+  gap: var(--space-xl);
+  padding: var(--space-xl);
 }
 
-.card-title {
-  font-family: var(--font-impact);
-  font-size: 1.2rem;
-  font-weight: 400;
-  color: var(--white);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
-
-/* === PRÓXIMO EVENTO === */
-.next-event-card {
-  grid-column: span 2;
-}
-
-.event-date {
-  background: var(--gradient-primary);
-  color: var(--white);
-  padding: var(--space-xs) var(--space-sm);
-  border-radius: var(--radius-md);
-  font-weight: bold;
-  font-size: 0.8rem;
-}
-
-.event-preview {
-  display: flex;
-  gap: var(--space-lg);
-  align-items: center;
+.event-card-featured:hover {
+  transform: translateY(-5px);
+  border-color: var(--primary);
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
 }
 
 .event-image {
   position: relative;
-  width: 150px;
-  height: 100px;
+  width: 200px;
+  height: 120px;
   border-radius: var(--radius-lg);
   overflow: hidden;
   flex-shrink: 0;
@@ -647,235 +610,116 @@ export default {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.event-card-featured:hover .event-image img {
+  transform: scale(1.05);
+}
+
+.event-overlay {
+  position: absolute;
+  top: var(--space-sm);
+  right: var(--space-sm);
 }
 
 .event-badge {
-  position: absolute;
-  top: var(--space-xs);
-  right: var(--space-xs);
   background: var(--gradient-primary);
   color: var(--white);
-  padding: var(--space-xs);
-  border-radius: var(--radius-sm);
-  font-size: 0.7rem;
-  font-weight: bold;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-full);
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .event-info {
   flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .event-title {
   font-family: var(--font-impact);
-  font-size: 1.3rem;
+  font-size: 1.8rem;
   color: var(--white);
-  margin-bottom: var(--space-sm);
+  margin-bottom: var(--space-xs);
   text-transform: uppercase;
 }
 
-.event-time {
-  color: var(--gray-light);
+.event-subtitle {
+  font-family: var(--font-impact);
+  font-size: 1.3rem;
+  color: var(--primary);
   margin-bottom: var(--space-md);
+  text-transform: uppercase;
+}
+
+.event-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.event-date,
+.event-location {
+  color: var(--gray-light);
+  font-size: 0.9rem;
 }
 
 .btn-event {
   background: var(--gradient-primary);
   color: var(--white);
-  border: none;
-  padding: var(--space-sm) var(--space-lg);
+  padding: var(--space-md) var(--space-lg);
   border-radius: var(--radius-md);
-}
-
-/* === RESUMEN DE LIGAS === */
-.leagues-summary {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-lg);
-}
-
-.league-quick-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-md);
-}
-
-.quick-stat {
-  text-align: center;
-  background: rgba(255, 255, 255, 0.05);
-  padding: var(--space-md);
-  border-radius: var(--radius-md);
-}
-
-.quick-number {
-  display: block;
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: var(--primary);
-  margin-bottom: var(--space-xs);
-}
-
-.quick-label {
-  font-size: 0.8rem;
-  color: var(--gray-light);
+  font-weight: 600;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.league-mini {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  background: rgba(255, 107, 53, 0.1);
-  padding: var(--space-md);
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 107, 53, 0.3);
+.btn-event:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
 }
 
-.league-rank {
-  width: 32px;
-  height: 32px;
-  background: var(--gradient-primary);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--white);
-  font-weight: bold;
+/* === GRID PRINCIPAL === */
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2xl);
 }
 
-.league-details {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+/* === SECCIONES === */
+.section-card {
+  background: var(--gradient-card);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-xl);
+  padding: var(--space-2xl);
+  box-shadow: var(--shadow-lg);
 }
 
-.league-name {
-  color: var(--white);
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.league-points {
-  color: var(--primary);
-  font-size: 0.8rem;
-}
-
-.league-badge {
-  font-size: 1.2rem;
-}
-
-/* === UNIRSE RÁPIDO === */
-.join-option {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  padding: var(--space-md);
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  margin-bottom: var(--space-md);
-}
-
-.join-option:hover {
-  background: rgba(255, 255, 255, 0.1);
-  transform: translateX(5px);
-}
-
-.join-icon {
-  font-size: 1.5rem;
-}
-
-.join-text {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.join-title {
-  color: var(--white);
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.join-subtitle {
-  color: var(--gray-light);
-  font-size: 0.8rem;
-}
-
-.join-arrow {
-  color: var(--primary);
-  font-weight: bold;
-  transition: transform 0.3s ease;
-}
-
-.join-option:hover .join-arrow {
-  transform: translateX(3px);
-}
-
-.join-separator {
-  height: 1px;
-  background: rgba(255, 255, 255, 0.1);
-  margin: var(--space-md) 0;
-}
-
-.private-join-form {
-  display: flex;
-  gap: var(--space-sm);
-}
-
-.quick-input {
-  flex: 1;
-  padding: var(--space-sm);
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: var(--radius-md);
-  color: var(--white);
-  font-size: 0.9rem;
-}
-
-.quick-input::placeholder {
-  color: var(--gray-light);
-}
-
-.btn-join-private {
-  background: var(--gradient-primary);
-  color: var(--white);
-  border: none;
-  padding: var(--space-sm);
-  border-radius: var(--radius-md);
-  width: 40px;
-  height: 40px;
-}
-
-/* === ÚLTIMOS RESULTADOS === */
-.results-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.result-item {
+.section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--space-sm) var(--space-md);
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: var(--radius-md);
+  margin-bottom: var(--space-xl);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.result-event {
+.section-title {
+  font-family: var(--font-impact);
+  font-size: 1.5rem;
+  font-weight: 400;
   color: var(--white);
-  font-weight: 600;
-  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
-.result-score {
-  color: var(--success);
-  font-weight: bold;
-  font-size: 0.9rem;
-}
-
-.result-position {
+.leagues-count {
   background: var(--gradient-primary);
   color: var(--white);
   padding: var(--space-xs) var(--space-sm);
@@ -884,158 +728,14 @@ export default {
   font-weight: bold;
 }
 
-/* === LEADERBOARD GLOBAL === */
-.leaderboard-mini {
+/* === MIS LIGAS === */
+.leagues-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.leader-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  padding: var(--space-sm);
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: var(--radius-md);
-}
-
-.leader-item.you {
-  background: rgba(255, 107, 53, 0.1);
-  border: 1px solid rgba(255, 107, 53, 0.3);
-}
-
-.leader-rank {
-  width: 24px;
-  height: 24px;
-  background: var(--gray);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--white);
-  font-weight: bold;
-  font-size: 0.8rem;
-}
-
-.leader-item.you .leader-rank {
-  background: var(--gradient-primary);
-}
-
-.leader-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.leader-name {
-  color: var(--white);
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.leader-points {
-  color: var(--gray-light);
-  font-size: 0.8rem;
-}
-
-.leader-badge {
-  font-size: 1.2rem;
-}
-
-/* === ESTADÍSTICAS RÁPIDAS === */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-md);
-}
-
-.stat-box {
-  text-align: center;
-  background: rgba(255, 255, 255, 0.05);
-  padding: var(--space-md);
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.3s ease;
-}
-
-.stat-box:hover {
-  border-color: rgba(255, 107, 53, 0.3);
-  transform: translateY(-2px);
-}
-
-.stat-value {
-  display: block;
-  font-size: 1.8rem;
-  font-weight: bold;
-  color: var(--primary);
-  margin-bottom: var(--space-xs);
-}
-
-.stat-label {
-  font-size: 0.8rem;
-  color: var(--gray-light);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-/* === BOTONES AUXILIARES === */
-.btn-see-all {
-  background: none;
-  border: none;
-  color: var(--primary);
-  font-size: 0.8rem;
-  cursor: pointer;
-  text-decoration: underline;
-  transition: color 0.3s ease;
-}
-
-.btn-see-all:hover {
-  color: var(--primary-light);
-}
-
-.btn-collapse {
-  background: var(--gradient-primary);
-  color: var(--white);
-  border: none;
-  padding: var(--space-sm) var(--space-lg);
-  border-radius: var(--radius-md);
-  font-size: 0.9rem;
-  cursor: pointer;
-}
-
-/* === SECCIÓN EXPANDIDA === */
-.expanded-section {
-  margin-top: var(--space-2xl);
-  padding: var(--space-xl);
-  background: var(--gradient-card);
-  border-radius: var(--radius-xl);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--space-xl);
-}
-
-.section-title {
-  font-family: var(--font-impact);
-  font-size: 1.8rem;
-  font-weight: 400;
-  color: var(--white);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
-
-.leagues-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: var(--space-lg);
 }
 
-.league-card-detailed {
+.league-item {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-lg);
@@ -1044,7 +744,7 @@ export default {
   transition: all 0.3s ease;
 }
 
-.league-card-detailed:hover {
+.league-item:hover {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 107, 53, 0.3);
   transform: translateY(-2px);
@@ -1054,59 +754,333 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--space-md);
+  margin-bottom: var(--space-sm);
 }
 
 .league-name {
   font-family: var(--font-impact);
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   color: var(--white);
   text-transform: uppercase;
+}
+
+.league-badges {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
 }
 
 .league-type {
   font-size: 1.2rem;
 }
 
-.league-stats-detailed {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-lg);
+.position-badge {
+  background: var(--gray);
+  color: var(--white);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  font-weight: bold;
 }
 
-.stat-detailed {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
+.position-badge.gold {
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+  color: var(--dark);
 }
 
-.stat-detailed .stat-icon {
-  width: 20px;
-  text-align: center;
+.position-badge.silver {
+  background: linear-gradient(135deg, #c0c0c0 0%, #e5e5e5 100%);
+  color: var(--dark);
 }
 
-.stat-detailed .stat-text {
+.position-badge.bronze {
+  background: linear-gradient(135deg, #cd7f32 0%, #e6a85c 100%);
+  color: var(--white);
+}
+
+.league-description {
   color: var(--gray-light);
   font-size: 0.9rem;
+  margin-bottom: var(--space-md);
+}
+
+.league-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.stat-item {
+  text-align: center;
+  background: rgba(255, 255, 255, 0.05);
+  padding: var(--space-sm);
+  border-radius: var(--radius-md);
+}
+
+.stat-label {
+  display: block;
+  color: var(--gray-light);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  margin-bottom: var(--space-xs);
+}
+
+.stat-value {
+  display: block;
+  color: var(--primary);
+  font-weight: bold;
+  font-size: 1.1rem;
 }
 
 .league-action {
   text-align: center;
 }
 
-.btn-enter-league {
+.btn-enter {
   background: var(--gradient-primary);
   color: var(--white);
-  border: none;
   padding: var(--space-sm) var(--space-lg);
   border-radius: var(--radius-md);
   font-weight: 600;
   width: 100%;
 }
 
-/* === MENSAJE FLOTANTE === */
-.floating-message {
+/* === ESTADO VACÍO === */
+.empty-state {
+  text-align: center;
+  padding: var(--space-2xl) var(--space-lg);
+}
+
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: var(--space-lg);
+}
+
+.empty-title {
+  font-family: var(--font-impact);
+  font-size: 1.3rem;
+  color: var(--white);
+  margin-bottom: var(--space-sm);
+  text-transform: uppercase;
+}
+
+.empty-description {
+  color: var(--gray-light);
+}
+
+/* === UNIRSE A LIGA === */
+.join-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+.join-option {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+}
+
+.option-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.option-icon {
+  font-size: 1.8rem;
+  width: 50px;
+  height: 50px;
+  background: var(--gradient-primary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.option-title {
+  font-family: var(--font-impact);
+  font-size: 1.1rem;
+  color: var(--white);
+  margin-bottom: var(--space-xs);
+  text-transform: uppercase;
+}
+
+.option-description {
+  color: var(--gray-light);
+  font-size: 0.9rem;
+}
+
+/* === UNIRSE A LIGA PRIVADA === */
+.input-group {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.private-input {
+  flex: 1;
+  padding: var(--space-md);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-md);
+  color: var(--white);
+  font-size: 1rem;
+}
+
+.private-input::placeholder {
+  color: var(--gray-light);
+}
+
+.private-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.btn-join-private {
+  background: var(--gradient-primary);
+  color: var(--white);
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.btn-join-private:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* === SEPARADOR === */
+.separator {
+  position: relative;
+  text-align: center;
+  margin: var(--space-lg) 0;
+}
+
+.separator::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.separator-text {
+  background: var(--dark-light);
+  color: var(--gray-light);
+  padding: 0 var(--space-md);
+  font-weight: 600;
+  font-size: 0.9rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* === LIGAS PÚBLICAS === */
+.public-leagues-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.public-league-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.public-league-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 107, 53, 0.3);
+  transform: translateX(0px);
+}
+
+.public-league-info {
+  flex: 1;
+}
+
+.public-league-name {
+  font-family: var(--font-impact);
+  font-size: 1rem;
+  color: var(--white);
+  margin-bottom: var(--space-xs);
+  text-transform: uppercase;
+}
+
+.public-league-description {
+  color: var(--gray-light);
+  font-size: 0.8rem;
+  margin-bottom: var(--space-sm);
+}
+
+.public-league-meta {
+  display: flex;
+  gap: var(--space-md);
+  font-size: 0.8rem;
+}
+
+.member-count,
+.event-name {
+  color: var(--gray-light);
+}
+
+.btn-join-public {
+  background: transparent;
+  color: var(--primary);
+  border: 2px solid var(--primary);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.btn-join-public:hover {
+  background: var(--primary);
+  color: var(--white);
+}
+
+/* === ESTADO VACÍO LIGAS PÚBLICAS === */
+.empty-public {
+  text-align: center;
+  padding: var(--space-xl);
+  color: var(--gray-light);
+}
+
+.empty-text {
+  margin-bottom: var(--space-md);
+  font-size: 0.9rem;
+}
+
+.btn-refresh {
+  background: transparent;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+}
+
+.btn-refresh:hover {
+  background: var(--primary);
+  color: var(--white);
+}
+
+/* === NOTIFICACIÓN FLOTANTE === */
+.notification {
   position: fixed;
   top: var(--space-xl);
   right: var(--space-xl);
@@ -1122,14 +1096,14 @@ export default {
   cursor: pointer;
   transform: translateX(100%);
   animation: slideIn 0.3s ease forwards;
-  max-width: 300px;
+  max-width: 350px;
 }
 
-.floating-message.success {
+.notification.success {
   border: 2px solid var(--success);
 }
 
-.floating-message.error {
+.notification.error {
   border: 2px solid var(--error);
 }
 
@@ -1139,12 +1113,12 @@ export default {
   }
 }
 
-.message-icon {
+.notification-icon {
   font-size: 1.5rem;
   flex-shrink: 0;
 }
 
-.message-text {
+.notification-text {
   color: var(--white);
   font-size: 0.9rem;
   line-height: 1.4;
@@ -1152,80 +1126,33 @@ export default {
 
 /* === RESPONSIVE === */
 @media (max-width: 1200px) {
-  .dashboard-grid {
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  .main-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-xl);
   }
   
-  .next-event-card {
-    grid-column: span 1;
-  }
-  
-  .event-preview {
+  .event-card-featured {
     flex-direction: column;
     text-align: center;
   }
   
   .event-image {
     width: 100%;
-    height: 120px;
+    height: 150px;
+  }
+  
+  .event-info {
+    flex-direction: column;
+    gap: var(--space-lg);
+    width: 100%;
   }
 }
 
 @media (max-width: 768px) {
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-    gap: var(--space-md);
-  }
-  
-  .dashboard-card {
-    padding: var(--space-lg);
-  }
-  
   .header-content {
     flex-direction: column;
     text-align: center;
     gap: var(--space-md);
-  }
-  
-  .user-stats {
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: var(--space-md);
-  }
-  
-  .title-hero {
-    font-size: 2rem;
-  }
-  
-  .floating-message {
-    top: var(--space-md);
-    right: var(--space-md);
-    left: var(--space-md);
-    max-width: none;
-  }
-  
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--space-sm);
-  }
-  
-  .league-quick-stats {
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--space-sm);
-  }
-  
-  .quick-stat {
-    padding: var(--space-sm);
-  }
-  
-  .quick-number {
-    font-size: 1.2rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .dashboard-card {
-    padding: var(--space-md);
   }
   
   .user-actions {
@@ -1239,20 +1166,84 @@ export default {
     justify-content: center;
   }
   
-  .stats-grid {
-    grid-template-columns: 1fr;
+  .section-card {
+    padding: var(--space-lg);
   }
   
-  .league-quick-stats {
-    grid-template-columns: 1fr;
+  .event-card-featured {
+    padding: var(--space-lg);
   }
   
-  .event-preview {
+  .league-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .input-group {
+    flex-direction: column;
+  }
+  
+  .btn-join-private {
+    width: 100%;
+  }
+  
+  .public-league-item {
+    flex-direction: column;
+    align-items: flex-start;
     gap: var(--space-md);
   }
   
-  .leagues-grid {
+  .btn-join-public {
+    width: 100%;
+  }
+  
+  .notification {
+    top: var(--space-md);
+    right: var(--space-md);
+    left: var(--space-md);
+    max-width: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 0 var(--space-md);
+  }
+  
+  .main-content {
+    padding: var(--space-lg) 0;
+  }
+  
+  .title-hero {
+    font-size: 1.8rem;
+  }
+  
+  .section-card {
+    padding: var(--space-md);
+  }
+  
+  .event-card-featured {
+    padding: var(--space-md);
+  }
+  
+  .league-item {
+    padding: var(--space-md);
+  }
+  
+  .league-stats {
     grid-template-columns: 1fr;
+  }
+  
+  .join-option {
+    padding: var(--space-md);
+  }
+  
+  .option-header {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .public-leagues-list {
+    max-height: 300px;
   }
 }
 </style>
