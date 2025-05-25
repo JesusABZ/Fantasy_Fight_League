@@ -101,7 +101,7 @@
               class="btn btn-back"
               @click="goBack"
             >
-              ← Volver a la Home
+              ← Volver
             </button>
           </div>
         </form>
@@ -132,6 +132,9 @@ export default {
     // Estado general
     const isSubmitting = ref(false)
     const generalError = ref('')
+    const showNotification = ref(false)
+    const notificationType = ref('success')
+    const notificationText = ref('')
 
     // Computed property para validar si el formulario está completo y válido
     const isFormValid = computed(() => {
@@ -207,8 +210,14 @@ export default {
         // Simular llamada al API
         await new Promise(resolve => setTimeout(resolve, 2000))
         
-        // Redirigir a la home después del envío exitoso
-        router.push('/')
+        // Mostrar mensaje de éxito
+        showFloatingNotification('success', '¡Mensaje enviado correctamente!')
+        
+        // Esperar un momento para que el usuario vea la notificación
+        setTimeout(() => {
+          // Usar navegación inteligente
+          goBack()
+        }, 1500)
         
       } catch (error) {
         generalError.value = error.message || 'Error al enviar el mensaje. Inténtalo de nuevo más tarde.'
@@ -217,9 +226,30 @@ export default {
       }
     }
 
-    // Función para volver a la home
+    // Función inteligente para volver a la página anterior
     const goBack = () => {
-      router.push('/')
+      if (window.history.length > 1) {
+        // Si hay historial, usar el router para ir atrás
+        router.go(-1)
+      } else {
+        // Si no hay historial (llegó directamente a la URL), ir a home
+        router.push('/')
+      }
+    }
+
+    // Función para mostrar notificaciones
+    const showFloatingNotification = (type, text) => {
+      notificationType.value = type
+      notificationText.value = text
+      showNotification.value = true
+      
+      setTimeout(() => {
+        hideNotification()
+      }, 3000)
+    }
+
+    const hideNotification = () => {
+      showNotification.value = false
     }
 
     return {
@@ -228,10 +258,14 @@ export default {
       isSubmitting,
       generalError,
       isFormValid,
+      showNotification,
+      notificationType,
+      notificationText,
       handleSubmit,
       validateField,
       clearFieldError,
-      goBack
+      goBack,
+      hideNotification
     }
   }
 }

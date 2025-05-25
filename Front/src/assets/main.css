@@ -51,6 +51,19 @@
     background-clip: text;
 }
 
+input::placeholder,
+textarea::placeholder {
+    color: var(--placeholder-color, #a5a5a5);
+    opacity: 1;
+}
+
+.text-secondary,
+.help-text,
+.input-help,
+.description {
+    color: var(--text-secondary, #b8b8b8);
+}
+
 /* === BOTONES === */
 .btn {
     display: inline-flex;

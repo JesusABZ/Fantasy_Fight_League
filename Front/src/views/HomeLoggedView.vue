@@ -320,8 +320,7 @@ export default {
     }
 
     const enterLeague = (league) => {
-      console.log('Entrando a liga:', league.name)
-      showFloatingNotification('success', `Abriendo liga: ${league.name}`)
+      router.push(`/league/${league.id}`)
     }
 
     const joinPrivateLeague = () => {

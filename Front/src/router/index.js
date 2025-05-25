@@ -70,6 +70,36 @@ const routes = [
       title: 'Mi Perfil - Fantasy Fight League'
     }
   },
+  // NUEVA RUTA PARA EDITAR PERFIL
+  {
+    path: '/profile/edit',
+    name: 'EditProfile',
+    component: () => import('../views/EditProfileView.vue'),
+    meta: {
+      title: 'Editar Perfil - Fantasy Fight League'
+    }
+  },
+  {
+  path: '/profile/change-email',
+  name: 'ChangeEmail',
+  component: () => import('../views/ChangeEmailView.vue'),
+  meta: {
+    title: 'Cambiar Email - Fantasy Fight League'
+  }
+  },
+  {
+  path: '/profile/change-password',
+  name: 'ChangePassword',
+  component: () => import('../views/ChangePasswordView.vue'),
+  meta: {
+    title: 'Cambiar Contraseña - Fantasy Fight League'
+  }
+  },
+  {
+  path: '/league/:id',
+  name: 'LeagueDetail',
+  component: () => import('../views/LeagueDetailView.vue')
+  },
   {
     path: '/about',
     name: 'About',

@@ -18,9 +18,15 @@
     --dark-light: #1a1a1a;
     --dark-medium: #2a2a2a;
     --gray: #404040;
-    --gray-light: #666666;
+    --gray-light: #b0b0b0;
     --white: #ffffff;
     --white-soft: #f8f9fa;
+
+    /* AGREGAR estas nuevas variables para mejor control */
+    --text-primary: #ffffff;
+    --text-secondary: #b8b8b8; /* Para textos secundarios */
+    --text-muted: #a0a0a0;     /* Para textos menos importantes */
+    --placeholder-color: #a5a5a5; /* Para placeholders */
     
     /* Colores de estado */
     --success: #10b981;
