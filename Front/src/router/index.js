@@ -101,6 +101,15 @@ const routes = [
   component: () => import('../views/LeagueDetailView.vue')
   },
   {
+    path: '/league/:id/picks/:eventId',
+    name: 'PicksSelection',
+    component: () => import('../views/PicksSelectionView.vue'),
+    meta: {
+      title: 'Seleccionar Picks - Fantasy Fight League',
+      requiresAuth: true // Opcional: si quieres que requiera autenticación
+    }
+  },
+  {
     path: '/about',
     name: 'About',
     component: () => import('../views/AboutView.vue')

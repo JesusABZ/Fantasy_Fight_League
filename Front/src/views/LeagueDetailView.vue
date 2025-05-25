@@ -21,7 +21,6 @@
                 {{ currentLeague.type === 'PUBLIC' ? '🌍 Pública' : '🔒 Privada' }}
               </span>
               <span class="member-count">👥 {{ currentLeague.memberCount }} miembros</span>
-              <span class="your-position">📊 Tu posición: #{{ currentLeague.userPosition }}</span>
             </div>
           </div>
           
@@ -38,29 +37,43 @@
     <div class="tabs-navigation">
       <div class="container">
         <div class="tabs">
-          <button 
-            class="tab-button" 
-            :class="{ 'active': activeTab === 'global' }"
-            @click="activeTab = 'global'"
-          >
-            🏆 Clasificación Global
-          </button>
-          <button 
-            class="tab-button" 
-            :class="{ 'active': activeTab === 'current' }"
-            @click="activeTab = 'current'"
-            v-if="currentEvent"
-          >
-            ⚡ Evento Actual
-          </button>
-          <button 
-            class="tab-button" 
-            :class="{ 'active': activeTab === 'previous' }"
-            @click="activeTab = 'previous'"
-            v-if="previousEvent"
-          >
-            📈 Evento Anterior
-          </button>
+          <!-- Para ligas privadas: Global, Evento Actual y Evento Anterior -->
+          <template v-if="currentLeague.type === 'PRIVATE'">
+            <button 
+              class="tab-button" 
+              :class="{ 'active': activeTab === 'global' }"
+              @click="activeTab = 'global'"
+            >
+              🏆 Clasificación Global
+            </button>
+            <button 
+              class="tab-button" 
+              :class="{ 'active': activeTab === 'current' }"
+              @click="activeTab = 'current'"
+              v-if="currentEvent"
+            >
+              ⚡ Evento Actual
+            </button>
+            <button 
+              class="tab-button" 
+              :class="{ 'active': activeTab === 'previous' }"
+              @click="activeTab = 'previous'"
+              v-if="previousEvent"
+            >
+              📈 Evento Anterior
+            </button>
+          </template>
+          
+          <!-- Para ligas públicas: Solo Evento Actual -->
+          <template v-else>
+            <button 
+              class="tab-button active"
+              @click="activeTab = 'current'"
+              v-if="currentEvent"
+            >
+              ⚡ {{ currentEvent.name }}
+            </button>
+          </template>
         </div>
       </div>
     </div>
@@ -69,8 +82,8 @@
     <div class="main-content">
       <div class="container">
         
-        <!-- Pestaña: Clasificación Global -->
-        <div v-if="activeTab === 'global'" class="tab-content">
+        <!-- Pestaña: Clasificación Global (Solo para ligas privadas) -->
+        <div v-if="activeTab === 'global' && currentLeague.type === 'PRIVATE'" class="tab-content">
           <div class="content-header">
             <h2 class="content-title">🏆 Clasificación Global de la Liga</h2>
             <p class="content-subtitle">Puntuación acumulada de todos los eventos</p>
@@ -105,7 +118,7 @@
                 
                 <div class="member-stats">
                   <div class="total-points">{{ member.totalPoints }} pts</div>
-                  <div class="average-points">{{ member.averagePoints }} promedio</div>
+                  <div class="last-event-points">Último: {{ member.lastEventPoints }} pts</div>
                 </div>
               </div>
             </div>
@@ -119,6 +132,21 @@
             <p class="content-subtitle">{{ formatDate(currentEvent.date) }} • {{ currentEvent.location }}</p>
             <div class="event-status">
               <span class="status-badge current">🔴 En Curso</span>
+            </div>
+          </div>
+
+          <!-- Botón para elegir picks (Solo si el usuario no tiene picks o puede modificarlos) -->
+          <div v-if="canMakePicks" class="picks-action-section">
+            <div class="picks-call-to-action">
+              <div class="cta-content">
+                <h3 class="cta-title">🎯 ¡Elige tu Lineup!</h3>
+                <p class="cta-description">
+                  {{ currentUserPicks.length > 0 ? 'Modifica tu lineup antes de que comience el evento' : 'Selecciona hasta 3 luchadores para este evento' }}
+                </p>
+              </div>
+              <button class="btn btn-picks" @click="goToPicksSelection">
+                {{ currentUserPicks.length > 0 ? '✏️ Modificar Picks' : '⚔️ Elegir Luchadores' }}
+              </button>
             </div>
           </div>
 
@@ -184,8 +212,8 @@
           </div>
         </div>
 
-        <!-- Pestaña: Evento Anterior -->
-        <div v-if="activeTab === 'previous' && previousEvent" class="tab-content">
+        <!-- Pestaña: Evento Anterior (Solo para ligas privadas) -->
+        <div v-if="activeTab === 'previous' && previousEvent && currentLeague.type === 'PRIVATE'" class="tab-content">
           <div class="content-header">
             <h2 class="content-title">📈 {{ previousEvent.name }}</h2>
             <p class="content-subtitle">{{ formatDate(previousEvent.date) }} • {{ previousEvent.location }}</p>
@@ -387,7 +415,7 @@ export default {
     const route = useRoute()
     
     // Estados principales
-    const activeTab = ref('global')
+    const activeTab = ref('global') // Para privadas inicia en global, para públicas será 'current'
     const selectedFighter = ref(null)
     const showLeagueInfo = ref(false)
     const showNotificationModal = ref(false)
@@ -397,7 +425,7 @@ export default {
     const currentLeague = reactive({
       id: 1,
       name: 'Liga Oficina',
-      type: 'PRIVATE',
+      type: 'PRIVATE', // Cambiar a 'PUBLIC' para probar ligas públicas
       memberCount: 12,
       userPosition: 1,
       description: 'Liga entre compañeros de trabajo',
@@ -424,60 +452,20 @@ export default {
       status: 'COMPLETED'
     })
 
-    // Clasificación global (simulada)
+    // Clasificación global (simulada) - Con últimos puntos del evento
     const globalLeaderboard = ref([
-      { id: 1, username: 'usuario_prueba2', totalPoints: 2890, averagePoints: 289, eventsParticipated: 10, isCurrentUser: true },
-      { id: 2, username: 'fighter_pro', totalPoints: 2750, averagePoints: 275, eventsParticipated: 10, isCurrentUser: false },
-      { id: 3, username: 'mma_expert', totalPoints: 2680, averagePoints: 268, eventsParticipated: 10, isCurrentUser: false },
-      { id: 4, username: 'cage_warrior', totalPoints: 2550, averagePoints: 255, eventsParticipated: 10, isCurrentUser: false },
-      { id: 5, username: 'octagon_king', totalPoints: 2480, averagePoints: 248, eventsParticipated: 10, isCurrentUser: false }
-    ])
-
-    // Clasificación evento actual (simulada)
-    const currentEventLeaderboard = ref([
-      { id: 1, username: 'fighter_pro', eventPoints: 285, fightersSelected: 3, isCurrentUser: false },
-      { id: 2, username: 'usuario_prueba2', eventPoints: 265, fightersSelected: 3, isCurrentUser: true },
-      { id: 3, username: 'mma_expert', eventPoints: 240, fightersSelected: 2, isCurrentUser: false },
-      { id: 4, username: 'cage_warrior', eventPoints: 220, fightersSelected: 3, isCurrentUser: false }
-    ])
-
+      { id: 1, username: 'usuario_prueba2', totalPoints: 2890, lastEventPoints: 285, eventsParticipated: 10, isCurrentUser: true },
+      { id: 2, username: 'fighter_pro', totalPoints: 2750, lastEventPoints: 320, eventsParticipated: 10, isCurrentUser: false },
+      { id: 3, username: 'mma_expert', totalPoints: 2680, lastEventPoints: 240, eventsParticipated: 10, isCurrentUser: false },
+      { id: 4, username: 'cage_warrior', totalPoints: 2550, lastEventPoints: 190, eventsParticipated: 10, isCurrentUser: false },
+      { id: 5, username: 'octagon_king', totalPoints: 2480, lastEventPoints: 260, eventsParticipated: 10, isCurrentUser: false }
+      ])
     // Clasificación evento anterior (simulada)
     const previousEventLeaderboard = ref([
       { id: 1, username: 'usuario_prueba2', finalPoints: 320, fightersSelected: 3, isCurrentUser: true },
       { id: 2, username: 'mma_expert', finalPoints: 295, fightersSelected: 3, isCurrentUser: false },
       { id: 3, username: 'fighter_pro', finalPoints: 285, fightersSelected: 2, isCurrentUser: false },
       { id: 4, username: 'cage_warrior', finalPoints: 260, fightersSelected: 3, isCurrentUser: false }
-    ])
-
-    // Picks del usuario para evento actual (simulados)
-    const currentUserPicks = ref([
-      { 
-        id: 1, 
-        name: 'Jon Jones', 
-        record: '27-1', 
-        cost: 75000, 
-        points: 120, 
-        weightClass: 'Heavyweight',
-        imageUrl: 'https://dynl.mktgcdn.com/p/xnYGAGWMpbap_gSsJDIFPvBDPsTv5j_W3V0gCeAFyIQ/200x1.png'
-      },
-      { 
-        id: 2, 
-        name: 'Ilia Topuria', 
-        record: '14-0', 
-        cost: 65000, 
-        points: 95, 
-        weightClass: 'Featherweight',
-        imageUrl: 'https://dynl.mktgcdn.com/p/jMTyWWXdzwWDaswQzek-X6JLObRd1otuQaU4KQZElfw/200x1.png'
-      },
-      { 
-        id: 3, 
-        name: 'Ciryl Gane', 
-        record: '11-2', 
-        cost: 45000, 
-        points: 50, 
-        weightClass: 'Heavyweight',
-        imageUrl: 'https://dynl.mktgcdn.com/p/HREUg-pySQqB86Xxda5JUqmFInPekYteFBioxw1yUJw/200x1.png'
-      }
     ])
 
     // Picks del usuario para evento anterior (simulados)
@@ -523,6 +511,59 @@ export default {
       }
     ])
 
+    // Clasificación evento actual (simulada)
+    const currentEventLeaderboard = ref([
+      { id: 1, username: 'fighter_pro', eventPoints: 285, fightersSelected: 3, isCurrentUser: false },
+      { id: 2, username: 'usuario_prueba2', eventPoints: 265, fightersSelected: 3, isCurrentUser: true },
+      { id: 3, username: 'mma_expert', eventPoints: 240, fightersSelected: 2, isCurrentUser: false },
+      { id: 4, username: 'cage_warrior', eventPoints: 220, fightersSelected: 3, isCurrentUser: false }
+    ])
+
+    // Picks del usuario para evento actual (simulados)
+    const currentUserPicks = ref([
+      { 
+        id: 1, 
+        name: 'Jon Jones', 
+        record: '27-1', 
+        cost: 75000, 
+        points: 120, 
+        weightClass: 'Heavyweight',
+        imageUrl: 'https://dynl.mktgcdn.com/p/xnYGAGWMpbap_gSsJDIFPvBDPsTv5j_W3V0gCeAFyIQ/200x1.png'
+      },
+      { 
+        id: 2, 
+        name: 'Ilia Topuria', 
+        record: '14-0', 
+        cost: 65000, 
+        points: 95, 
+        weightClass: 'Featherweight',
+        imageUrl: 'https://dynl.mktgcdn.com/p/jMTyWWXdzwWDaswQzek-X6JLObRd1otuQaU4KQZElfw/200x1.png'
+      },
+      { 
+        id: 3, 
+        name: 'Ciryl Gane', 
+        record: '11-2', 
+        cost: 45000, 
+        points: 50, 
+        weightClass: 'Heavyweight',
+        imageUrl: 'https://dynl.mktgcdn.com/p/HREUg-pySQqB86Xxda5JUqmFInPekYteFBioxw1yUJw/200x1.png'
+      }
+    ])
+
+    // Computed properties
+    const canMakePicks = computed(() => {
+      // Lógica para determinar si se pueden hacer picks
+      // Por ejemplo: evento no ha comenzado, dentro del tiempo límite, etc.
+      return currentEvent.status === 'IN_PROGRESS' || currentEvent.status === 'UPCOMING'
+    })
+
+    // Inicializar tab activo basado en el tipo de liga
+    onMounted(() => {
+      if (currentLeague.type === 'PUBLIC') {
+        activeTab.value = 'current'
+      }
+    })
+
     // Funciones
     const formatDate = (dateString) => {
       const date = new Date(dateString)
@@ -556,6 +597,11 @@ export default {
 
     const goBackToDashboard = () => {
       router.push('/dashboard')
+    }
+
+    const goToPicksSelection = () => {
+  // Navegar a la pantalla de selección de picks
+      router.push(`/league/${currentLeague.id}/picks/${currentEvent.id}`)
     }
 
     const displayNotification = (message) => {
@@ -593,12 +639,14 @@ export default {
       previousEventLeaderboard,
       currentUserPicks,
       previousUserPicks,
+      canMakePicks,
       formatDate,
       getPositionClass,
       getFighterInitials,
       showFighterDetails,
       showUserEventDetails,
       goBackToDashboard,
+      goToPicksSelection,
       hideNotification
     }
   }
@@ -699,8 +747,7 @@ export default {
 }
 
 .league-type,
-.member-count,
-.your-position {
+.member-count {
   background: rgba(255, 255, 255, 0.1);
   padding: var(--space-xs) var(--space-md);
   border-radius: var(--radius-full);
@@ -717,11 +764,6 @@ export default {
 .league-type.private {
   border: 1px solid var(--warning);
   color: var(--warning);
-}
-
-.your-position {
-  border: 1px solid var(--success);
-  color: var(--success);
 }
 
 /* === BOTONES === */
@@ -762,6 +804,24 @@ export default {
 .btn-info:hover {
   background: var(--info);
   color: var(--white);
+}
+
+.btn-picks {
+  background: var(--gradient-primary);
+  color: var(--white);
+  padding: var(--space-lg) var(--space-xl);
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  min-height: 50px;
+}
+
+.btn-picks:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
 }
 
 /* === NAVEGACIÓN POR PESTAÑAS === */
@@ -863,6 +923,42 @@ export default {
   background: rgba(16, 185, 129, 0.2);
   border: 1px solid var(--success);
   color: var(--success);
+}
+
+/* === SECCIÓN DE PICKS === */
+.picks-action-section {
+  background: var(--gradient-card);
+  backdrop-filter: blur(15px);
+  border: 2px solid rgba(255, 107, 53, 0.3);
+  border-radius: var(--radius-xl);
+  padding: var(--space-xl);
+  margin-bottom: var(--space-2xl);
+  box-shadow: var(--shadow-lg);
+}
+
+.picks-call-to-action {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.cta-content {
+  flex: 1;
+}
+
+.cta-title {
+  font-family: var(--font-impact);
+  font-size: 1.5rem;
+  color: var(--white);
+  margin-bottom: var(--space-sm);
+  text-transform: uppercase;
+}
+
+.cta-description {
+  color: var(--gray-light);
+  font-size: 1rem;
+  line-height: 1.5;
 }
 
 /* === CLASIFICACIONES === */
@@ -998,7 +1094,7 @@ export default {
   margin-bottom: var(--space-xs);
 }
 
-.average-points {
+.last-event-points {
   color: var(--gray-light);
   font-size: 0.9rem;
 }
@@ -1047,10 +1143,6 @@ export default {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 107, 53, 0.3);
   transform: translateY(-2px);
-}
-
-.fighter-pick.completed {
-  border-color: var(--success);
 }
 
 .fighter-avatar {
@@ -1107,13 +1199,17 @@ export default {
   color: var(--primary);
 }
 
-.points.final {
-  color: var(--success);
-}
-
 .cost {
   color: var(--gray-light);
   font-size: 0.9rem;
+}
+
+.fighter-pick.completed {
+  border-color: var(--success);
+}
+
+.points.final {
+  color: var(--success);
 }
 
 .result {
@@ -1396,6 +1492,12 @@ export default {
   .info-grid {
     grid-template-columns: 1fr;
   }
+
+  .picks-call-to-action {
+    flex-direction: column;
+    text-align: center;
+    gap: var(--space-lg);
+  }
 }
 
 @media (max-width: 768px) {
@@ -1461,7 +1563,8 @@ export default {
 
   .your-picks-section,
   .event-leaderboard-section,
-  .leaderboard-container {
+  .leaderboard-container,
+  .picks-action-section {
     padding: var(--space-lg);
   }
 
