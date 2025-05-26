@@ -1,0 +1,178 @@
+/* =================================
+   SISTEMA DE FONDOS OPTIMIZADO
+   Fantasy Fight League
+   ================================= */
+
+/* === FONDO BASE ESTÁTICO === */
+.background-static {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+  overflow: hidden;
+}
+
+.background-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+/* === OVERLAYS DE FONDO === */
+.background-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  backdrop-filter: blur(1px);
+}
+
+/* === VARIANTES DE IMAGEN === */
+.background-image--default {
+  background-image: url('/images/carrusel3.jpg');
+}
+
+.background-image--auth {
+  background-image: url('/images/carrusel3.jpg');
+  filter: brightness(0.3) contrast(0.8) grayscale(0.2);
+}
+
+.background-image--profile {
+  background-image: url('/images/carrusel3.jpg');
+  filter: brightness(0.2) contrast(0.8) grayscale(0.3);
+}
+
+.background-image--league {
+  background-image: url('/images/carrusel3.jpg');
+  filter: brightness(0.2) contrast(0.8) grayscale(0.3);
+}
+
+/* === VARIANTES DE OVERLAY === */
+.background-overlay--default {
+  background: linear-gradient(
+    135deg,
+    rgba(10, 10, 10, 0.95) 0%,
+    rgba(26, 26, 26, 0.85) 30%,
+    rgba(42, 42, 42, 0.75) 50%,
+    rgba(26, 26, 26, 0.85) 70%,
+    rgba(10, 10, 10, 0.95) 100%
+  );
+}
+
+.background-overlay--auth {
+  background: linear-gradient(
+    135deg,
+    rgba(10, 10, 10, 0.95) 0%,
+    rgba(26, 26, 26, 0.85) 30%,
+    rgba(42, 42, 42, 0.75) 50%,
+    rgba(26, 26, 26, 0.85) 70%,
+    rgba(10, 10, 10, 0.95) 100%
+  );
+}
+
+.background-overlay--profile {
+  background: linear-gradient(
+    135deg,
+    rgba(10, 10, 10, 0.95) 0%,
+    rgba(26, 26, 26, 0.85) 30%,
+    rgba(42, 42, 42, 0.75) 50%,
+    rgba(26, 26, 26, 0.85) 70%,
+    rgba(10, 10, 10, 0.95) 100%
+  );
+}
+
+.background-overlay--league {
+  background: linear-gradient(
+    135deg,
+    rgba(10, 10, 10, 0.95) 0%,
+    rgba(26, 26, 26, 0.85) 30%,
+    rgba(42, 42, 42, 0.75) 50%,
+    rgba(26, 26, 26, 0.85) 70%,
+    rgba(10, 10, 10, 0.95) 100%
+  );
+}
+
+.background-overlay--dashboard {
+  background: linear-gradient(
+    135deg,
+    rgba(10, 10, 10, 0.95) 0%,
+    rgba(26, 26, 26, 0.85) 30%,
+    rgba(42, 42, 42, 0.75) 50%,
+    rgba(26, 26, 26, 0.85) 70%,
+    rgba(10, 10, 10, 0.95) 100%
+  );
+}
+
+/* === FONDOS ESPECIALES === */
+.background-overlay--radial {
+  background: 
+    radial-gradient(ellipse at center, transparent 20%, rgba(10, 10, 10, 0.3) 70%),
+    linear-gradient(to bottom, rgba(10, 10, 10, 0.6) 0%, transparent 20%, transparent 80%, rgba(10, 10, 10, 0.6) 100%);
+}
+
+.background-overlay--enhanced {
+  background: linear-gradient(
+    135deg,
+    rgba(10, 10, 10, 0.95) 0%,
+    rgba(26, 26, 26, 0.85) 30%,
+    rgba(42, 42, 42, 0.75) 50%,
+    rgba(26, 26, 26, 0.85) 70%,
+    rgba(10, 10, 10, 0.95) 100%
+  );
+}
+
+.background-overlay--enhanced::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: 
+    radial-gradient(ellipse at center, transparent 20%, rgba(10, 10, 10, 0.3) 70%),
+    linear-gradient(to bottom, rgba(10, 10, 10, 0.6) 0%, transparent 20%, transparent 80%, rgba(10, 10, 10, 0.6) 100%);
+  z-index: 1;
+}
+
+/* === CLASES UTILITARIAS === */
+.background-scrollable .background-static {
+  position: absolute;
+}
+
+.background-blur-light .background-overlay {
+  backdrop-filter: blur(2px);
+}
+
+.background-blur-heavy .background-overlay {
+  backdrop-filter: blur(5px);
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+  .background-image {
+    background-attachment: scroll;
+  }
+}
+
+/* === ANIMACIONES === */
+@keyframes backgroundFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.background-fade-in {
+  animation: backgroundFadeIn 0.5s ease-in-out;
+}

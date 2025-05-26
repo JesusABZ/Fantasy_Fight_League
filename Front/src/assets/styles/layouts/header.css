@@ -1,0 +1,379 @@
+/* =================================
+   SISTEMA DE HEADERS OPTIMIZADO
+   Fantasy Fight League
+   ================================= */
+
+/* === HEADER BASE === */
+.app-header {
+  position: relative;
+  z-index: 10;
+  border-bottom: 1px solid rgba(255, 107, 53, 0.2);
+}
+
+.header-container {
+  max-width: var(--breakpoint-2xl);
+  margin: 0 auto;
+  padding: 0 var(--space-lg);
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-lg);
+  min-height: 80px;
+}
+
+/* === VARIANTES DE HEADER === */
+
+/* Header público (Home, Auth) */
+.app-header--public {
+  padding: var(--space-2xl) 0;
+  background: transparent;
+}
+
+.app-header--public .header-content {
+  flex-direction: column;
+  text-align: center;
+  gap: var(--space-xl);
+  min-height: auto;
+}
+
+/* Header de aplicación (Dashboard, Profile) */
+.app-header--app {
+  padding: var(--space-lg) 0;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+/* Header de página (Profile edit, Support) */
+.app-header--page {
+  padding: var(--space-lg) 0;
+  background: transparent;
+}
+
+/* Header de liga (League detail, Picks) */
+.app-header--league {
+  padding: var(--space-lg) 0;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+/* === SECCIONES DEL HEADER === */
+
+/* Navegación izquierda */
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  min-width: 120px;
+}
+
+.header-nav--centered {
+  min-width: auto;
+  justify-content: center;
+}
+
+/* Contenido central */
+.header-main {
+  flex: 1;
+  text-align: center;
+}
+
+.header-main--left {
+  text-align: left;
+}
+
+.header-main--right {
+  text-align: right;
+}
+
+/* Acciones derecha */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  min-width: 120px;
+  justify-content: flex-end;
+}
+
+.header-actions--centered {
+  min-width: auto;
+  justify-content: center;
+}
+
+/* === TÍTULOS === */
+.header-title {
+  font-family: var(--font-impact);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-bottom: var(--space-xs);
+}
+
+/* Variantes de títulos */
+.header-title--hero {
+  font-size: clamp(3rem, 6vw, 5rem);
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.9);
+  margin-bottom: var(--space-lg);
+}
+
+.header-title--large {
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.header-title--medium {
+  font-size: clamp(1.5rem, 2.5vw, 2.2rem);
+  color: var(--white);
+}
+
+.header-title--small {
+  font-size: 1.5rem;
+  color: var(--white);
+}
+
+/* Subtítulos */
+.header-subtitle {
+  color: var(--gray-light);
+  font-size: 1.1rem;
+  line-height: 1.5;
+  margin-bottom: var(--space-sm);
+}
+
+.header-subtitle--large {
+  font-size: 1.2rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* === METADATA Y BADGES === */
+.header-meta {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-lg);
+  flex-wrap: wrap;
+  margin-top: var(--space-md);
+}
+
+.header-meta--left {
+  justify-content: flex-start;
+}
+
+.header-meta--right {
+  justify-content: flex-end;
+}
+
+.header-badge {
+  background: rgba(255, 255, 255, 0.1);
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-full);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--white);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.header-badge--primary {
+  background: rgba(255, 107, 53, 0.2);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.header-badge--success {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.header-badge--warning {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+.header-badge--info {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: var(--info);
+  color: var(--info);
+}
+
+/* === INFORMACIÓN DE USUARIO === */
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.header-user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--gradient-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(255, 107, 53, 0.3);
+  flex-shrink: 0;
+}
+
+.header-user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.header-user-initials {
+  font-family: var(--font-impact);
+  font-size: 0.9rem;
+  color: var(--white);
+  font-weight: bold;
+}
+
+.header-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.header-username {
+  color: var(--white);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.header-user-subtitle {
+  color: var(--gray-light);
+  font-size: 0.8rem;
+}
+
+/* === BOTONES EN HEADER === */
+.header-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-sm) var(--space-md);
+  border: none;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-primary);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  text-decoration: none;
+  gap: var(--space-xs);
+  white-space: nowrap;
+}
+
+.header-btn--back {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--gray-light);
+}
+
+.header-btn--back:hover {
+  color: var(--white);
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.header-btn--primary {
+  background: var(--gradient-primary);
+  color: var(--white);
+  box-shadow: var(--shadow-md);
+}
+
+.header-btn--primary:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
+}
+
+.header-btn--secondary {
+  background: transparent;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+}
+
+.header-btn--secondary:hover {
+  background: var(--primary);
+  color: var(--white);
+}
+
+.header-btn--danger {
+  background: transparent;
+  color: var(--error);
+  border: 1px solid var(--error);
+}
+
+.header-btn--danger:hover {
+  background: var(--error);
+  color: var(--white);
+}
+
+.header-btn--info {
+  background: transparent;
+  color: var(--info);
+  border: 1px solid var(--info);
+}
+
+.header-btn--info:hover {
+  background: var(--info);
+  color: var(--white);
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+  .header-container {
+    padding: 0 var(--space-md);
+  }
+  
+  .header-content {
+    flex-direction: column;
+    gap: var(--space-md);
+    text-align: center;
+  }
+  
+  .header-nav,
+  .header-actions {
+    min-width: auto;
+  }
+  
+  .header-actions {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .header-meta {
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  
+  .app-header--public .header-content {
+    gap: var(--space-lg);
+  }
+  
+  .header-user {
+    order: -1;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-header--public {
+    padding: var(--space-lg) 0;
+  }
+  
+  .header-actions {
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  
+  .header-btn {
+    min-width: 120px;
+  }
+}
