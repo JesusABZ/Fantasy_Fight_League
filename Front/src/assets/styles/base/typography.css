@@ -1,0 +1,306 @@
+/* =================================
+   SISTEMA DE TIPOGRAFÍA
+   Fantasy Fight League
+   ================================= */
+
+/* === CLASES DE TÍTULOS === */
+.title-hero {
+  font-family: var(--font-impact);
+  font-size: clamp(3rem, 6vw, 5rem);
+  font-weight: 400;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-align: center;
+  margin-bottom: var(--space-2xl);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.9);
+}
+
+.title-section {
+  font-family: var(--font-impact);
+  font-size: clamp(2.2rem, 4vw, 3rem);
+  font-weight: 400;
+  color: var(--white);
+  margin-bottom: var(--space-xl);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.9);
+}
+
+.title-page {
+  font-family: var(--font-impact);
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  font-weight: 400;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-bottom: var(--space-lg);
+}
+
+.title-card {
+  font-family: var(--font-impact);
+  font-size: 1.8rem;
+  font-weight: 400;
+  color: var(--white);
+  margin-bottom: var(--space-md);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.title-modal {
+  font-family: var(--font-impact);
+  font-size: 1.5rem;
+  color: var(--white);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin: 0;
+}
+
+/* === CLASES DE TEXTO === */
+.text-hero {
+  font-size: 1.2rem;
+  color: var(--gray-light);
+  line-height: 1.6;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.text-subtitle {
+  font-size: 1.1rem;
+  color: var(--gray-light);
+  line-height: 1.5;
+}
+
+.text-body {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.text-small {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.text-xs {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+/* === CLASES DE PESO === */
+.font-light { font-weight: 300; }
+.font-normal { font-weight: 400; }
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 700; }
+.font-extrabold { font-weight: 800; }
+
+/* === CLASES DE FAMILIA === */
+.font-primary { font-family: var(--font-primary); }
+.font-display { font-family: var(--font-display); }
+.font-impact { font-family: var(--font-impact); }
+
+/* === CLASES DE TRANSFORMACIÓN === */
+.text-uppercase { text-transform: uppercase; }
+.text-lowercase { text-transform: lowercase; }
+.text-capitalize { text-transform: capitalize; }
+.text-normal-case { text-transform: none; }
+
+/* === CLASES DE ESPACIADO === */
+.letter-tight { letter-spacing: -0.025em; }
+.letter-normal { letter-spacing: 0; }
+.letter-wide { letter-spacing: 0.025em; }
+.letter-wider { letter-spacing: 0.05em; }
+.letter-widest { letter-spacing: 0.1em; }
+
+/* === CLASES DE LÍNEA === */
+.leading-none { line-height: 1; }
+.leading-tight { line-height: 1.25; }
+.leading-snug { line-height: 1.375; }
+.leading-normal { line-height: 1.5; }
+.leading-relaxed { line-height: 1.625; }
+.leading-loose { line-height: 2; }
+
+/* === CLASES DE COLOR === */
+.text-primary { color: var(--primary); }
+.text-secondary { color: var(--text-secondary); }
+.text-muted { color: var(--text-muted); }
+.text-white { color: var(--white); }
+.text-success { color: var(--success); }
+.text-warning { color: var(--warning); }
+.text-error { color: var(--error); }
+.text-info { color: var(--info); }
+
+/* === TEXTO CON GRADIENTE === */
+.text-gradient {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* === CLASES DE USUARIO === */
+.username-display {
+  font-family: var(--font-impact);
+  font-size: 1.9rem;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  text-shadow: 
+    1px 1px 0 rgba(0, 0, 0, 1),
+    2px 2px 4px rgba(0, 0, 0, 0.8),
+    0 0 8px rgba(255, 107, 53, 0.3);
+}
+
+.username-large {
+  font-family: var(--font-impact);
+  font-size: 3.5rem;
+  color: var(--white);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
+  line-height: 1;
+}
+
+.username-medium {
+  font-family: var(--font-impact);
+  font-size: 1.2rem;
+  color: var(--white);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.username-small {
+  font-family: var(--font-impact);
+  font-size: 1rem;
+  color: var(--white);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* === CLASES DE PUNTOS/ESTADÍSTICAS === */
+.points-display {
+  font-family: var(--font-impact);
+  font-size: 1.5rem;
+  color: var(--primary);
+  font-weight: bold;
+}
+
+.points-large {
+  font-family: var(--font-impact);
+  font-size: 2rem;
+  color: var(--primary);
+  font-weight: bold;
+}
+
+.stat-value {
+  font-family: var(--font-impact);
+  font-size: 1.3rem;
+  color: var(--white);
+  font-weight: bold;
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: var(--gray-light);
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+/* === CLASES DE COSTO/DINERO === */
+.cost-display {
+  font-family: var(--font-impact);
+  font-size: 1.4rem;
+  color: var(--primary);
+  font-weight: bold;
+}
+
+.budget-value {
+  font-family: var(--font-impact);
+  font-size: 1.3rem;
+  font-weight: 400;
+}
+
+/* === CLASES DE ESTADO === */
+.status-text {
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* === CLASES DE AYUDA === */
+.help-text {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.error-text {
+  font-size: 0.8rem;
+  color: var(--error);
+  font-weight: 500;
+}
+
+/* === CLASES DE ENLACE === */
+.link-text {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.link-text:hover {
+  color: var(--primary-light);
+  text-decoration: underline;
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+  .username-large {
+    font-size: 2.8rem;
+  }
+  
+  .title-hero {
+    font-size: 3rem;
+  }
+  
+  .title-section {
+    font-size: 2.2rem;
+  }
+  
+  .title-page {
+    font-size: 2rem;
+  }
+  
+  .title-card {
+    font-size: 1.6rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .username-large {
+    font-size: 2.2rem;
+  }
+  
+  .title-hero {
+    font-size: 2.5rem;
+  }
+  
+  .title-section {
+    font-size: 2rem;
+  }
+  
+  .title-page {
+    font-size: 1.8rem;
+  }
+}
