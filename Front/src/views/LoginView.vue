@@ -1,229 +1,144 @@
 <template>
-  <FormContainer
-    title="Iniciar Sesión"
-    subtitle="¡Bienvenido de vuelta, fighter!"
-    size="large"
-    back-button-text="Volver a la Home"
-    back-route="/"
-  >
-    <!-- Formulario -->
-    <form @submit.prevent="handleSubmit" class="login-form">
-      
-      <!-- Campo de usuario -->
-      <BaseInput
-        v-model="formData.username"
-        label="Usuario"
-        placeholder="Ingresa tu usuario"
-        :error="errors.username"
-        size="large"
-        required
-        @blur="validateField('username')"
-        @input="clearFieldError('username')"
-      />
-
-      <!-- Campo de contraseña -->
-      <BaseInput
-        v-model="formData.password"
-        type="password"
-        label="Contraseña"
-        placeholder="Ingresa tu contraseña"
-        :error="errors.password"
-        size="large"
-        required
-        @blur="validateField('password')"
-        @input="clearFieldError('password')"
-      />
-
-      <!-- Link olvidaste contraseña -->
-      <div class="forgot-password-container">
-        <router-link to="/forgot-password" class="link forgot-password">
-          ¿Olvidaste tu contraseña?
-        </router-link>
-      </div>
-
-      <!-- Mensaje de error general -->
-      <div v-if="generalError" class="error-banner-large">
-        {{ generalError }}
-      </div>
-
-      <!-- Mensaje de éxito -->
-      <div v-if="successMessage" class="success-banner-large">
-        {{ successMessage }}
-      </div>
-
-      <!-- Botón de envío -->
-      <div class="form-actions-large">
-        <BaseButton
-          type="submit"
-          variant="primary"
+  <AuthLayout container-size="medium">
+    <FormContainer
+      title="Iniciar Sesión"
+      subtitle="¡Bienvenido de vuelta, fighter!"
+      icon="🔐"
+      size="large"
+      :show-back-button="false"
+    >
+      <!-- Formulario -->
+      <form @submit.prevent="handleSubmit" class="login-form">
+        
+        <!-- Campo de usuario -->
+        <BaseInput
+          v-model="formData.username"
+          label="Usuario"
+          placeholder="Ingresa tu usuario"
+          validation-schema="username"
+          :error="errors.username"
           size="large"
-          :loading="isSubmitting"
-          :disabled="!isFormValid"
-          full-width
-        >
-          {{ isSubmitting ? 'Iniciando sesión...' : 'Iniciar Sesión' }}
-        </BaseButton>
-      </div>
+          show-validation-icon
+          required
+          @blur="validateField('username')"
+          @input="clearFieldError('username')"
+        />
 
-    </form>
+        <!-- Campo de contraseña -->
+        <BaseInput
+          v-model="formData.password"
+          type="password"
+          label="Contraseña"
+          placeholder="Ingresa tu contraseña"
+          validation-schema="required"
+          :error="errors.password"
+          size="large"
+          show-validation-icon
+          required
+          @blur="validateField('password')"
+          @input="clearFieldError('password')"
+        />
 
-    <!-- Footer con link de registro -->
-    <template #footer>
-      <p class="register-link">
-        ¿No tienes cuenta? 
-        <BaseButton
-          tag="router-link"
-          to="/register"
-          variant="secondary"
-          size="small"
-        >
-          Regístrate aquí
-        </BaseButton>
-      </p>
-    </template>
-  </FormContainer>
+        <!-- Link olvidaste contraseña -->
+        <div class="forgot-password-container">
+          <router-link to="/forgot-password" class="link forgot-password">
+            ¿Olvidaste tu contraseña?
+          </router-link>
+        </div>
 
-  <!-- Notificación -->
-  <BaseNotification
-    :show="showNotification"
-    :type="notificationType"
-    :message="notificationMessage"
-    @close="hideNotification"
-  />
+        <!-- Mensaje de error general -->
+        <div v-if="generalError" class="error-banner-large">
+          {{ generalError }}
+        </div>
+
+        <!-- Botón de envío -->
+        <div class="form-actions-large">
+          <BaseButton
+            type="submit"
+            variant="primary"
+            size="large"
+            :loading="isSubmitting"
+            :disabled="!canSubmit"
+            full-width
+          >
+            {{ isSubmitting ? 'Iniciando sesión...' : 'Iniciar Sesión' }}
+          </BaseButton>
+        </div>
+
+      </form>
+
+      <!-- Footer con link de registro -->
+      <template #footer>
+        <p class="register-link">
+          ¿No tienes cuenta? 
+          <BaseButton
+            tag="router-link"
+            to="/register"
+            variant="secondary"
+            size="small"
+          >
+            Regístrate aquí
+          </BaseButton>
+        </p>
+      </template>
+    </FormContainer>
+  </AuthLayout>
 </template>
 
 <script>
-import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useForm } from '@/composables/useForm'
+import { useAuth } from '@/composables/useAuth'
 
 export default {
   name: 'LoginView',
   setup() {
     const router = useRouter()
-
-    // Estado del formulario
-    const formData = reactive({
-      username: '',
-      password: ''
-    })
-
-    // Estado de errores
-    const errors = reactive({})
+    const { handleLogin } = useAuth()
     
-    // Estado general
-    const isSubmitting = ref(false)
-    const generalError = ref('')
-    const successMessage = ref('')
-    
-    // Notificaciones
-    const showNotification = ref(false)
-    const notificationType = ref('success')
-    const notificationMessage = ref('')
-
-    // Computed property para validar si el formulario está completo y válido
-    const isFormValid = computed(() => {
-      return formData.username.trim() !== '' &&
-             formData.password !== '' &&
-             Object.keys(errors).length === 0
-    })
-
-    // Limpiar error de un campo específico
-    const clearFieldError = (fieldName) => {
-      if (errors[fieldName]) {
-        delete errors[fieldName]
-      }
-    }
-
-    // Validar un campo específico
-    const validateField = (fieldName) => {
-      clearFieldError(fieldName)
-
-      switch (fieldName) {
-        case 'username':
-          if (!formData.username.trim()) {
-            errors.username = 'El usuario es obligatorio'
-          } else if (formData.username.length < 3) {
-            errors.username = 'El usuario debe tener al menos 3 caracteres'
-          }
-          break
-
-        case 'password':
-          if (!formData.password) {
-            errors.password = 'La contraseña es obligatoria'
-          } else if (formData.password.length < 6) {
-            errors.password = 'La contraseña debe tener al menos 6 caracteres'
-          }
-          break
-      }
-    }
-
-    // Validaciones (para el submit final)
-    const validateForm = () => {
-      Object.keys(errors).forEach(key => delete errors[key])
-      validateField('username')
-      validateField('password')
-      return Object.keys(errors).length === 0
-    }
-
-    // Manejar envío del formulario
-    const handleSubmit = async () => {
-      generalError.value = ''
-      successMessage.value = ''
-
-      if (!validateForm()) {
-        return
-      }
-
-      isSubmitting.value = true
-
-      try {
-        // TODO: Aquí conectaremos con el backend
-        console.log('Datos del login:', formData)
-        
-        // Simular llamada al API
-        await new Promise(resolve => setTimeout(resolve, 1500))
-        
-        // Mostrar notificación de éxito
-        showFloatingNotification('success', '¡Inicio de sesión exitoso!')
-        
-        // Redirigir después de un breve delay
-        setTimeout(() => {
-          router.push('/dashboard')
-        }, 1000)
-        
-      } catch (error) {
-        generalError.value = error.message || 'Credenciales incorrectas. Verifica tu usuario y contraseña.'
-        showFloatingNotification('error', 'Error al iniciar sesión')
-      } finally {
-        isSubmitting.value = false
-      }
-    }
-
-    // Mostrar notificación
-    const showFloatingNotification = (type, message) => {
-      notificationType.value = type
-      notificationMessage.value = message
-      showNotification.value = true
-    }
-
-    const hideNotification = () => {
-      showNotification.value = false
-    }
-
-    return {
+    // Crear formulario de login con validación automática
+    const {
       formData,
       errors,
       isSubmitting,
       generalError,
-      successMessage,
-      isFormValid,
-      showNotification,
-      notificationType,
-      notificationMessage,
-      handleSubmit,
+      canSubmit,
       validateField,
       clearFieldError,
-      hideNotification
+      submitForm
+    } = useForm(
+      { username: '', password: '' },
+      {
+        validationSchema: 'login',
+        showNotifications: true
+      }
+    )
+
+    // Manejar envío del formulario
+    const handleSubmit = async () => {
+      const result = await submitForm(async (data) => {
+        // Usar el auth service
+        await handleLogin(data, '/dashboard', false) // false = no mostrar notificación aquí
+        return { success: true }
+      })
+
+      if (result.success) {
+        router.push('/dashboard')
+      }
+    }
+
+    return {
+      // Estado del formulario
+      formData,
+      errors,
+      isSubmitting,
+      generalError,
+      canSubmit,
+      
+      // Métodos
+      handleSubmit,
+      validateField,
+      clearFieldError
     }
   }
 }
