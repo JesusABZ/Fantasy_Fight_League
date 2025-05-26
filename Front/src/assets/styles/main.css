@@ -1,0 +1,286 @@
+/* =================================
+   ARCHIVO PRINCIPAL DE ESTILOS
+   Fantasy Fight League
+   ================================= */
+
+/* === IMPORTACIONES BASE === */
+@import './base/reset.css';
+@import './base/variables.css';
+
+/* === IMPORTACIONES DE COMPONENTES === */
+@import './components/buttons.css';
+@import './components/forms.css';
+@import './components/cards.css';
+
+/* === IMPORTACIONES DE LAYOUTS === */
+/* @import './layouts/header.css'; */
+/* @import './layouts/footer.css'; */
+/* @import './layouts/backgrounds.css'; */
+
+/* === ESTILOS GLOBALES ADICIONALES === */
+
+/* Contenedor principal */
+.container {
+    max-width: var(--breakpoint-2xl);
+    margin: 0 auto;
+    padding: 0 var(--space-lg);
+}
+
+.container-small {
+    max-width: 600px;
+}
+
+.container-large {
+    max-width: 1600px;
+}
+
+/* === TÍTULOS PRINCIPALES === */
+.title-hero {
+    font-family: var(--font-impact);
+    font-size: clamp(3rem, 6vw, 5rem);
+    font-weight: 400;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-align: center;
+    margin-bottom: var(--space-2xl);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.9);
+}
+
+.title-section {
+    font-family: var(--font-impact);
+    font-size: 3rem;
+    font-weight: 400;
+    color: var(--white);
+    margin-bottom: var(--space-xl);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.9);
+}
+
+.title-card {
+    font-family: var(--font-impact);
+    font-size: 1.8rem;
+    font-weight: 400;
+    color: var(--white);
+    margin-bottom: var(--space-md);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+/* === TEXTO CON GRADIENTE === */
+.text-gradient {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* === UTILIDADES DE LAYOUT === */
+.flex {
+    display: flex;
+}
+
+.flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.flex-between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.flex-column {
+    display: flex;
+    flex-direction: column;
+}
+
+.flex-wrap {
+    flex-wrap: wrap;
+}
+
+.items-center {
+    align-items: center;
+}
+
+.justify-center {
+    justify-content: center;
+}
+
+.justify-between {
+    justify-content: space-between;
+}
+
+/* === UTILIDADES DE TEXTO === */
+.text-center {
+    text-align: center;
+}
+
+.text-left {
+    text-align: left;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.text-primary {
+    color: var(--primary);
+}
+
+.text-secondary {
+    color: var(--text-secondary);
+}
+
+.text-muted {
+    color: var(--text-muted);
+}
+
+.text-white {
+    color: var(--white);
+}
+
+.text-success {
+    color: var(--success);
+}
+
+.text-warning {
+    color: var(--warning);
+}
+
+.text-error {
+    color: var(--error);
+}
+
+/* === UTILIDADES DE ESPACIADO === */
+.m-0 { margin: 0; }
+.m-xs { margin: var(--space-xs); }
+.m-sm { margin: var(--space-sm); }
+.m-md { margin: var(--space-md); }
+.m-lg { margin: var(--space-lg); }
+.m-xl { margin: var(--space-xl); }
+.m-2xl { margin: var(--space-2xl); }
+
+.p-0 { padding: 0; }
+.p-xs { padding: var(--space-xs); }
+.p-sm { padding: var(--space-sm); }
+.p-md { padding: var(--space-md); }
+.p-lg { padding: var(--space-lg); }
+.p-xl { padding: var(--space-xl); }
+.p-2xl { padding: var(--space-2xl); }
+
+/* Márgenes específicos */
+.mb-0 { margin-bottom: 0; }
+.mb-xs { margin-bottom: var(--space-xs); }
+.mb-sm { margin-bottom: var(--space-sm); }
+.mb-md { margin-bottom: var(--space-md); }
+.mb-lg { margin-bottom: var(--space-lg); }
+.mb-xl { margin-bottom: var(--space-xl); }
+.mb-2xl { margin-bottom: var(--space-2xl); }
+
+.mt-0 { margin-top: 0; }
+.mt-xs { margin-top: var(--space-xs); }
+.mt-sm { margin-top: var(--space-sm); }
+.mt-md { margin-top: var(--space-md); }
+.mt-lg { margin-top: var(--space-lg); }
+.mt-xl { margin-top: var(--space-xl); }
+.mt-2xl { margin-top: var(--space-2xl); }
+
+/* === UTILIDADES DE DISPLAY === */
+.hidden {
+    display: none;
+}
+
+.block {
+    display: block;
+}
+
+.inline {
+    display: inline;
+}
+
+.inline-block {
+    display: inline-block;
+}
+
+/* === UTILIDADES DE POSICIÓN === */
+.relative {
+    position: relative;
+}
+
+.absolute {
+    position: absolute;
+}
+
+.fixed {
+    position: fixed;
+}
+
+.sticky {
+    position: sticky;
+}
+
+/* === UTILIDADES DE Z-INDEX === */
+.z-0 { z-index: 0; }
+.z-10 { z-index: 10; }
+.z-20 { z-index: 20; }
+.z-50 { z-index: 50; }
+.z-100 { z-index: 100; }
+.z-1000 { z-index: 1000; }
+
+/* === UTILIDADES DE WIDTH === */
+.w-full { width: 100%; }
+.w-auto { width: auto; }
+.max-w-full { max-width: 100%; }
+
+/* === UTILIDADES DE HEIGHT === */
+.h-full { height: 100%; }
+.h-screen { height: 100vh; }
+.min-h-screen { min-height: 100vh; }
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+    .container {
+        padding: 0 var(--space-md);
+    }
+
+    .title-hero {
+        font-size: 3rem;
+    }
+
+    .title-section {
+        font-size: 2.2rem;
+    }
+
+    .title-card {
+        font-size: 1.6rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 0 var(--space-sm);
+    }
+
+    /* Ocultar en móvil */
+    .hidden-mobile {
+        display: none;
+    }
+    
+    /* Mostrar solo en móvil */
+    .mobile-only {
+        display: block;
+    }
+}
+
+@media (min-width: 769px) {
+    .mobile-only {
+        display: none;
+    }
+}

@@ -1,0 +1,266 @@
+/* =================================
+   ESTILOS DE BOTONES
+   ================================= */
+
+/* === BOTÓN BASE === */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-sm) var(--space-lg);
+    border: none;
+    border-radius: var(--radius-lg);
+    font-family: var(--font-primary);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    gap: var(--space-sm);
+    min-height: 44px;
+    font-size: 0.9rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* === VARIANTES DE BOTONES === */
+
+/* Botón Primario */
+.btn-primary {
+    background: var(--gradient-primary);
+    color: var(--white);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg), var(--shadow-glow);
+}
+
+/* Botón Secundario */
+.btn-secondary {
+    background: transparent;
+    color: var(--primary);
+    border: 2px solid var(--primary);
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background: var(--primary);
+    color: var(--white);
+    transform: translateY(-2px);
+}
+
+/* Botón de Volver */
+.btn-back {
+    background: transparent;
+    color: var(--gray-light);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-back:hover:not(:disabled) {
+    color: var(--white);
+    border-color: rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateY(-1px);
+}
+
+/* Botón de Error/Peligro */
+.btn-danger {
+    background: transparent;
+    color: var(--error);
+    border: 1px solid var(--error);
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: var(--error);
+    color: var(--white);
+    transform: translateY(-2px);
+}
+
+/* Botón de Información */
+.btn-info {
+    background: transparent;
+    border: 1px solid var(--info);
+    color: var(--info);
+}
+
+.btn-info:hover:not(:disabled) {
+    background: var(--info);
+    color: var(--white);
+    transform: translateY(-2px);
+}
+
+/* Botón de Evento */
+.btn-event {
+    background: transparent;
+    color: var(--primary);
+    border: 2px solid var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.btn-event:hover:not(:disabled) {
+    background: var(--primary);
+    color: var(--white);
+    transform: translateY(-2px);
+}
+
+/* === TAMAÑOS DE BOTONES === */
+
+/* Botón Pequeño */
+.btn-small {
+    padding: var(--space-sm) var(--space-md);
+    font-size: 0.8rem;
+    min-height: 36px;
+}
+
+/* Botón Mediano (por defecto) */
+.btn-medium {
+    padding: var(--space-sm) var(--space-lg);
+    font-size: 0.9rem;
+    min-height: 44px;
+}
+
+/* Botón Grande */
+.btn-large {
+    padding: var(--space-lg);
+    font-size: 1.2rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    min-height: 56px;
+    width: 100%;
+}
+
+/* === ESTADOS DE BOTONES === */
+
+/* Botón de Carga */
+.btn.loading {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+.btn.loading::after {
+    content: '';
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-left: var(--space-sm);
+}
+
+/* Botón Deshabilitado */
+.btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+    background: var(--gray) !important;
+    border-color: var(--gray) !important;
+    color: var(--text-muted) !important;
+}
+
+/* Botón de Ancho Completo */
+.btn-full-width {
+    width: 100%;
+}
+
+/* === BOTONES ESPECIALIZADOS === */
+
+/* Botón de Perfil */
+.btn-profile {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--white);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-profile:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Botón para Unirse */
+.btn-join {
+    background: var(--gradient-primary);
+    color: var(--white);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.btn-join:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Botón de Seguridad */
+.btn-security {
+    background: transparent;
+    color: var(--primary);
+    border: 2px solid var(--primary);
+    padding: var(--space-md) var(--space-xl);
+    flex: 1;
+    min-width: 200px;
+}
+
+.btn-security:hover:not(:disabled) {
+    background: var(--primary);
+    color: var(--white);
+    transform: translateY(-2px);
+}
+
+/* === ANIMACIONES === */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+    .btn-large {
+        font-size: 1.1rem;
+        padding: var(--space-md) var(--space-lg);
+    }
+    
+    .btn-security {
+        min-width: auto;
+        flex-direction: column;
+    }
+}
+
+/* === BOTONES FLOTANTES === */
+.btn-floating {
+    position: fixed;
+    bottom: var(--space-xl);
+    right: var(--space-xl);
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    z-index: 100;
+    box-shadow: var(--shadow-lg);
+}
+
+@media (max-width: 768px) {
+    .btn-floating {
+        bottom: var(--space-lg);
+        right: var(--space-lg);
+    }
+}

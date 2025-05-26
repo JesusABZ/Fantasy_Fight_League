@@ -1,19 +1,22 @@
+/* =================================
+   VARIABLES CSS DEL SISTEMA DE DISEÑO
+   ================================= */
+
 /* Importar fuentes de Google */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Orbitron:wght@400;700;900&family=Bebas+Neue&display=swap');
 
-/* Variables CSS del sistema de diseño */
 :root {
-    /* Colores primarios */
+    /* === COLORES PRIMARIOS === */
     --primary: #ff6b35;
     --primary-dark: #e55a2d;
     --primary-light: #ff8a5c;
     
-    /* Colores secundarios */
+    /* === COLORES SECUNDARIOS === */
     --secondary: #f7931e;
     --secondary-dark: #e8841a;
     --secondary-light: #ffa940;
     
-    /* Colores neutros */
+    /* === COLORES NEUTROS === */
     --dark: #0a0a0a;
     --dark-light: #1a1a1a;
     --dark-medium: #2a2a2a;
@@ -22,61 +25,53 @@
     --white: #ffffff;
     --white-soft: #f8f9fa;
 
-    /* AGREGAR estas nuevas variables para mejor control */
+    /* === COLORES DE TEXTO === */
     --text-primary: #ffffff;
-    --text-secondary: #b8b8b8; /* Para textos secundarios */
-    --text-muted: #a0a0a0;     /* Para textos menos importantes */
-    --placeholder-color: #a5a5a5; /* Para placeholders */
+    --text-secondary: #b8b8b8;
+    --text-muted: #a0a0a0;
+    --placeholder-color: #a5a5a5;
     
-    /* Colores de estado */
+    /* === COLORES DE ESTADO === */
     --success: #10b981;
     --warning: #f59e0b;
     --error: #ef4444;
     --info: #3b82f6;
     
-    /* Gradientes */
+    /* === GRADIENTES === */
     --gradient-primary: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
     --gradient-dark: linear-gradient(135deg, var(--dark) 0%, var(--dark-light) 100%);
     --gradient-card: linear-gradient(145deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
     
-    /* Sombras */
+    /* === SOMBRAS === */
     --shadow-sm: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
     --shadow-md: 0 4px 8px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.12);
     --shadow-lg: 0 10px 25px rgba(0,0,0,0.2), 0 6px 10px rgba(0,0,0,0.15);
     --shadow-glow: 0 0 20px rgba(255, 107, 53, 0.3);
     
-    /* Tipografía */
+    /* === TIPOGRAFÍA === */
     --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-display: 'Orbitron', monospace;
-    --font-impact: 'Bebas Neue', cursive; /* Nueva fuente para títulos principales */
+    --font-impact: 'Bebas Neue', cursive;
     
-    /* Espaciado */
-    --space-xs: 0.25rem;
-    --space-sm: 0.5rem;
-    --space-md: 1rem;
-    --space-lg: 1.5rem;
-    --space-xl: 2rem;
-    --space-2xl: 3rem;
+    /* === ESPACIADO === */
+    --space-xs: 0.25rem;    /* 4px */
+    --space-sm: 0.5rem;     /* 8px */
+    --space-md: 1rem;       /* 16px */
+    --space-lg: 1.5rem;     /* 24px */
+    --space-xl: 2rem;       /* 32px */
+    --space-2xl: 3rem;      /* 48px */
     
-    /* Border radius */
+    /* === BORDER RADIUS === */
     --radius-sm: 4px;
     --radius-md: 8px;
     --radius-lg: 12px;
     --radius-xl: 16px;
     --radius-full: 9999px;
-}
-
-/* Reset básico */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: var(--font-primary);
-    background: var(--gradient-dark);
-    color: var(--white);
-    line-height: 1.6;
-    overflow-x: hidden;
+    
+    /* === BREAKPOINTS (para usar en media queries) === */
+    --breakpoint-sm: 480px;
+    --breakpoint-md: 768px;
+    --breakpoint-lg: 1024px;
+    --breakpoint-xl: 1200px;
+    --breakpoint-2xl: 1400px;
 }

@@ -1,34 +1,26 @@
 <template>
   <div id="app">
-    <!-- Header solo para páginas públicas -->
-    <header v-if="showPublicLayout" class="app-header">
-      <div class="container">
-        <h1 class="title-hero">FANTASY FIGHT LEAGUE</h1>
-        <p class="text-center" style="color: var(--gray-light); font-size: 1.2rem;">
-          ¡Bienvenido a la plataforma de fantasy más emocionante de MMA!
-        </p>
-      </div>
-    </header>
+    <!-- Fondo de la aplicación -->
+    <AppBackground variant="enhanced" />
+
+    <!-- Header - Solo en páginas públicas -->
+    <AppHeader>
+      <template #actions>
+        <!-- Aquí puedes agregar acciones del header si es necesario -->
+      </template>
+    </AppHeader>
 
     <!-- Contenido principal -->
     <main class="app-main" :class="{ 'no-header': !showPublicLayout }">
-      <div v-if="showPublicLayout" class="container">
-        <RouterView />
-      </div>
-      <div v-else>
-        <!-- Sin container para vistas autenticadas que manejan su propio layout -->
-        <RouterView />
-      </div>
+      <RouterView />
     </main>
 
-    <!-- Footer solo para páginas públicas -->
-    <footer v-if="showPublicLayout" class="app-footer">
-      <div class="container">
-        <p class="text-center" style="color: var(--gray-light);">
-          © 2025 Fantasy Fight League - Desarrollado por Jesús Álvarez
-        </p>
-      </div>
-    </footer>
+    <!-- Footer - Solo en páginas públicas -->
+    <AppFooter>
+      <template #links>
+        <!-- Aquí puedes agregar enlaces del footer si es necesario -->
+      </template>
+    </AppFooter>
   </div>
 </template>
 
@@ -57,30 +49,26 @@ export default {
 </script>
 
 <style scoped>
-.app-header {
-  padding: var(--space-2xl) 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.app-main {
-  min-height: calc(100vh - 200px);
-  padding: var(--space-2xl) 0;
-}
-
-.app-main.no-header {
-  min-height: 100vh;
-  padding: 0;
-}
-
-.app-footer {
-  padding: var(--space-xl) 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  margin-top: auto;
-}
-
 #app {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  position: relative;
+}
+
+.app-main {
+  flex: 1;
+  position: relative;
+  z-index: 1;
+  padding: var(--space-2xl) 0;
+}
+
+.app-main.no-header {
+  padding: 0;
+}
+
+/* Ajustes específicos para páginas sin layout público */
+.no-header {
+  min-height: 100vh;
 }
 </style>

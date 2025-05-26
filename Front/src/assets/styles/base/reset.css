@@ -1,0 +1,97 @@
+/* =================================
+   RESET Y ESTILOS BASE
+   ================================= */
+
+/* === RESET BÁSICO === */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+/* === ELEMENTOS BASE === */
+html {
+    font-size: 16px;
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font-primary);
+    background: var(--gradient-dark);
+    color: var(--text-primary);
+    line-height: 1.6;
+    overflow-x: hidden;
+    min-height: 100vh;
+}
+
+/* === TIPOGRAFÍA BASE === */
+h1, h2, h3, h4, h5, h6 {
+    margin: 0;
+    font-weight: normal;
+    line-height: 1.2;
+}
+
+p {
+    margin: 0;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* === FORMULARIOS === */
+button {
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    background: none;
+}
+
+input, 
+textarea, 
+select {
+    font-family: inherit;
+    font-size: inherit;
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--placeholder-color);
+    opacity: 1;
+}
+
+/* === IMÁGENES === */
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* === LISTAS === */
+ul, ol {
+    list-style: none;
+}
+
+/* === ELEMENTOS INTERACTIVOS === */
+button:disabled {
+    cursor: not-allowed;
+}
+
+/* === UTILIDADES DE ACCESIBILIDAD === */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
