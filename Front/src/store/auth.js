@@ -46,7 +46,19 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
     
     try {
-      const response = await authService.register(userData)
+      // Preparar datos para el backend
+      const registrationData = {
+        username: userData.username.trim(),
+        email: userData.email.trim().toLowerCase(),
+        password: userData.password,
+        firstName: userData.firstName.trim(),
+        lastName: userData.lastName.trim()
+      }
+      
+      const response = await authService.register(registrationData)
+      
+      // El registro fue exitoso pero no logueamos automáticamente
+      // El usuario debe verificar su email primero
       return response
     } catch (err) {
       error.value = err.message

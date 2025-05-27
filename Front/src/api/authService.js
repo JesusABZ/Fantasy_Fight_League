@@ -18,16 +18,26 @@ export const authService = {
     }
   },
 
-  // Registrarse
+    // Registrarse
   async register(userData) {
     try {
       const response = await httpService.post(endpoints.auth.register, userData)
+      
+      // El registro exitoso no incluye token automáticamente
+      // Solo devolvemos la respuesta del servidor
       return response
     } catch (error) {
-      throw new Error(error.message || 'Error al registrarse')
+      // Manejo específico de errores de registro
+      if (error.message.includes('username')) {
+        throw new Error('El nombre de usuario ya está en uso')
+      } else if (error.message.includes('email')) {
+        throw new Error('El email ya está registrado')
+      } else {
+        throw new Error(error.message || 'Error al registrarse. Inténtalo de nuevo.')
+      }
     }
   },
-
+  
   // Cerrar sesión
   async logout() {
     try {

@@ -66,6 +66,8 @@ export function useAuth() {
     logout: authStore.logout,
     confirmEmail: authStore.confirmEmail,
     clearError: authStore.clearError,
+    checkAuth: authStore.checkAuth,
+    updateProfile: authStore.updateProfile,
     
     // Funciones helper
     handleLogin,

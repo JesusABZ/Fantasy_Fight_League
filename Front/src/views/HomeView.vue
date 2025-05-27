@@ -51,37 +51,114 @@
     </div>
 
     <!-- Sección del próximo evento UFC -->
-    <div class="next-event-section">
+    <div v-if="nextEvent" class="next-event-section">
       <h3 class="title-card text-center">Próximo Evento UFC</h3>
       <div class="event-card" @click="goToUFCEvents">
         <div class="event-image">
-          <!-- Usar la imagen correcta que ya tienes -->
-          <img src="/images/ufc-event-vegas-107.jpg" alt="UFC Vegas 107" />
+          <img 
+            :src="nextEvent.imageUrl || '/images/ufc-default.jpg'" 
+            :alt="nextEvent.name"
+            @error="handleImageError"
+          />
           <div class="event-overlay">
-            <div class="event-badge">UFC VEGAS 107</div>
+            <div class="event-badge">{{ eventBadge }}</div>
           </div>
         </div>
         <div class="event-content">
-          <h4 class="event-title">BLANCHFIELD VS BARBER</h4>
-          <p class="event-subtitle">El top de peso mosca femenil tendrá movimiento el 31 de mayo</p>
+          <h4 class="event-title">{{ eventTitle }}</h4>
+          <p class="event-subtitle">{{ nextEvent.description }}</p>
           <div class="event-date">
-            <span class="date-text">31 de Mayo, 2025</span>
-            <span class="location-text">Las Vegas, Nevada</span>
+            <span class="date-text">{{ formattedDate }}</span>
+            <span class="location-text">{{ nextEvent.location }}</span>
           </div>
-          <button class="btn-event" @click="goToUFCEvents">Ver Cartelera del Evento</button>
+          <button class="btn-event" @click.stop="goToUFCEvents">Ver Cartelera del Evento</button>
         </div>
+      </div>
+    </div>
+
+    <!-- Loading state -->
+    <div v-if="isLoadingEvent" class="loading-section">
+      <div class="loading-spinner">
+        <span class="spinner"></span>
+        <p>Cargando próximo evento...</p>
+      </div>
+    </div>
+
+    <!-- Error state -->
+    <div v-if="eventError" class="error-section">
+      <div class="error-message">
+        <span class="error-icon">⚠️</span>
+        <p>{{ eventError }}</p>
+        <button @click="loadNextEvent" class="btn btn-secondary">Reintentar</button>
       </div>
     </div>
   </div>
 </template>
 
 <script>
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { eventsService } from '../api/index.js'
+import { useDateFormatter } from '../composables/useDateFormatter.js'
 
 export default {
   name: 'HomeView',
   setup() {
     const router = useRouter()
+    const { formatEventDate } = useDateFormatter()
+
+    // Estado reactivo
+    const nextEvent = ref(null)
+    const isLoadingEvent = ref(false)
+    const eventError = ref(null)
+
+    // Computed properties para procesar los datos del evento
+    const eventBadge = computed(() => {
+      if (!nextEvent.value?.name) return 'UFC'
+      
+      // Dividir el nombre por ":" y tomar la primera parte
+      const parts = nextEvent.value.name.split(':')
+      return parts[0].trim()
+    })
+
+    const eventTitle = computed(() => {
+      if (!nextEvent.value?.name) return ''
+      
+      // Dividir el nombre por ":" y tomar la segunda parte
+      const parts = nextEvent.value.name.split(':')
+      return parts.length > 1 ? parts[1].trim() : parts[0].trim()
+    })
+
+    const formattedDate = computed(() => {
+      if (!nextEvent.value?.startDate) return ''
+      return formatEventDate(nextEvent.value.startDate)
+    })
+
+    // Función para cargar el próximo evento
+    const loadNextEvent = async () => {
+      isLoadingEvent.value = true
+      eventError.value = null
+
+      try {
+        const event = await eventsService.getNextEvent()
+        nextEvent.value = event
+        
+        if (!event) {
+          console.log('No se encontraron eventos próximos')
+        }
+      } catch (error) {
+        console.error('Error al cargar el próximo evento:', error)
+        eventError.value = 'Error al cargar el próximo evento. Por favor, inténtalo de nuevo.'
+      } finally {
+        isLoadingEvent.value = false
+      }
+    }
+
+    // Manejar error de imagen
+    const handleImageError = (event) => {
+      console.log('Error cargando imagen, usando imagen por defecto')
+      event.target.src = '/images/ufc-default.jpg'
+    }
 
     // Funciones para navegación
     const goToLogin = () => {
@@ -97,7 +174,25 @@ export default {
       window.open('https://www.ufc.com/events', '_blank')
     }
 
+    // Cargar datos al montar el componente
+    onMounted(() => {
+      loadNextEvent()
+    })
+
     return {
+      // Estado
+      nextEvent,
+      isLoadingEvent,
+      eventError,
+      
+      // Computed
+      eventBadge,
+      eventTitle,
+      formattedDate,
+      
+      // Métodos
+      loadNextEvent,
+      handleImageError,
       goToLogin,
       goToRegister,
       goToUFCEvents

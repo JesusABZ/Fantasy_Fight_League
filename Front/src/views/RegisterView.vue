@@ -212,11 +212,14 @@
 <script>
 import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuth } from '../composables/useAuth.js'
 
 export default {
   name: 'RegisterView',
   setup() {
     const router = useRouter()
+    const { register, isLoading, error: authError, clearError } = useAuth()
+    
     // Estado del formulario
     const formData = reactive({
       username: '',
@@ -255,6 +258,12 @@ export default {
       if (errors[fieldName]) {
         delete errors[fieldName]
       }
+      // También limpiar error de auth si existe
+      if (authError.value) {
+        clearError()
+      }
+      // Limpiar error general
+      generalError.value = ''
     }
 
     // Validar un campo específico
@@ -268,6 +277,8 @@ export default {
             errors.username = 'El nombre de usuario es obligatorio'
           } else if (formData.username.length < 3) {
             errors.username = 'El nombre de usuario debe tener al menos 3 caracteres'
+          } else if (formData.username.length > 20) {
+            errors.username = 'El nombre de usuario no puede tener más de 20 caracteres'
           } else if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
             errors.username = 'Solo se permiten letras, números y guiones bajos'
           }
@@ -278,6 +289,8 @@ export default {
             errors.firstName = 'El nombre es obligatorio'
           } else if (formData.firstName.trim().length < 2) {
             errors.firstName = 'El nombre debe tener al menos 2 caracteres'
+          } else if (formData.firstName.trim().length > 50) {
+            errors.firstName = 'El nombre no puede tener más de 50 caracteres'
           }
           break
 
@@ -286,6 +299,8 @@ export default {
             errors.lastName = 'Los apellidos son obligatorios'
           } else if (formData.lastName.trim().length < 2) {
             errors.lastName = 'Los apellidos deben tener al menos 2 caracteres'
+          } else if (formData.lastName.trim().length > 50) {
+            errors.lastName = 'Los apellidos no pueden tener más de 50 caracteres'
           }
           break
 
@@ -294,6 +309,8 @@ export default {
             errors.email = 'El email es obligatorio'
           } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
             errors.email = 'El formato del email no es válido'
+          } else if (formData.email.length > 100) {
+            errors.email = 'El email no puede tener más de 100 caracteres'
           }
           break
 
@@ -302,8 +319,8 @@ export default {
             errors.password = 'La contraseña es obligatoria'
           } else if (formData.password.length < 6) {
             errors.password = 'La contraseña debe tener al menos 6 caracteres'
-          } else if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(formData.password)) {
-            errors.password = 'La contraseña debe contener al menos una letra y un número'
+          } else if (formData.password.length > 100) {
+            errors.password = 'La contraseña no puede tener más de 100 caracteres'
           }
           
           // Re-validar confirmación si ya se llenó
@@ -357,16 +374,25 @@ export default {
       isSubmitting.value = true
 
       try {
-        // TODO: Aquí conectaremos con el backend
-        console.log('Datos del formulario:', formData)
+        // Llamar al servicio de registro
+        const response = await register(formData)
         
-        // Simular llamada al API
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        console.log('Usuario registrado exitosamente:', response)
         
-        // Redirigir a página de verificación en lugar de a la home
-        router.push('/verify-email')
+        // Mostrar mensaje de éxito
+        successMessage.value = '¡Cuenta creada exitosamente! Se ha enviado un email de verificación.'
+        
+        // Esperar un momento para que el usuario vea el mensaje
+        setTimeout(() => {
+          // Redirigir a página de verificación con el email
+          router.push({
+            name: 'VerifyEmail',
+            query: { email: formData.email }
+          })
+        }, 2000)
         
       } catch (error) {
+        console.error('Error en registro:', error)
         generalError.value = error.message || 'Error al crear la cuenta. Inténtalo de nuevo.'
       } finally {
         isSubmitting.value = false
@@ -388,8 +414,8 @@ export default {
     return {
       formData,
       errors,
-      isSubmitting,
-      generalError,
+      isSubmitting: computed(() => isSubmitting.value || isLoading.value),
+      generalError: computed(() => generalError.value || authError.value),
       successMessage,
       showPassword,
       showConfirmPassword,
