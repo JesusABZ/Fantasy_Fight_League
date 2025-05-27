@@ -4,6 +4,8 @@ package com.fantasyfightleague.controller;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -160,6 +162,52 @@ public class AuthController {
         userService.saveUser(user);
         
         return ResponseEntity.ok(new MessageResponseDTO("Email verificado correctamente. Ya puedes iniciar sesión."));
+    }
+    
+    /**
+     * Reenviar email de verificación
+     */
+    @PostMapping("/resend-verification")
+    public ResponseEntity<?> resendVerificationEmail(@RequestBody Map<String, String> request) {
+        try {
+            String email = request.get("email");
+            
+            if (email == null || email.trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                    .body(new MessageResponseDTO("Email es requerido"));
+            }
+            
+            // Buscar usuario por email
+            Optional<User> userOpt = userService.findByEmail(email.trim());
+            
+            if (!userOpt.isPresent()) {
+                // Por seguridad, no revelar si el email existe o no
+                return ResponseEntity.ok(new MessageResponseDTO("Si el email está registrado, recibirás un nuevo enlace de verificación"));
+            }
+            
+            User user = userOpt.get();
+            
+            // Si ya está verificado, no reenviar
+            if (user.isEmailConfirmed()) {
+                return ResponseEntity.badRequest()
+                    .body(new MessageResponseDTO("Este email ya está verificado"));
+            }
+            
+            // Reenviar email de verificación
+            try {
+                emailVerificationService.sendVerificationEmail(user);
+                return ResponseEntity.ok(new MessageResponseDTO("Email de verificación reenviado correctamente"));
+            } catch (Exception e) {
+                logger.error("Error al reenviar email de verificación: {}", e.getMessage());
+                return ResponseEntity.internalServerError()
+                    .body(new MessageResponseDTO("Error al enviar el email. Inténtalo más tarde."));
+            }
+            
+        } catch (Exception e) {
+            logger.error("Error en reenvío de verificación: {}", e.getMessage());
+            return ResponseEntity.internalServerError()
+                .body(new MessageResponseDTO("Error interno del servidor"));
+        }
     }
 
     @PostMapping("/logout")

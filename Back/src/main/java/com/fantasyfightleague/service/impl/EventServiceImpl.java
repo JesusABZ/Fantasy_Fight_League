@@ -32,12 +32,14 @@ public class EventServiceImpl implements EventService {
     
     @Override
     public List<Event> findUpcomingEvents() {
-        return eventRepository.findByDateAfter(new Date());
+        // ✅ CORREGIDO: Usar startDate en lugar de date
+        return eventRepository.findByStartDateAfter(new Date());
     }
     
     @Override
     public List<Event> findPastEvents() {
-        return eventRepository.findByDateBefore(new Date());
+        // ✅ CORREGIDO: Usar startDate en lugar de date
+        return eventRepository.findByStartDateBefore(new Date());
     }
     
     @Override
@@ -52,7 +54,8 @@ public class EventServiceImpl implements EventService {
     
     @Override
     public Optional<Event> findNextEvent() {
-        List<Event> upcomingEvents = eventRepository.findByDateAfterOrderByDateAsc(new Date());
+        // ✅ CORREGIDO: Usar startDate en lugar de date
+        List<Event> upcomingEvents = eventRepository.findByStartDateAfterOrderByStartDateAsc(new Date());
         if (upcomingEvents.isEmpty()) {
             return Optional.empty();
         }

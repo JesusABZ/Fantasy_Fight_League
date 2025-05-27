@@ -112,4 +112,13 @@ public class EventController {
             return ResponseEntity.badRequest().body(new MessageResponseDTO("Error: " + e.getMessage()));
         }
     }
+    /**
+     * PÚBLICO - Obtener el próximo evento
+     */
+    @GetMapping("/events/next")
+    public ResponseEntity<?> getNextEvent() {
+        return eventService.findNextEvent()
+                .map(event -> ResponseEntity.ok(event))
+                .orElse(ResponseEntity.notFound().build());
+    }
 }
