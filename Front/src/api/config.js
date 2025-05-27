@@ -54,6 +54,14 @@ export const endpoints = {
     myPicks: (leagueId) => `/picks/my-picks/${leagueId}`,
     leaderboard: '/picks/leaderboard'
   },
+
+    // 🆕 SOPORTE
+  support: {
+    ticket: '/support/ticket',
+    categories: '/support/categories',
+    status: '/support/status',
+    contactInfo: '/support/contact-info'
+  },
   
   // Admin (solo para administradores)
   admin: {

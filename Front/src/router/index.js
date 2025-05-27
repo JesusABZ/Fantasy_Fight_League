@@ -30,7 +30,6 @@ const routes = [
       title: 'Verificar Email - Fantasy Fight League'
     }
   },
-  // 🆕 NUEVA RUTA para confirmación por token
   {
     path: '/confirm-email',
     name: 'ConfirmEmail',

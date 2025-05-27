@@ -39,6 +39,26 @@
             <span v-if="errors.email" class="error-message">{{ errors.email }}</span>
           </div>
 
+          <!-- Campo de categoría (opcional) -->
+          <div class="form-group">
+            <label for="category" class="form-label">Categoría (Opcional)</label>
+            <select
+              id="category"
+              v-model="formData.category"
+              class="form-input form-select"
+            >
+              <option value="">Selecciona una categoría</option>
+              <option value="BUG">Reportar un Error</option>
+              <option value="ACCOUNT_ISSUE">Problema con la Cuenta</option>
+              <option value="SCORING_ISSUE">Problema con Puntuaciones</option>
+              <option value="LEAGUE_ISSUE">Problema con Ligas</option>
+              <option value="FEATURE_REQUEST">Sugerencia de Mejora</option>
+              <option value="PAYMENT_ISSUE">Problema de Pago</option>
+              <option value="GENERAL">Consulta General</option>
+              <option value="OTHER">Otro</option>
+            </select>
+          </div>
+
           <!-- Campo de asunto -->
           <div class="form-group">
             <label for="subject" class="form-label">Asunto</label>
@@ -81,6 +101,11 @@
             {{ generalError }}
           </div>
 
+          <!-- Mensaje de éxito -->
+          <div v-if="successMessage" class="success-banner">
+            {{ successMessage }}
+          </div>
+
           <!-- Botones -->
           <div class="form-actions">
             <button
@@ -90,7 +115,7 @@
               :class="{ 'loading': isSubmitting, 'disabled': !isFormValid }"
             >
               <span v-if="isSubmitting">Enviando...</span>
-              <span v-else">📩 Enviar Mensaje</span>
+              <span v-else>📩 Enviar Mensaje</span>
             </button>
           </div>
 
@@ -111,17 +136,22 @@
 </template>
 
 <script>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { supportService } from '../api/supportService.js'
+import { useAuth } from '../composables/useAuth.js'
 
 export default {
   name: 'SupportView',
   setup() {
     const router = useRouter()
+    const { user, isAuthenticated } = useAuth()
 
     // Estado del formulario
     const formData = reactive({
       email: '',
+      username: '',
+      category: '',
       subject: '',
       message: ''
     })
@@ -132,9 +162,7 @@ export default {
     // Estado general
     const isSubmitting = ref(false)
     const generalError = ref('')
-    const showNotification = ref(false)
-    const notificationType = ref('success')
-    const notificationText = ref('')
+    const successMessage = ref('')
 
     // Computed property para validar si el formulario está completo y válido
     const isFormValid = computed(() => {
@@ -146,11 +174,22 @@ export default {
       return hasRequiredFields && hasNoErrors
     })
 
+    // Inicializar datos del usuario si está autenticado
+    onMounted(() => {
+      if (isAuthenticated.value && user.value) {
+        formData.email = user.value.email || ''
+        formData.username = user.value.username || ''
+      }
+    })
+
     // Limpiar error de un campo específico
     const clearFieldError = (fieldName) => {
       if (errors[fieldName]) {
         delete errors[fieldName]
       }
+      // Limpiar mensajes generales
+      generalError.value = ''
+      successMessage.value = ''
     }
 
     // Validar un campo específico
@@ -196,6 +235,7 @@ export default {
     // Manejar envío del formulario
     const handleSubmit = async () => {
       generalError.value = ''
+      successMessage.value = ''
 
       if (!validateForm()) {
         return
@@ -204,22 +244,39 @@ export default {
       isSubmitting.value = true
 
       try {
-        // TODO: Conectar con el backend
-        console.log('Enviando mensaje de soporte:', formData)
+        // Preparar datos para el backend
+        const ticketData = {
+          email: formData.email.trim(),
+          username: formData.username.trim() || null,
+          category: formData.category || 'GENERAL',
+          subject: formData.subject.trim(),
+          message: formData.message.trim()
+        }
+
+        console.log('Enviando ticket de soporte:', ticketData)
         
-        // Simular llamada al API
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        // 🔥 LLAMADA REAL AL BACKEND
+        const response = await supportService.createSupportTicket(ticketData)
+        
+        console.log('Respuesta del servidor:', response)
         
         // Mostrar mensaje de éxito
-        showFloatingNotification('success', '¡Mensaje enviado correctamente!')
+        successMessage.value = `¡Ticket enviado correctamente! Referencia: #${response.ticketReference || 'N/A'}`
         
-        // Esperar un momento para que el usuario vea la notificación
+        // Limpiar formulario
+        Object.keys(formData).forEach(key => {
+          if (key !== 'email' && key !== 'username') {
+            formData[key] = ''
+          }
+        })
+        
+        // Esperar un momento para que el usuario vea el mensaje
         setTimeout(() => {
-          // Usar navegación inteligente
           goBack()
-        }, 1500)
+        }, 3000)
         
       } catch (error) {
+        console.error('Error al enviar ticket:', error)
         generalError.value = error.message || 'Error al enviar el mensaje. Inténtalo de nuevo más tarde.'
       } finally {
         isSubmitting.value = false
@@ -229,27 +286,10 @@ export default {
     // Función inteligente para volver a la página anterior
     const goBack = () => {
       if (window.history.length > 1) {
-        // Si hay historial, usar el router para ir atrás
         router.go(-1)
       } else {
-        // Si no hay historial (llegó directamente a la URL), ir a home
         router.push('/')
       }
-    }
-
-    // Función para mostrar notificaciones
-    const showFloatingNotification = (type, text) => {
-      notificationType.value = type
-      notificationText.value = text
-      showNotification.value = true
-      
-      setTimeout(() => {
-        hideNotification()
-      }, 3000)
-    }
-
-    const hideNotification = () => {
-      showNotification.value = false
     }
 
     return {
@@ -257,15 +297,12 @@ export default {
       errors,
       isSubmitting,
       generalError,
+      successMessage,
       isFormValid,
-      showNotification,
-      notificationType,
-      notificationText,
       handleSubmit,
       validateField,
       clearFieldError,
-      goBack,
-      hideNotification
+      goBack
     }
   }
 }
@@ -400,7 +437,8 @@ export default {
 }
 
 .form-input,
-.form-textarea {
+.form-textarea,
+.form-select {
   width: 100%;
   padding: var(--space-lg);
   background: rgba(255, 255, 255, 0.1);
@@ -413,13 +451,23 @@ export default {
   font-family: inherit;
 }
 
+.form-select {
+  cursor: pointer;
+}
+
+.form-select option {
+  background: var(--dark);
+  color: var(--white);
+}
+
 .form-input::placeholder,
 .form-textarea::placeholder {
   color: var(--gray-light);
 }
 
 .form-input:focus,
-.form-textarea:focus {
+.form-textarea:focus,
+.form-select:focus {
   outline: none;
   border-color: var(--primary);
   background: rgba(255, 255, 255, 0.15);
@@ -459,6 +507,16 @@ export default {
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid var(--error);
   color: var(--error);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-lg);
+  text-align: center;
+}
+
+.success-banner {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid var(--success);
+  color: var(--success);
   padding: var(--space-md);
   border-radius: var(--radius-md);
   margin-bottom: var(--space-lg);
