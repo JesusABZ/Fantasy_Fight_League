@@ -42,7 +42,7 @@ export default {
     const route = useRoute()
     
     // Rutas que usan el layout público (con header y footer)
-    const publicRoutes = ['Home', 'Login', 'Register', 'VerifyEmail', 'ForgotPassword', 'EmailUnverified', 'Support', 'About']
+    const publicRoutes = ['Home', 'Login', 'Register', 'VerifyEmail', 'ConfirmEmail', 'ForgotPassword', 'EmailUnverified', 'Support', 'About']
     
     // Computed para determinar si mostrar el layout público
     const showPublicLayout = computed(() => {

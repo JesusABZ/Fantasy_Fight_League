@@ -104,6 +104,21 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+    async function resendVerificationEmail(email) {
+    isLoading.value = true
+    error.value = null
+    
+    try {
+      const response = await authService.resendVerificationEmail(email)
+      return response
+    } catch (err) {
+      error.value = err.message
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+  
   function clearError() {
     error.value = null
   }

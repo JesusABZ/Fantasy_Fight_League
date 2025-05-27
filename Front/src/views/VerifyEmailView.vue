@@ -32,7 +32,8 @@
             <div class="email-text">
               <p><strong>Revisa tu bandeja de entrada</strong></p>
               <p class="email-detail">
-                Hemos enviado un enlace de verificación a tu correo electrónico.
+                Hemos enviado un enlace de verificación a:
+                <strong v-if="userEmail">{{ userEmail }}</strong>
               </p>
             </div>
           </div>
@@ -63,7 +64,7 @@
               <button 
                 class="link-button" 
                 @click="resendEmail"
-                :disabled="isResending"
+                :disabled="isResending || !userEmail"
               >
                 <span v-if="isResending">Enviando...</span>
                 <span v-else>Reenviar email de verificación</span>
@@ -71,7 +72,7 @@
             </p>
             
             <!-- Mensaje de reenvío -->
-            <div v-if="resendMessage" class="resend-message">
+            <div v-if="resendMessage" class="resend-message" :class="messageClass">
               {{ resendMessage }}
             </div>
           </div>
@@ -106,34 +107,87 @@
 </template>
 
 <script>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { authService } from '../api/authService.js'
 
 export default {
   name: 'VerifyEmailView',
   setup() {
     const router = useRouter()
+    const route = useRoute()
+    
+    // Estado local
     const isResending = ref(false)
     const resendMessage = ref('')
+    const resendSuccess = ref(false)
+    
+    // Obtener email desde query params
+    const userEmail = ref('')
+    
+    // Obtener el email de los query params si está disponible
+    onMounted(() => {
+      userEmail.value = route.query.email || ''
+      console.log('📧 Email del usuario:', userEmail.value)
+      
+      // 🔍 VERIFICAR QUE authService TENGA EL MÉTODO
+      console.log('🔍 Verificando authService:', authService)
+      console.log('🔍 ¿Existe resendVerificationEmail?:', typeof authService.resendVerificationEmail)
+    })
+    
+    // Clase CSS para el mensaje según el tipo
+    const messageClass = computed(() => ({
+      'success': resendSuccess.value,
+      'error': !resendSuccess.value && resendMessage.value
+    }))
 
-    // Función para reenviar email
+    // Función para reenviar email usando authService
     const resendEmail = async () => {
+      if (!userEmail.value) {
+        resendMessage.value = '❌ No se pudo determinar la dirección de email'
+        resendSuccess.value = false
+        return
+      }
+
+      // 🔍 VERIFICAR EL MÉTODO ANTES DE USARLO
+      if (typeof authService.resendVerificationEmail !== 'function') {
+        console.error('❌ authService.resendVerificationEmail no es una función:', authService.resendVerificationEmail)
+        resendMessage.value = '❌ Error: Método no disponible'
+        resendSuccess.value = false
+        return
+      }
+
       isResending.value = true
       resendMessage.value = ''
+      resendSuccess.value = false
 
       try {
-        // TODO: Conectar con el backend para reenviar email
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        console.log('📤 Reenviando email de verificación a:', userEmail.value)
+        console.log('🔧 Usando authService.resendVerificationEmail')
+        
+        // ✅ USAR authService
+        const response = await authService.resendVerificationEmail(userEmail.value)
+        
+        console.log('✅ Respuesta exitosa:', response)
         
         resendMessage.value = '✅ Email de verificación reenviado correctamente'
+        resendSuccess.value = true
         
-        // Limpiar mensaje después de 5 segundos
+        // Limpiar mensaje después de 8 segundos
         setTimeout(() => {
           resendMessage.value = ''
-        }, 5000)
+          resendSuccess.value = false
+        }, 8000)
         
-      } catch (error) {
-        resendMessage.value = '❌ Error al reenviar el email. Inténtalo de nuevo.'
+      } catch (err) {
+        console.error('❌ Error al reenviar email:', err)
+        resendMessage.value = err.message || '❌ Error al reenviar el email. Inténtalo de nuevo.'
+        resendSuccess.value = false
+        
+        // Limpiar mensaje de error después de 8 segundos
+        setTimeout(() => {
+          resendMessage.value = ''
+        }, 8000)
       } finally {
         isResending.value = false
       }
@@ -151,8 +205,10 @@ export default {
     }
 
     return {
+      userEmail,
       isResending,
       resendMessage,
+      messageClass,
       resendEmail,
       goToLogin,
       goToHome
@@ -419,14 +475,36 @@ export default {
   cursor: not-allowed;
 }
 
+/* === MENSAJES DE REENVÍO === */
 .resend-message {
   margin-top: var(--space-md);
   padding: var(--space-md);
   border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  animation: fadeIn 0.3s ease-in;
+}
+
+.resend-message.success {
   background: rgba(16, 185, 129, 0.1);
   border: 1px solid var(--success);
   color: var(--success);
-  font-size: 0.9rem;
+}
+
+.resend-message.error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid var(--error);
+  color: var(--error);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* === BOTONES === */

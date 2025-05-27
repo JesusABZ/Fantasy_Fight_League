@@ -30,6 +30,15 @@ const routes = [
       title: 'Verificar Email - Fantasy Fight League'
     }
   },
+  // 🆕 NUEVA RUTA para confirmación por token
+  {
+    path: '/confirm-email',
+    name: 'ConfirmEmail',
+    component: () => import('../views/EmailConfirmationView.vue'),
+    meta: {
+      title: 'Confirmación de Email - Fantasy Fight League'
+    }
+  },
   {
     path: '/forgot-password',
     name: 'ForgotPassword',
@@ -70,7 +79,6 @@ const routes = [
       title: 'Mi Perfil - Fantasy Fight League'
     }
   },
-  // NUEVA RUTA PARA EDITAR PERFIL
   {
     path: '/profile/edit',
     name: 'EditProfile',
@@ -80,25 +88,25 @@ const routes = [
     }
   },
   {
-  path: '/profile/change-email',
-  name: 'ChangeEmail',
-  component: () => import('../views/ChangeEmailView.vue'),
-  meta: {
-    title: 'Cambiar Email - Fantasy Fight League'
-  }
+    path: '/profile/change-email',
+    name: 'ChangeEmail',
+    component: () => import('../views/ChangeEmailView.vue'),
+    meta: {
+      title: 'Cambiar Email - Fantasy Fight League'
+    }
   },
   {
-  path: '/profile/change-password',
-  name: 'ChangePassword',
-  component: () => import('../views/ChangePasswordView.vue'),
-  meta: {
-    title: 'Cambiar Contraseña - Fantasy Fight League'
-  }
+    path: '/profile/change-password',
+    name: 'ChangePassword',
+    component: () => import('../views/ChangePasswordView.vue'),
+    meta: {
+      title: 'Cambiar Contraseña - Fantasy Fight League'
+    }
   },
   {
-  path: '/league/:id',
-  name: 'LeagueDetail',
-  component: () => import('../views/LeagueDetailView.vue')
+    path: '/league/:id',
+    name: 'LeagueDetail',
+    component: () => import('../views/LeagueDetailView.vue')
   },
   {
     path: '/league/:id/picks/:eventId',
@@ -106,7 +114,7 @@ const routes = [
     component: () => import('../views/PicksSelectionView.vue'),
     meta: {
       title: 'Seleccionar Picks - Fantasy Fight League',
-      requiresAuth: true // Opcional: si quieres que requiera autenticación
+      requiresAuth: true
     }
   },
   {

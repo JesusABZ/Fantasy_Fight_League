@@ -212,13 +212,12 @@
 <script>
 import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuth } from '../composables/useAuth.js'
+import { authService } from '../api/authService.js'
 
 export default {
   name: 'RegisterView',
   setup() {
     const router = useRouter()
-    const { register, isLoading, error: authError, clearError } = useAuth()
     
     // Estado del formulario
     const formData = reactive({
@@ -257,10 +256,6 @@ export default {
     const clearFieldError = (fieldName) => {
       if (errors[fieldName]) {
         delete errors[fieldName]
-      }
-      // También limpiar error de auth si existe
-      if (authError.value) {
-        clearError()
       }
       // Limpiar error general
       generalError.value = ''
@@ -374,8 +369,17 @@ export default {
       isSubmitting.value = true
 
       try {
-        // Llamar al servicio de registro
-        const response = await register(formData)
+        // Preparar datos para el backend
+        const registrationData = {
+          username: formData.username.trim(),
+          email: formData.email.trim().toLowerCase(),
+          password: formData.password,
+          firstName: formData.firstName.trim(),
+          lastName: formData.lastName.trim()
+        }
+        
+        // Llamar directamente al servicio de registro
+        const response = await authService.register(registrationData)
         
         console.log('Usuario registrado exitosamente:', response)
         
@@ -414,8 +418,8 @@ export default {
     return {
       formData,
       errors,
-      isSubmitting: computed(() => isSubmitting.value || isLoading.value),
-      generalError: computed(() => generalError.value || authError.value),
+      isSubmitting,
+      generalError,
       successMessage,
       showPassword,
       showConfirmPassword,
@@ -666,6 +670,34 @@ export default {
   margin-bottom: var(--space-lg);
 }
 
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-sm) var(--space-lg);
+  border: none;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-primary);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  min-height: 48px;
+}
+
+.btn-primary {
+  background: var(--gradient-primary);
+  color: var(--white);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
+}
+
 .btn-large {
   width: 100%;
   padding: var(--space-lg);
@@ -771,10 +803,6 @@ export default {
 
   .form-title {
     font-size: 1.8rem;
-  }
-
-  .title-hero {
-    font-size: 3rem;
   }
 }
 

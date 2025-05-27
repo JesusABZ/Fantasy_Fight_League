@@ -18,7 +18,7 @@ export const authService = {
     }
   },
 
-    // Registrarse
+  // Registrarse
   async register(userData) {
     try {
       const response = await httpService.post(endpoints.auth.register, userData)
@@ -57,6 +57,23 @@ export const authService = {
       return response
     } catch (error) {
       throw new Error(error.message || 'Error al confirmar el email')
+    }
+  },
+
+  // 🔥 REENVIAR EMAIL DE VERIFICACIÓN - MÉTODO CORREGIDO
+  async resendVerificationEmail(email) {
+    try {
+      console.log('Enviando petición de reenvío para email:', email)
+      
+      const response = await httpService.post(endpoints.auth.resendVerification, { 
+        email: email 
+      })
+      
+      console.log('Respuesta del servidor:', response)
+      return response
+    } catch (error) {
+      console.error('Error en resendVerificationEmail:', error)
+      throw new Error(error.message || 'Error al reenviar el email de verificación')
     }
   },
 

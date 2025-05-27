@@ -1,4 +1,5 @@
 // Composable para facilitar el uso de autenticación en componentes
+import { computed } from 'vue' // 🔥 AGREGAR ESTA IMPORTACIÓN
 import { useAuthStore } from '../store/auth.js'
 import { useRouter } from 'vue-router'
 
@@ -52,10 +53,10 @@ export function useAuth() {
   }
 
   return {
-    // Estado del store
+    // Estado del store - con valores seguros
     user: authStore.user,
     isLoading: authStore.isLoading,
-    error: authStore.error,
+    error: computed(() => authStore.error || null), // 🔥 AQUÍ ESTABA EL ERROR - faltaba importar computed
     isAuthenticated: authStore.isAuthenticated,
     isAdmin: authStore.isAdmin,
     isEmailConfirmed: authStore.isEmailConfirmed,
@@ -65,9 +66,9 @@ export function useAuth() {
     register: authStore.register,
     logout: authStore.logout,
     confirmEmail: authStore.confirmEmail,
+    resendVerificationEmail: authStore.resendVerificationEmail,
     clearError: authStore.clearError,
-    checkAuth: authStore.checkAuth,
-    updateProfile: authStore.updateProfile,
+    initializeAuth: authStore.initializeAuth,
     
     // Funciones helper
     handleLogin,

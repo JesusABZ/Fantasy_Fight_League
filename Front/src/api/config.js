@@ -17,7 +17,8 @@ export const endpoints = {
     login: '/auth/signin',
     register: '/auth/signup',
     logout: '/auth/logout',
-    confirm: '/auth/confirm'
+    confirm: '/auth/confirm',
+    resendVerification: '/auth/resend-verification' // 🆕 NUEVO endpoint
   },
   
   // User
@@ -32,6 +33,7 @@ export const endpoints = {
   events: {
     all: '/events',
     upcoming: '/events/upcoming',
+    next: '/events/next', // 🆕 AÑADIDO endpoint del próximo evento
     byId: (id) => `/events/${id}`,
     fighters: (id) => `/events/${id}/fighters`
   },
