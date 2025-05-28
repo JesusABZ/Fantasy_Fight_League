@@ -1,4 +1,4 @@
-// Crear este archivo en: src/main/java/com/fantasyfightleague/security/jwt/AuthTokenFilter.java
+// Back/src/main/java/com/fantasyfightleague/security/jwt/AuthTokenFilter.java
 package com.fantasyfightleague.security.jwt;
 
 import java.io.IOException;
@@ -19,6 +19,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.fantasyfightleague.security.services.UserDetailsServiceImpl;
+import com.fantasyfightleague.service.TokenBlacklistService; // ✅ IMPORTAR
 
 public class AuthTokenFilter extends OncePerRequestFilter {
     @Autowired
@@ -26,6 +27,10 @@ public class AuthTokenFilter extends OncePerRequestFilter {
 
     @Autowired
     private UserDetailsServiceImpl userDetailsService;
+    
+    // ✅ INYECTAR TokenBlacklistService
+    @Autowired
+    private TokenBlacklistService tokenBlacklistService;
 
     private static final Logger logger = LoggerFactory.getLogger(AuthTokenFilter.class);
 
@@ -35,6 +40,14 @@ public class AuthTokenFilter extends OncePerRequestFilter {
         try {
             String jwt = parseJwt(request);
             if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
+                
+                // ✅ VERIFICAR BLACKLIST
+                if (tokenBlacklistService.isTokenBlacklisted(jwt)) {
+                    logger.warn("Token blacklisted detectado: {}", jwt.substring(0, Math.min(10, jwt.length())) + "...");
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+                
                 String username = jwtUtils.getUserNameFromJwtToken(jwt);
 
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);

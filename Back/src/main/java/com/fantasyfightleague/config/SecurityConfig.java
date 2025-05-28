@@ -99,6 +99,11 @@ public class SecurityConfig {
                 .requestMatchers("/api/events/next").permitAll()
                 .requestMatchers("/api/support/**").permitAll()
                 
+                // ✅ NUEVOS endpoints para password reset
+                .requestMatchers("/api/auth/forgot-password").permitAll()
+                .requestMatchers("/api/auth/validate-reset-token").permitAll()
+                .requestMatchers("/api/auth/reset-password").permitAll()
+                
                 // Endpoints públicos de ligas (pueden ver ligas públicas sin autenticarse)
                 .requestMatchers("/api/leagues/public").permitAll()
                 

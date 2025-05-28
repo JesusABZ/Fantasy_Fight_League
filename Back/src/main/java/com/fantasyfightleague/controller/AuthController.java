@@ -36,6 +36,9 @@ import com.fantasyfightleague.security.services.UserDetailsImpl;
 import com.fantasyfightleague.service.EmailVerificationService;
 import com.fantasyfightleague.service.UserService;
 
+import com.fantasyfightleague.service.TokenBlacklistService;
+import jakarta.servlet.http.HttpServletRequest;
+
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/auth")
@@ -54,12 +57,15 @@ public class AuthController {
 
     @Autowired
     EmailVerificationService emailVerificationService;
+    
+    @Autowired
+    private TokenBlacklistService tokenBlacklistService;
 
     @Autowired
     JwtUtils jwtUtils;
 
     @PostMapping("/signin")
-    public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequestDTO loginRequest) {
+    public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequestDTO loginRequest, HttpServletRequest request) {
         try {
             logger.info("Intento de login para usuario: {}", loginRequest.getUsername());
             
@@ -74,12 +80,23 @@ public class AuthController {
                     new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
+            
+            // ✅ NUEVO: Obtener el token anterior del header (si existe)
+            String oldToken = extractTokenFromRequest(request);
+            
             String jwt = jwtUtils.generateJwtToken(authentication);
             
             UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
             List<String> roles = userDetails.getAuthorities().stream()
                     .map(item -> item.getAuthority())
                     .collect(Collectors.toList());
+            
+            
+            // ✅ NUEVO: Invalidar token anterior si existe
+            if (oldToken != null) {
+                tokenBlacklistService.blacklistToken(oldToken);
+                logger.info("Token anterior invalidado para usuario: {}", loginRequest.getUsername());
+            }
             
             logger.info("Login exitoso para usuario: {}", loginRequest.getUsername());
             
@@ -211,7 +228,28 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logoutUser() {
-        return ResponseEntity.ok(new MessageResponseDTO("¡Logout exitoso!"));
+    public ResponseEntity<?> logoutUser(HttpServletRequest request) {
+        try {
+            // ✅ NUEVO: Extraer token y agregarlo a blacklist
+            String token = extractTokenFromRequest(request);
+            if (token != null) {
+                tokenBlacklistService.blacklistToken(token);
+                logger.info("Token agregado a blacklist en logout");
+            }
+            
+            return ResponseEntity.ok(new MessageResponseDTO("¡Logout exitoso!"));
+        } catch (Exception e) {
+            logger.error("Error durante logout: {}", e.getMessage());
+            return ResponseEntity.ok(new MessageResponseDTO("¡Logout exitoso!")); // Siempre éxito por UX
+        }
+    }
+    
+ // ✅ NUEVO: Método helper para extraer token del request
+    private String extractTokenFromRequest(HttpServletRequest request) {
+        String headerAuth = request.getHeader("Authorization");
+        if (headerAuth != null && headerAuth.startsWith("Bearer ")) {
+            return headerAuth.substring(7);
+        }
+        return null;
     }
 }
