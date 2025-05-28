@@ -18,7 +18,10 @@ export const endpoints = {
     register: '/auth/signup',
     logout: '/auth/logout',
     confirm: '/auth/confirm',
-    resendVerification: '/auth/resend-verification' // 🆕 NUEVO endpoint
+    resendVerification: '/auth/resend-verification', // 🆕 NUEVO endpoint
+    forgotPassword: '/auth/forgot-password',
+    validateResetToken: '/auth/validate-reset-token',
+    resetPassword: '/auth/reset-password'
   },
   
   // User

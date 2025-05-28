@@ -155,6 +155,7 @@
 <script>
 import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { passwordResetService } from '../api/index.js' // ✅ IMPORTAR EL SERVICIO
 
 export default {
   name: 'ForgotPasswordView',
@@ -211,7 +212,7 @@ export default {
       return Object.keys(errors).length === 0
     }
 
-    // Manejar envío del formulario
+    // ✅ MANEJAR ENVÍO DEL FORMULARIO - CONECTADO AL BACKEND
     const handleSubmit = async () => {
       generalError.value = ''
       successMessage.value = ''
@@ -223,15 +224,11 @@ export default {
       isSubmitting.value = true
 
       try {
-        // TODO: Aquí conectaremos con el backend
-        console.log('Solicitud de recuperación para:', formData.email)
-        
-        // Simular llamada al API
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        const response = await passwordResetService.forgotPassword(formData.email)
         
         emailSent.value = true
         showInstructions.value = true
-        successMessage.value = `Hemos enviado las instrucciones de recuperación a ${formData.email}`
+        successMessage.value = response.message || `Hemos enviado las instrucciones de recuperación a ${formData.email}`
         
       } catch (error) {
         generalError.value = error.message || 'Error al enviar el email de recuperación. Inténtalo de nuevo.'
@@ -240,7 +237,7 @@ export default {
       }
     }
 
-    // Reenviar email
+    // ✅ REENVIAR EMAIL - CONECTADO AL BACKEND
     const resendEmail = async () => {
       if (!emailSent.value) return
 
@@ -248,13 +245,11 @@ export default {
       generalError.value = ''
 
       try {
-        // TODO: Conectar con backend para reenviar
-        await new Promise(resolve => setTimeout(resolve, 1500))
-        
-        successMessage.value = `Email reenviado a ${formData.email}`
+        const response = await passwordResetService.forgotPassword(formData.email)
+        successMessage.value = response.message || `Email reenviado a ${formData.email}`
         
       } catch (error) {
-        generalError.value = 'Error al reenviar el email. Inténtalo de nuevo.'
+        generalError.value = error.message || 'Error al reenviar el email. Inténtalo de nuevo.'
       } finally {
         isResending.value = false
       }

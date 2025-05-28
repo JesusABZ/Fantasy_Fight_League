@@ -47,6 +47,14 @@ const routes = [
     }
   },
   {
+    path: '/reset-password',
+    name: 'ResetPassword',
+    component: () => import('../views/ResetPasswordView.vue'),
+    meta: {
+      title: 'Cambiar Contraseña - Fantasy Fight League'
+    }
+  },
+  {
     path: '/email-unverified',
     name: 'EmailUnverified',
     component: () => import('../views/EmailUnverifiedView.vue'),
