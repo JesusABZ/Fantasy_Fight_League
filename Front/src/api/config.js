@@ -58,12 +58,31 @@ export const endpoints = {
     leaderboard: '/picks/leaderboard'
   },
 
-    // 🆕 SOPORTE
+  // 🆕 SOPORTE
   support: {
     ticket: '/support/ticket',
     categories: '/support/categories',
     status: '/support/status',
     contactInfo: '/support/contact-info'
+  },
+
+  // Leagues
+  leagues: {
+    public: '/leagues/public',
+    myLeagues: '/leagues/my-leagues',
+    join: (id) => `/leagues/${id}/join`,
+    joinPrivate: '/leagues/join-private',
+    createPrivate: '/leagues/private',
+    leave: (id) => `/leagues/${id}/leave`,
+    byId: (id) => `/leagues/${id}`
+  },
+  
+  // Leaderboard
+  leaderboard: {
+    myPosition: (leagueId) => `/leaderboard/my-position/${leagueId}`,
+    global: (leagueId) => `/leaderboard/global/${leagueId}`,
+    event: (leagueId, eventId) => `/leaderboard/event/${leagueId}/${eventId}`,
+    myHistory: (leagueId) => `/leaderboard/my-history/${leagueId}`
   },
   
   // Admin (solo para administradores)

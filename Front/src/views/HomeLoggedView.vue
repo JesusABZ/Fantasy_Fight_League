@@ -19,6 +19,9 @@
               <span class="profile-avatar">{{ userInitials }}</span>
               Mi Perfil
             </button>
+            <button class="btn btn-logout" @click="handleLogout">
+              Cerrar Sesión
+            </button>
           </div>
         </div>
       </div>
@@ -29,27 +32,39 @@
       <div class="container">
         
         <!-- Próximo Evento UFC - Destacado -->
-        <div class="next-event-section">
+        <div class="next-event-section" v-if="nextEvent">
           <div class="event-card-featured" @click="goToUFCEvents">
             <div class="event-image">
-              <img src="/images/ufc-event-vegas-107.jpg" alt="UFC Vegas 107" />
+              <img 
+                :src="nextEvent.imageUrl || '/images/ufc-event-vegas-107.jpg'" 
+                :alt="nextEvent.name"
+                @error="handleImageError"
+              />
               <div class="event-overlay">
-                <div class="event-badge">PRÓXIMO EVENTO</div>
+                <div class="event-badge">{{ eventBadge }}</div>
               </div>
             </div>
             <div class="event-info">
               <div class="event-details">
-                <h3 class="event-title">UFC VEGAS 107</h3>
-                <h4 class="event-subtitle">BLANCHFIELD VS BARBER</h4>
+                <h3 class="event-title">{{ eventTitle }}</h3>
+                <h4 class="event-subtitle">{{ nextEvent.description || 'Próximo evento UFC' }}</h4>
                 <div class="event-meta">
-                  <span class="event-date">📅 31 de Mayo, 2025</span>
-                  <span class="event-location">📍 Las Vegas, Nevada</span>
+                  <span class="event-date">📅 {{ formattedDate }}</span>
+                  <span class="event-location">📍 {{ nextEvent.location || 'Por confirmar' }}</span>
                 </div>
               </div>
               <div class="event-action">
                 <button class="btn btn-event">Ver Cartelera</button>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Loading state del evento -->
+        <div v-if="isLoadingEvent" class="loading-event">
+          <div class="loading-spinner">
+            <span class="spinner"></span>
+            <p>Cargando próximo evento...</p>
           </div>
         </div>
 
@@ -63,7 +78,15 @@
               <span class="leagues-count">{{ myLeagues.length }} liga{{ myLeagues.length !== 1 ? 's' : '' }}</span>
             </div>
             
-            <div class="leagues-list">
+            <!-- Loading state para mis ligas -->
+            <div v-if="isLoadingMyLeagues" class="loading-section">
+              <div class="loading-spinner">
+                <span class="spinner"></span>
+                <p>Cargando tus ligas...</p>
+              </div>
+            </div>
+            
+            <div v-else class="leagues-list">
               <!-- Liga individual -->
               <div 
                 v-for="league in myLeagues" 
@@ -78,7 +101,7 @@
                       <span class="league-type" :class="league.type.toLowerCase()">
                         {{ league.type === 'PUBLIC' ? '🌍' : '🔒' }}
                       </span>
-                      <span v-if="league.userPosition <= 3" class="position-badge" :class="getPositionClass(league.userPosition)">
+                      <span v-if="league.userPosition && league.userPosition <= 3" class="position-badge" :class="getPositionClass(league.userPosition)">
                         #{{ league.userPosition }}
                       </span>
                     </div>
@@ -89,15 +112,15 @@
                 <div class="league-stats">
                   <div class="stat-item">
                     <span class="stat-label">Posición</span>
-                    <span class="stat-value">#{{ league.userPosition }}</span>
+                    <span class="stat-value">#{{ league.userPosition || '-' }}</span>
                   </div>
                   <div class="stat-item">
                     <span class="stat-label">Puntos</span>
-                    <span class="stat-value">{{ league.userPoints }}</span>
+                    <span class="stat-value">{{ league.userPoints || 0 }}</span>
                   </div>
                   <div class="stat-item">
                     <span class="stat-label">Miembros</span>
-                    <span class="stat-value">{{ league.memberCount }}</span>
+                    <span class="stat-value">{{ league.memberCount || league.members?.length || 0 }}</span>
                   </div>
                 </div>
                 
@@ -142,13 +165,15 @@
                       placeholder="Código de invitación (ej: ABC12DEF)"
                       maxlength="8"
                       @keyup.enter="joinPrivateLeague"
+                      :disabled="isJoiningPrivate"
                     />
                     <button 
                       class="btn btn-join-private"
                       @click="joinPrivateLeague"
-                      :disabled="!privateCode.trim()"
+                      :disabled="!privateCode.trim() || isJoiningPrivate"
                     >
-                      Unirse
+                      <span v-if="isJoiningPrivate">Uniéndose...</span>
+                      <span v-else>Unirse</span>
                     </button>
                   </div>
                 </div>
@@ -169,7 +194,15 @@
                   </div>
                 </div>
                 
-                <div class="public-leagues-list">
+                <!-- Loading state para ligas públicas -->
+                <div v-if="isLoadingPublicLeagues" class="loading-section">
+                  <div class="loading-spinner">
+                    <span class="spinner"></span>
+                    <p>Cargando ligas públicas...</p>
+                  </div>
+                </div>
+                
+                <div v-else class="public-leagues-list">
                   <!-- Liga pública individual -->
                   <div 
                     v-for="league in publicLeagues" 
@@ -181,20 +214,26 @@
                       <h4 class="public-league-name">{{ league.name }}</h4>
                       <p class="public-league-description">{{ league.description }}</p>
                       <div class="public-league-meta">
-                        <span class="member-count">👥 {{ league.memberCount }} miembros</span>
-                        <span class="event-name">🎯 {{ league.eventName }}</span>
+                        <span class="member-count">👥 {{ league.memberCount || league.members?.length || 0 }} miembros</span>
+                        <span v-if="league.event" class="event-name">🎯 {{ league.event.name }}</span>
                       </div>
                     </div>
                     <div class="public-league-action">
-                      <button class="btn btn-join-public">Unirse</button>
+                      <button 
+                        class="btn btn-join-public"
+                        :disabled="isJoiningPublic === league.id"
+                      >
+                        <span v-if="isJoiningPublic === league.id">Uniéndose...</span>
+                        <span v-else>Unirse</span>
+                      </button>
                     </div>
                   </div>
 
                   <!-- Estado vacío para ligas públicas -->
                   <div v-if="publicLeagues.length === 0" class="empty-public">
                     <p class="empty-text">No hay ligas públicas disponibles</p>
-                    <button class="btn btn-refresh" @click="loadPublicLeagues">
-                      🔄 Actualizar
+                    <button class="btn btn-refresh" @click="loadPublicLeagues" :disabled="isLoadingPublicLeagues">
+                      🔄 {{ isLoadingPublicLeagues ? 'Actualizando...' : 'Actualizar' }}
                     </button>
                   </div>
                 </div>
@@ -217,22 +256,18 @@
 </template>
 
 <script>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuth } from '../composables/useAuth.js'
+import { eventsService, leaguesService, leaderboardService } from '../api/index.js'
+import { useDateFormatter } from '../composables/useDateFormatter.js'
 
 export default {
   name: 'HomeLoggedView',
   setup() {
     const router = useRouter()
-
-    // Estado del usuario (simulado)
-    const currentUser = ref({
-      id: 1,
-      username: 'fighter_user',
-      firstName: 'John',
-      lastName: 'Doe',
-      email: 'john@example.com'
-    })
+    const { user, logout } = useAuth()
+    const { formatEventDate } = useDateFormatter()
 
     // Estados
     const privateCode = ref('')
@@ -240,78 +275,182 @@ export default {
     const notificationType = ref('success')
     const notificationText = ref('')
 
-    // Datos simulados de mis ligas
-    const myLeagues = ref([
-      {
-        id: 1,
-        name: 'Liga Oficina',
-        description: 'Liga entre compañeros de trabajo',
-        type: 'PRIVATE',
-        memberCount: 12,
-        userPosition: 1,
-        userPoints: 1890
-      },
-      {
-        id: 2,
-        name: 'Amigos Luchadores',
-        description: 'Liga con mis amigos de toda la vida',
-        type: 'PRIVATE',
-        memberCount: 8,
-        userPosition: 3,
-        userPoints: 1250
-      },
-      {
-        id: 3,
-        name: 'UFC Vegas 107 - Global',
-        description: 'Liga pública para el evento UFC Vegas 107',
-        type: 'PUBLIC',
-        memberCount: 156,
-        userPosition: 5,
-        userPoints: 980
-      }
-    ])
+    // Estados de carga
+    const isLoadingEvent = ref(false)
+    const isLoadingMyLeagues = ref(false)
+    const isLoadingPublicLeagues = ref(false)
+    const isJoiningPrivate = ref(false)
+    const isJoiningPublic = ref(null) // ID de la liga que se está uniendo
 
-    // Datos simulados de ligas públicas disponibles
-    const publicLeagues = ref([
-      {
-        id: 4,
-        name: 'UFC Vegas 107 - Élite',
-        description: 'Liga para los mejores fighters',
-        memberCount: 89,
-        eventName: 'UFC Vegas 107'
-      },
-      {
-        id: 5,
-        name: 'Novatos UFC',
-        description: 'Liga perfecta para principiantes',
-        memberCount: 34,
-        eventName: 'UFC Vegas 107'
-      },
-      {
-        id: 6,
-        name: 'España Fantasy UFC',
-        description: 'Liga en español para fans de UFC',
-        memberCount: 67,
-        eventName: 'UFC Vegas 107'
-      }
-    ])
+    // Datos
+    const nextEvent = ref(null)
+    const myLeagues = ref([])
+    const publicLeagues = ref([])
 
     // Computed properties
     const userDisplayName = computed(() => {
-      if (currentUser.value.firstName && currentUser.value.lastName) {
-        return `${currentUser.value.firstName} ${currentUser.value.lastName}`
+      if (!user.value) return 'Usuario'
+      if (user.value.firstName && user.value.lastName) {
+        return `${user.value.firstName} ${user.value.lastName}`
       }
-      return currentUser.value.username
+      return user.value.username
     })
 
     const userInitials = computed(() => {
-      if (currentUser.value.firstName && currentUser.value.lastName) {
-        return `${currentUser.value.firstName[0]}${currentUser.value.lastName[0]}`.toUpperCase()
+      if (!user.value) return 'U'
+      if (user.value.firstName && user.value.lastName) {
+        return `${user.value.firstName[0]}${user.value.lastName[0]}`.toUpperCase()
       }
-      return currentUser.value.username.substring(0, 2).toUpperCase()
+      return user.value.username.substring(0, 2).toUpperCase()
     })
 
-    // Funciones
+    const eventBadge = computed(() => {
+      if (!nextEvent.value?.name) return 'UFC'
+      const parts = nextEvent.value.name.split(':')
+      return parts[0].trim()
+    })
+
+    const eventTitle = computed(() => {
+      if (!nextEvent.value?.name) return ''
+      const parts = nextEvent.value.name.split(':')
+      return parts.length > 1 ? parts[1].trim() : parts[0].trim()
+    })
+
+    const formattedDate = computed(() => {
+      if (!nextEvent.value?.startDate) return ''
+      return formatEventDate(nextEvent.value.startDate)
+    })
+
+    // Funciones para cargar datos
+    const loadNextEvent = async () => {
+      isLoadingEvent.value = true
+      try {
+        const event = await eventsService.getNextEvent()
+        nextEvent.value = event
+      } catch (error) {
+        console.error('Error al cargar el próximo evento:', error)
+        // No mostrar error para el evento ya que es opcional
+      } finally {
+        isLoadingEvent.value = false
+      }
+    }
+
+    const loadMyLeagues = async () => {
+      isLoadingMyLeagues.value = true
+      try {
+        const leagues = await leaguesService.getMyLeagues()
+        
+        // Enriquecer cada liga con datos de posición y puntos
+        const enrichedLeagues = await Promise.all(
+          leagues.map(async (league) => {
+            try {
+              // Obtener mi posición en esta liga
+              const position = await leaderboardService.getMyPosition(league.id)
+              
+              return {
+                ...league,
+                userPosition: position.position,
+                userPoints: position.totalPoints,
+                memberCount: league.members?.length || 0
+              }
+            } catch (error) {
+              console.error(`Error al obtener posición en liga ${league.id}:`, error)
+              return {
+                ...league,
+                userPosition: null,
+                userPoints: 0,
+                memberCount: league.members?.length || 0
+              }
+            }
+          })
+        )
+        
+        myLeagues.value = enrichedLeagues
+      } catch (error) {
+        console.error('Error al cargar mis ligas:', error)
+        showFloatingNotification('error', 'Error al cargar tus ligas')
+      } finally {
+        isLoadingMyLeagues.value = false
+      }
+    }
+
+    const loadPublicLeagues = async () => {
+      isLoadingPublicLeagues.value = true
+      try {
+        const leagues = await leaguesService.getPublicLeagues()
+        publicLeagues.value = leagues
+      } catch (error) {
+        console.error('Error al cargar ligas públicas:', error)
+        showFloatingNotification('error', 'Error al cargar ligas públicas')
+      } finally {
+        isLoadingPublicLeagues.value = false
+      }
+    }
+
+    // Funciones de acción
+    const joinPrivateLeague = async () => {
+      if (!privateCode.value.trim()) return
+      
+      isJoiningPrivate.value = true
+      try {
+        const response = await leaguesService.joinPrivateLeague(privateCode.value)
+        showFloatingNotification('success', `¡Te has unido a la liga: ${response.message || 'Liga privada'}!`)
+        privateCode.value = ''
+        
+        // Recargar mis ligas después de unirse
+        await loadMyLeagues()
+      } catch (error) {
+        console.error('Error al unirse a liga privada:', error)
+        showFloatingNotification('error', error.message || 'Error al unirse a la liga privada')
+      } finally {
+        isJoiningPrivate.value = false
+      }
+    }
+
+    const joinPublicLeague = async (league) => {
+      isJoiningPublic.value = league.id
+      try {
+        const response = await leaguesService.joinPublicLeague(league.id)
+        showFloatingNotification('success', `¡Te has unido a ${league.name}!`)
+        
+        // Recargar ambas listas
+        await Promise.all([
+          loadMyLeagues(),
+          loadPublicLeagues()
+        ])
+      } catch (error) {
+        console.error('Error al unirse a liga pública:', error)
+        showFloatingNotification('error', error.message || 'Error al unirse a la liga')
+      } finally {
+        isJoiningPublic.value = null
+      }
+    }
+
+    // Funciones de navegación
+    const enterLeague = (league) => {
+      router.push(`/league/${league.id}`)
+    }
+
+    const goToProfile = () => {
+      router.push('/profile')
+    }
+
+    const handleLogout = async () => {
+      try {
+        await logout()
+        router.push('/')
+      } catch (error) {
+        console.error('Error al cerrar sesión:', error)
+        // Forzar redirección aunque haya error
+        router.push('/')
+      }
+    }
+
+    const goToUFCEvents = () => {
+      window.open('https://www.ufc.com/events', '_blank')
+    }
+
+    // Funciones de utilidad
     const getPositionClass = (position) => {
       if (position === 1) return 'gold'
       if (position === 2) return 'silver'
@@ -319,71 +458,8 @@ export default {
       return ''
     }
 
-    const enterLeague = (league) => {
-      router.push(`/league/${league.id}`)
-    }
-
-    const joinPrivateLeague = () => {
-      if (!privateCode.value.trim()) return
-      
-      console.log('Uniéndose a liga privada con código:', privateCode.value)
-      showFloatingNotification('success', `¡Te has unido a la liga con código: ${privateCode.value}!`)
-      privateCode.value = ''
-      
-      // Simular que se añade una nueva liga
-      setTimeout(() => {
-        myLeagues.value.push({
-          id: Date.now(),
-          name: 'Nueva Liga Privada',
-          description: 'Liga recién agregada',
-          type: 'PRIVATE',
-          memberCount: 5,
-          userPosition: 1,
-          userPoints: 0
-        })
-      }, 1000)
-    }
-
-    const joinPublicLeague = (league) => {
-      console.log('Uniéndose a liga pública:', league.name)
-      showFloatingNotification('success', `¡Te has unido a ${league.name}!`)
-      
-      // Simular que se añade la liga a mis ligas
-      setTimeout(() => {
-        myLeagues.value.push({
-          id: league.id,
-          name: league.name,
-          description: league.description,
-          type: 'PUBLIC',
-          memberCount: league.memberCount + 1,
-          userPosition: league.memberCount + 1,
-          userPoints: 0
-        })
-        
-        // Remover de ligas públicas disponibles
-        const index = publicLeagues.value.findIndex(l => l.id === league.id)
-        if (index > -1) {
-          publicLeagues.value.splice(index, 1)
-        }
-      }, 1000)
-    }
-
-    const loadPublicLeagues = () => {
-      console.log('Actualizando ligas públicas...')
-      showFloatingNotification('success', 'Ligas públicas actualizadas')
-    }
-
-    const goToUFCEvents = () => {
-      window.open('https://www.ufc.com/events', '_blank')
-    }
-
-    const goToProfile = () => {
-      router.push('/profile')
-    }
-
-    const handleLogout = () => {
-      console.log('Cerrando sesión...')
-      router.push('/')
+    const handleImageError = (event) => {
+      event.target.src = '/images/ufc-default.jpg'
     }
 
     const showFloatingNotification = (type, text) => {
@@ -393,31 +469,65 @@ export default {
       
       setTimeout(() => {
         hideNotification()
-      }, 3000)
+      }, 4000)
     }
 
     const hideNotification = () => {
       showNotification.value = false
     }
 
+    // Cargar datos al montar
+    onMounted(async () => {
+      console.log('🚀 Cargando datos del dashboard...')
+      
+      // Cargar datos en paralelo
+      await Promise.all([
+        loadNextEvent(),
+        loadMyLeagues(),
+        loadPublicLeagues()
+      ])
+      
+      console.log('✅ Datos del dashboard cargados')
+    })
+
     return {
-      currentUser,
+      // Estado del usuario
       userDisplayName,
       userInitials,
-      privateCode,
+      
+      // Estados de carga
+      isLoadingEvent,
+      isLoadingMyLeagues,
+      isLoadingPublicLeagues,
+      isJoiningPrivate,
+      isJoiningPublic,
+      
+      // Datos
+      nextEvent,
       myLeagues,
       publicLeagues,
+      privateCode,
+      
+      // Computed del evento
+      eventBadge,
+      eventTitle,
+      formattedDate,
+      
+      // Notificaciones
       showNotification,
       notificationType,
       notificationText,
-      getPositionClass,
-      enterLeague,
+      
+      // Funciones
+      loadPublicLeagues,
       joinPrivateLeague,
       joinPublicLeague,
-      loadPublicLeagues,
-      goToUFCEvents,
+      enterLeague,
       goToProfile,
       handleLogout,
+      goToUFCEvents,
+      getPositionClass,
+      handleImageError,
       hideNotification
     }
   }
@@ -683,6 +793,35 @@ export default {
   box-shadow: var(--shadow-lg);
 }
 
+/* === ESTADOS DE CARGA === */
+.loading-event,
+.loading-section {
+  padding: var(--space-xl);
+  text-align: center;
+}
+
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  color: var(--gray-light);
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 107, 53, 0.3);
+  border-top: 3px solid var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 /* === GRID PRINCIPAL === */
 .main-grid {
   display: grid;
@@ -939,6 +1078,11 @@ export default {
   background: rgba(255, 255, 255, 0.15);
 }
 
+.private-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .btn-join-private {
   background: var(--gradient-primary);
   color: var(--white);
@@ -1004,7 +1148,6 @@ export default {
 .public-league-item:hover {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 107, 53, 0.3);
-  transform: translateX(0px);
 }
 
 .public-league-info {
@@ -1052,6 +1195,11 @@ export default {
   color: var(--white);
 }
 
+.btn-join-public:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* === ESTADO VACÍO LIGAS PÚBLICAS === */
 .empty-public {
   text-align: center;
@@ -1076,6 +1224,11 @@ export default {
 .btn-refresh:hover {
   background: var(--primary);
   color: var(--white);
+}
+
+.btn-refresh:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* === NOTIFICACIÓN FLOTANTE === */

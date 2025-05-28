@@ -23,13 +23,34 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const response = await authService.login(credentials)
       
-      // Guardar datos del usuario
-      user.value = {
-        id: response.id,
-        username: response.username,
-        email: response.email,
-        emailConfirmed: response.emailConfirmed,
-        roles: response.roles
+      // Después del login exitoso, intentar obtener el perfil completo del usuario
+      try {
+        const { userService } = await import('../api/userService.js')
+        const userProfile = await userService.getProfile()
+        
+        // Combinar datos del login con el perfil completo
+        user.value = {
+          id: response.id,
+          username: response.username,
+          email: response.email,
+          emailConfirmed: response.emailConfirmed,
+          roles: response.roles,
+          // Agregar datos del perfil
+          firstName: userProfile.firstName,
+          lastName: userProfile.lastName,
+          profileImageUrl: userProfile.profileImageUrl,
+          createdAt: userProfile.createdAt
+        }
+      } catch (profileError) {
+        console.warn('No se pudo cargar el perfil completo:', profileError)
+        // Usar solo los datos del login si falla el perfil
+        user.value = {
+          id: response.id,
+          username: response.username,
+          email: response.email,
+          emailConfirmed: response.emailConfirmed,
+          roles: response.roles
+        }
       }
       
       return response
@@ -104,7 +125,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  // ✅ MÉTODO CORREGIDO - Reenviar email de verificación
+  // Reenviar email de verificación
   async function resendVerificationEmail(email) {
     isLoading.value = true
     error.value = null
@@ -125,12 +146,22 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   // Inicializar el estado cuando se carga la app
-  function initializeAuth() {
+  async function initializeAuth() {
     // Verificar si hay un token guardado
     if (authService.isAuthenticated()) {
-      // Aquí podrías hacer una llamada para obtener los datos del usuario
-      // o simplemente marcar como autenticado y obtener los datos después
       console.log('Usuario previamente autenticado encontrado')
+      
+      // Intentar recuperar el perfil del usuario
+      try {
+        const { userService } = await import('../api/userService.js')
+        const userProfile = await userService.getProfile()
+        user.value = userProfile
+        console.log('Perfil de usuario recuperado:', userProfile)
+      } catch (error) {
+        console.warn('No se pudo recuperar el perfil del usuario:', error)
+        // Si falla, limpiar el token porque probablemente expiró
+        authService.clearAuthToken()
+      }
     }
   }
 
@@ -151,7 +182,7 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     logout,
     confirmEmail,
-    resendVerificationEmail, // ✅ ASEGURAR QUE ESTÁ EXPORTADO
+    resendVerificationEmail,
     clearError,
     initializeAuth
   }
