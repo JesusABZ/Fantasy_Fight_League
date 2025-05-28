@@ -9,6 +9,8 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.mail.internet.MimeMessage;
+import org.springframework.mail.javamail.MimeMessageHelper;
 
 import com.fantasyfightleague.model.User;
 import com.fantasyfightleague.model.VerificationToken;
@@ -34,18 +36,40 @@ public class EmailVerificationService {
         String token = UUID.randomUUID().toString();
         createVerificationToken(user, token);
         
-        String confirmationUrl = baseUrl + "/api/auth/confirm?token=" + token;
+        String confirmationUrl = baseUrl + "/confirm-email?token=" + token;
         
-        SimpleMailMessage email = new SimpleMailMessage();
-        email.setTo(user.getEmail());
-        email.setSubject("Fantasy Fight League - Confirmación de Email");
-        email.setText("Hola " + user.getUsername() + ",\n\n"
-                + "¡Gracias por registrarte en Fantasy Fight League! Por favor, confirma tu dirección de correo electrónico haciendo clic en el siguiente enlace:\n\n"
-                + confirmationUrl + "\n\n"
-                + "Si no te has registrado en nuestra plataforma, por favor ignora este correo.\n\n"
-                + "Saludos,\nEl equipo de Fantasy Fight League");
+//        //String confirmationUrl = baseUrl + "/api/auth/confirm?token=" + token;
+//        
+//        SimpleMailMessage email = new SimpleMailMessage();
+//        email.setTo(user.getEmail());
+//        email.setSubject("Fantasy Fight League - Confirmación de Email");
+//        email.setText("Hola " + user.getUsername() + ",\n\n"
+//                + "¡Gracias por registrarte en Fantasy Fight League! Por favor, confirma tu dirección de correo electrónico haciendo clic en el siguiente enlace:\n\n"
+//                + confirmationUrl + "\n\n"
+//                + "Si no te has registrado en nuestra plataforma, por favor ignora este correo.\n\n"
+//                + "Saludos,\nEl equipo de Fantasy Fight League");
+//        
+//        mailSender.send(email);
         
-        mailSender.send(email);
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo(user.getEmail());
+            helper.setSubject("Fantasy Fight League - Confirmación de Email");
+
+            String htmlContent = "<p>Hola <strong>" + user.getUsername() + "</strong>,</p>"
+                    + "<p>¡Gracias por registrarte en Fantasy Fight League! Por favor, confirma tu dirección de correo electrónico haciendo clic en el siguiente enlace:</p>"
+                    + "<p><a href=\"" + confirmationUrl + "\">Confirmar mi correo electrónico</a></p>"
+                    + "<p>Si no te has registrado en nuestra plataforma, por favor ignora este correo.</p>"
+                    + "<p>Saludos,<br>El equipo de Fantasy Fight League</p>";
+
+            helper.setText(htmlContent, true); // true para HTML
+
+            mailSender.send(message);
+        } catch (Exception e) {
+            System.out.println("Error enviando correo: " + e.getMessage());
+        }
     }
     
     @Transactional
@@ -56,22 +80,46 @@ public class EmailVerificationService {
         String token = UUID.randomUUID().toString();
         createVerificationToken(user, token);
         
-        String confirmationUrl = baseUrl + "/api/auth/confirm?token=" + token;
+        //String confirmationUrl = baseUrl + "/api/auth/confirm?token=" + token;
+        String confirmationUrl = baseUrl + "/confirm-email?token=" + token;
         
-        // Email al nuevo email
-        SimpleMailMessage email = new SimpleMailMessage();
-        email.setTo(user.getEmail()); // Enviar al nuevo email
-        email.setSubject("Fantasy Fight League - Confirmación de Cambio de Email");
-        email.setText("Hola " + user.getUsername() + ",\n\n"
-                + "Hemos recibido una solicitud para cambiar tu dirección de correo electrónico.\n\n"
-                + "Email anterior: " + oldEmail + "\n"
-                + "Nuevo email: " + user.getEmail() + "\n\n"
-                + "Para confirmar este cambio, haz clic en el siguiente enlace:\n\n"
-                + confirmationUrl + "\n\n"
-                + "Si no has solicitado este cambio, contacta inmediatamente con nuestro soporte.\n\n"
-                + "Saludos,\nEl equipo de Fantasy Fight League");
+//        // Email al nuevo email
+//        SimpleMailMessage email = new SimpleMailMessage();
+//        email.setTo(user.getEmail()); // Enviar al nuevo email
+//        email.setSubject("Fantasy Fight League - Confirmación de Cambio de Email");
+//        email.setText("Hola " + user.getUsername() + ",\n\n"
+//                + "Hemos recibido una solicitud para cambiar tu dirección de correo electrónico.\n\n"
+//                + "Email anterior: " + oldEmail + "\n"
+//                + "Nuevo email: " + user.getEmail() + "\n\n"
+//                + "Para confirmar este cambio, haz clic en el siguiente enlace:\n\n"
+//                + confirmationUrl + "\n\n"
+//                + "Si no has solicitado este cambio, contacta inmediatamente con nuestro soporte.\n\n"
+//                + "Saludos,\nEl equipo de Fantasy Fight League");
+//        
+//        mailSender.send(email);
         
-        mailSender.send(email);
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo(user.getEmail()); // Solo se envía al nuevo email
+            helper.setSubject("Fantasy Fight League - Confirmación de Cambio de Email");
+
+            String htmlContent = "<p>Hola <strong>" + user.getUsername() + "</strong>,</p>"
+                    + "<p>Hemos recibido una solicitud para cambiar tu dirección de correo electrónico.</p>"
+                    + "<p>Email anterior: <strong>" + oldEmail + "</strong><br>"
+                    + "Nuevo email: <strong>" + user.getEmail() + "</strong></p>"
+                    + "<p>Para confirmar este cambio, haz clic en el siguiente enlace:</p>"
+                    + "<p><a href=\"" + confirmationUrl + "\">Confirmar cambio de correo electrónico</a></p>"
+                    + "<p>Si no has solicitado este cambio, contacta inmediatamente con nuestro soporte.</p>"
+                    + "<p>Saludos,<br>El equipo de Fantasy Fight League</p>";
+
+            helper.setText(htmlContent, true); // `true` para HTML
+
+            mailSender.send(message);
+        } catch (Exception e) {
+            System.out.println("Error enviando correo de verificación de cambio de email: " + e.getMessage());
+        }
         
         // Opcional: Enviar notificación al email anterior
         try {

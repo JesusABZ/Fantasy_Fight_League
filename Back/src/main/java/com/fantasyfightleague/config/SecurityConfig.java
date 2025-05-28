@@ -97,6 +97,7 @@ public class SecurityConfig {
                 .requestMatchers("/uploads/**").permitAll()
                 .requestMatchers("/error").permitAll()
                 .requestMatchers("/api/events/next").permitAll()
+                .requestMatchers("/api/support/**").permitAll()
                 
                 // Endpoints públicos de ligas (pueden ver ligas públicas sin autenticarse)
                 .requestMatchers("/api/leagues/public").permitAll()
