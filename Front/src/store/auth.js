@@ -83,29 +83,29 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  // En store/auth.js - verificar que existe este método
   async function confirmEmail(token) {
-      isLoading.value = true
-      error.value = null
+    isLoading.value = true
+    error.value = null
+    
+    try {
+      const response = await authService.confirmEmail(token)
       
-      try {
-          const response = await authService.confirmEmail(token)
-          
-          // Actualizar estado de confirmación si el usuario está logueado
-          if (user.value) {
-              user.value.emailConfirmed = true
-          }
-          
-          return response
-      } catch (err) {
-          error.value = err.message
-          throw err
-      } finally {
-          isLoading.value = false
+      // Actualizar estado de confirmación si el usuario está logueado
+      if (user.value) {
+        user.value.emailConfirmed = true
       }
+      
+      return response
+    } catch (err) {
+      error.value = err.message
+      throw err
+    } finally {
+      isLoading.value = false
+    }
   }
 
-    async function resendVerificationEmail(email) {
+  // ✅ MÉTODO CORREGIDO - Reenviar email de verificación
+  async function resendVerificationEmail(email) {
     isLoading.value = true
     error.value = null
     
@@ -151,6 +151,7 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     logout,
     confirmEmail,
+    resendVerificationEmail, // ✅ ASEGURAR QUE ESTÁ EXPORTADO
     clearError,
     initializeAuth
   }

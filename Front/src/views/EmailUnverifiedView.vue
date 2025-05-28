@@ -72,9 +72,9 @@
             <button 
               class="btn btn-primary btn-large"
               @click="resendVerificationEmail"
-              :disabled="isResending"
+              :disabled="isLoading"
             >
-              <span v-if="isResending">Enviando...</span>
+              <span v-if="isLoading">Enviando...</span>
               <span v-else>📧 Reenviar Email de Verificación</span>
             </button>
           </div>
@@ -162,14 +162,15 @@
 <script>
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useAuth } from '../composables/useAuth.js'
 
 export default {
   name: 'EmailUnverifiedView',
   setup() {
     const router = useRouter()
     const route = useRoute()
+    const { resendVerificationEmail: resendEmail, isLoading, error: authError } = useAuth()
     
-    const isResending = ref(false)
     const resendMessage = ref('')
     const resendSuccess = ref(false)
     const userEmail = ref('')
@@ -178,68 +179,72 @@ export default {
     onMounted(() => {
       // El email puede venir como query param desde el intento de login
       userEmail.value = route.query.email || 'tu correo registrado'
+      console.log('📧 Email recibido en EmailUnverified:', userEmail.value)
     })
 
     // Reenviar email de verificación
     const resendVerificationEmail = async () => {
-      isResending.value = true
       resendMessage.value = ''
       resendSuccess.value = false
 
       try {
-        // TODO: Conectar con el backend para reenviar email
-        console.log('Reenviando email de verificación a:', userEmail.value)
+        console.log('🔄 Reenviando email de verificación a:', userEmail.value)
         
-        // Simular llamada al API
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        // Usar el método del store para reenviar email
+        const response = await resendEmail(userEmail.value)
         
-        resendMessage.value = `✅ Email de verificación reenviado a ${userEmail.value}`
+        console.log('✅ Email reenviado exitosamente:', response)
+        resendMessage.value = response.message || `✅ Email de verificación reenviado a ${userEmail.value}`
         resendSuccess.value = true
         
-        // Limpiar mensaje después de 5 segundos
+        // Limpiar mensaje después de 8 segundos
+        setTimeout(() => {
+          resendMessage.value = ''
+        }, 8000)
+        
+      } catch (error) {
+        console.error('❌ Error al reenviar email:', error)
+        resendMessage.value = authError.value || '❌ Error al reenviar el email. Inténtalo de nuevo más tarde.'
+        resendSuccess.value = false
+        
+        // Limpiar mensaje de error después de 5 segundos
         setTimeout(() => {
           resendMessage.value = ''
         }, 5000)
-        
-      } catch (error) {
-        resendMessage.value = '❌ Error al reenviar el email. Inténtalo de nuevo más tarde.'
-        resendSuccess.value = false
-      } finally {
-        isResending.value = false
       }
     }
 
     // Intentar login de nuevo
     const tryLoginAgain = () => {
-      console.log('Redirigiendo al login para intentar de nuevo')
+      console.log('🔄 Redirigiendo al login para intentar de nuevo')
       router.push('/login')
     }
 
     // Contactar soporte
     const contactSupport = () => {
-        router.push('/support')
+      router.push('/support')
     }
 
     // Crear nueva cuenta
     const createNewAccount = () => {
-      console.log('Redirigiendo al registro')
+      console.log('➕ Redirigiendo al registro')
       router.push('/register')
     }
 
     // Navegación
     const goToLogin = () => {
-      console.log('Volviendo al login')
+      console.log('⬅️ Volviendo al login')
       router.push('/login')
     }
 
     const goToHome = () => {
-      console.log('Navegando a la home')
+      console.log('🏠 Navegando a la home')
       router.push('/')
     }
 
     return {
       userEmail,
-      isResending,
+      isLoading, // ✅ Usar isLoading del composable useAuth
       resendMessage,
       resendSuccess,
       resendVerificationEmail,

@@ -1,6 +1,6 @@
 <template>
   <div class="login">
-    <!-- Fondo estático con overlay (igual que en Register) -->
+    <!-- Fondo estático con overlay -->
     <div class="background-static">
       <div class="background-image"></div>
       <div class="background-overlay"></div>
@@ -65,8 +65,8 @@
           </div>
 
           <!-- Mensaje de error general -->
-          <div v-if="generalError" class="error-banner">
-            {{ generalError }}
+          <div v-if="authError" class="error-banner">
+            {{ authError }}
           </div>
 
           <!-- Mensaje de éxito -->
@@ -114,11 +114,13 @@
 <script>
 import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuth } from '../composables/useAuth.js'
 
 export default {
   name: 'LoginView',
   setup() {
     const router = useRouter()
+    const { login, error: authError, isLoading } = useAuth()
 
     // Estado del formulario
     const formData = reactive({
@@ -126,12 +128,11 @@ export default {
       password: ''
     })
 
-    // Estado de errores
+    // Estado de errores de validación (no confundir con errores de autenticación)
     const errors = reactive({})
     
     // Estado general
-    const isSubmitting = ref(false)
-    const generalError = ref('')
+    const isSubmitting = computed(() => isLoading.value)
     const successMessage = ref('')
     const showPassword = ref(false)
 
@@ -187,33 +188,44 @@ export default {
 
     // Manejar envío del formulario
     const handleSubmit = async () => {
-      generalError.value = ''
       successMessage.value = ''
 
       if (!validateForm()) {
         return
       }
 
-      isSubmitting.value = true
-
       try {
-        // TODO: Aquí conectaremos con el backend
-        console.log('Datos del login:', formData)
+        console.log('🚀 Iniciando login con:', { username: formData.username })
         
-        // Simular llamada al API
-        await new Promise(resolve => setTimeout(resolve, 1500))
+        // Llamar al método de login del store
+        const response = await login({
+          username: formData.username.trim(),
+          password: formData.password
+        })
         
+        console.log('✅ Login exitoso:', response)
         successMessage.value = '¡Inicio de sesión exitoso!'
         
-        // Redirigir a la home después de un breve delay
-        setTimeout(() => {
-          router.push('/')
-        }, 1000)
+        // Verificar el estado del email y redirigir en consecuencia
+        if (response.emailConfirmed) {
+          console.log('📧 Email verificado - Redirigiendo al dashboard')
+          setTimeout(() => {
+            router.push('/dashboard')
+          }, 1000)
+        } else {
+          console.log('⚠️ Email no verificado - Redirigiendo a verificación')
+          setTimeout(() => {
+            router.push({
+              name: 'EmailUnverified',
+              query: { email: response.email }
+            })
+          }, 1000)
+        }
         
       } catch (error) {
-        generalError.value = error.message || 'Credenciales incorrectas. Verifica tu usuario y contraseña.'
-      } finally {
-        isSubmitting.value = false
+        console.error('❌ Error en login:', error)
+        // El error ya se maneja en el store, solo mostramos el mensaje
+        // authError ya está vinculado al error del store
       }
     }
 
@@ -226,7 +238,7 @@ export default {
       formData,
       errors,
       isSubmitting,
-      generalError,
+      authError,
       successMessage,
       showPassword,
       isFormValid,
@@ -244,12 +256,12 @@ export default {
   position: relative;
   min-height: 100vh;
   display: flex;
-  align-items: center; /* Cambio: volver a center para mejor centrado */
+  align-items: center;
   justify-content: center;
-  padding: var(--space-xl) 0; /* Padding vertical para evitar que toque los bordes */
+  padding: var(--space-xl) 0;
 }
 
-/* === FONDO (igual que en Register) === */
+/* === FONDO === */
 .background-static {
   position: fixed;
   top: 0;
@@ -295,7 +307,7 @@ export default {
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 650px; /* CAMBIADO: de 500px a 650px */
+  max-width: 650px;
   margin: 0 auto;
   padding: var(--space-lg);
 }
@@ -306,11 +318,11 @@ export default {
   backdrop-filter: blur(15px);
   border: 2px solid rgba(255, 107, 53, 0.2);
   border-radius: var(--radius-xl);
-  padding: var(--space-2xl) 3rem; /* CAMBIADO: padding horizontal más grande */
+  padding: var(--space-2xl) 3rem;
   box-shadow: var(--shadow-lg);
-  min-height: 600px; /* NUEVO: altura mínima para hacer el formulario más alto */
+  min-height: 600px;
   display: flex;
-  align-items: center; /* NUEVO: centrar contenido verticalmente */
+  align-items: center;
 }
 
 .login-form {
@@ -319,11 +331,11 @@ export default {
 
 .form-title {
   font-family: var(--font-impact);
-  font-size: 2.8rem; /* CAMBIADO: de 2.2rem a 2.8rem */
+  font-size: 2.8rem;
   font-weight: 400;
   color: var(--white);
   text-align: center;
-  margin-bottom: var(--space-lg); /* CAMBIADO: más espacio */
+  margin-bottom: var(--space-lg);
   text-transform: uppercase;
   letter-spacing: 0.02em;
 }
@@ -331,39 +343,39 @@ export default {
 .form-subtitle {
   color: var(--gray-light);
   text-align: center;
-  margin-bottom: 3rem; /* CAMBIADO: de var(--space-2xl) a 3rem para más espacio */
-  font-size: 1.2rem; /* CAMBIADO: texto más grande */
+  margin-bottom: 3rem;
+  font-size: 1.2rem;
 }
 
 .form-group {
-  margin-bottom: 2rem; /* CAMBIADO: de var(--space-lg) a 2rem para más espacio */
+  margin-bottom: 2rem;
 }
 
 .form-label {
   display: block;
   font-weight: 600;
   color: var(--white);
-  margin-bottom: var(--space-md); /* CAMBIADO: más espacio */
-  font-size: 1rem; /* CAMBIADO: de 0.9rem a 1rem */
+  margin-bottom: var(--space-md);
+  font-size: 1rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .form-input {
   width: 100%;
-  padding: 1.2rem; /* CAMBIADO: de var(--space-md) a 1.2rem para inputs más grandes */
+  padding: 1.2rem;
   background: rgba(255, 255, 255, 0.1);
   border: 2px solid rgba(255, 255, 255, 0.2);
   border-radius: var(--radius-md);
   color: var(--white);
-  font-size: 1.1rem; /* CAMBIADO: de 1rem a 1.1rem */
+  font-size: 1.1rem;
   transition: all 0.3s ease;
   backdrop-filter: blur(10px);
 }
 
 .form-input::placeholder {
   color: var(--gray-light);
-  font-size: 1rem; /* NUEVO: tamaño específico para placeholder */
+  font-size: 1rem;
 }
 
 .form-input:focus {
@@ -385,14 +397,14 @@ export default {
 
 .password-toggle {
   position: absolute;
-  right: 1rem; /* CAMBIADO: de var(--space-md) a 1rem */
+  right: 1rem;
   top: 50%;
   transform: translateY(-50%);
   background: none;
   border: none;
   color: var(--gray-light);
   cursor: pointer;
-  font-size: 1.3rem; /* CAMBIADO: botón más grande */
+  font-size: 1.3rem;
   padding: var(--space-sm);
   border-radius: var(--radius-sm);
   transition: all 0.2s ease;
@@ -406,18 +418,18 @@ export default {
 /* === OPCIONES DEL FORMULARIO === */
 .forgot-password-container {
   text-align: right;
-  margin-bottom: 2rem; /* CAMBIADO: más espacio */
+  margin-bottom: 2rem;
 }
 
 .forgot-password {
-  font-size: 1rem; /* CAMBIADO: de 0.9rem a 1rem */
+  font-size: 1rem;
 }
 
 /* === MENSAJES === */
 .error-message {
   display: block;
   color: var(--error);
-  font-size: 0.9rem; /* CAMBIADO: de 0.8rem a 0.9rem */
+  font-size: 0.9rem;
   margin-top: var(--space-sm);
   font-weight: 500;
 }
@@ -426,37 +438,61 @@ export default {
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid var(--error);
   color: var(--error);
-  padding: 1rem; /* CAMBIADO: padding más grande */
+  padding: 1rem;
   border-radius: var(--radius-md);
   margin-bottom: 1.5rem;
   text-align: center;
-  font-size: 1rem; /* NUEVO: texto más grande */
+  font-size: 1rem;
 }
 
 .success-banner {
   background: rgba(16, 185, 129, 0.1);
   border: 1px solid var(--success);
   color: var(--success);
-  padding: 1rem; /* CAMBIADO: padding más grande */
+  padding: 1rem;
   border-radius: var(--radius-md);
   margin-bottom: 1.5rem;
   text-align: center;
-  font-size: 1rem; /* NUEVO: texto más grande */
+  font-size: 1rem;
 }
 
 /* === BOTONES Y ACCIONES === */
 .form-actions {
-  margin-bottom: 2rem; /* CAMBIADO: más espacio */
+  margin-bottom: 2rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-primary);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: var(--gradient-primary);
+  color: var(--white);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-primary:hover:not(.loading):not(.disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
 }
 
 .btn-large {
   width: 100%;
-  padding: 1.2rem; /* CAMBIADO: botón más grande */
-  font-size: 1.2rem; /* CAMBIADO: de 1.1rem a 1.2rem */
+  padding: 1.2rem;
+  font-size: 1.2rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  min-height: 56px; /* NUEVO: altura mínima más grande */
+  min-height: 56px;
 }
 
 .btn.loading {
@@ -480,14 +516,14 @@ export default {
 
 .form-footer {
   text-align: center;
-  padding-top: 1.5rem; /* CAMBIADO: más padding */
+  padding-top: 1.5rem;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   margin-bottom: 1.5rem;
 }
 
 .register-link {
   color: var(--gray-light);
-  font-size: 1rem; /* CAMBIADO: de 0.9rem a 1rem */
+  font-size: 1rem;
 }
 
 .link {
@@ -512,8 +548,8 @@ export default {
   background: transparent;
   color: var(--gray-light);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: var(--space-md) var(--space-xl); /* CAMBIADO: padding más grande */
-  font-size: 1rem; /* CAMBIADO: de 0.9rem a 1rem */
+  padding: var(--space-md) var(--space-xl);
+  font-size: 1rem;
   font-weight: 500;
   transition: all 0.3s ease;
 }
@@ -528,21 +564,21 @@ export default {
 /* === RESPONSIVE === */
 @media (max-width: 768px) {
   .login {
-    padding: var(--space-lg) 0; /* Reducir padding en móvil */
+    padding: var(--space-lg) 0;
   }
 
   .login-container {
-    max-width: 90%; /* CAMBIADO: usar porcentaje en móvil */
+    max-width: 90%;
     padding: var(--space-md);
   }
 
   .login-form-container {
-    padding: var(--space-xl) var(--space-lg); /* CAMBIADO: reducir padding horizontal en móvil */
-    min-height: auto; /* NUEVO: permitir altura automática en móvil */
+    padding: var(--space-xl) var(--space-lg);
+    min-height: auto;
   }
 
   .form-title {
-    font-size: 2.2rem; /* CAMBIADO: reducir en móvil pero mantener más grande que antes */
+    font-size: 2.2rem;
   }
 
   .forgot-password-container {
