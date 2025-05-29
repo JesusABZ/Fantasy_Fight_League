@@ -19,8 +19,8 @@
               <span class="profile-avatar">{{ userInitials }}</span>
               Mi Perfil
             </button>
-            <button class="btn btn-logout" @click="handleLogout">
-              Cerrar Sesión
+            <button class="btn btn-create-league" @click="openCreateLeagueModal">
+              ➕ Crear Liga
             </button>
           </div>
         </div>
@@ -244,6 +244,92 @@
       </div>
     </div>
 
+    <!-- Modal de crear liga privada -->
+    <div v-if="showCreateLeagueModal" class="modal-overlay" @click="closeCreateLeagueModal">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3 class="modal-title">Crear Liga Privada</h3>
+          <button class="modal-close" @click="closeCreateLeagueModal">✕</button>
+        </div>
+        
+        <div class="modal-body">
+          <form @submit.prevent="createPrivateLeague">
+            <div class="form-group">
+              <label for="league-name" class="form-label">Nombre de la Liga *</label>
+              <input
+                id="league-name"
+                v-model="createLeagueForm.name"
+                type="text"
+                class="form-input"
+                placeholder="Ej: Liga de Amigos"
+                maxlength="50"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="league-description" class="form-label">Descripción</label>
+              <textarea
+                id="league-description"
+                v-model="createLeagueForm.description"
+                class="form-textarea"
+                placeholder="Describe tu liga (opcional)"
+                maxlength="200"
+                rows="3"
+              ></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="initial-budget" class="form-label">Presupuesto Inicial</label>
+              <select id="initial-budget" v-model="createLeagueForm.initialBudget" class="form-select">
+                <option value="50000">50,000 (Principiante)</option>
+                <option value="100000">100,000 (Estándar)</option>
+                <option value="150000">150,000 (Avanzado)</option>
+              </select>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="max-fighters-event" class="form-label">Máx. Luchadores por Evento</label>
+                <select id="max-fighters-event" v-model="createLeagueForm.maxFightersEvent" class="form-select">
+                  <option value="1">1 Luchador</option>
+                  <option value="2">2 Luchadores</option>
+                  <option value="3">3 Luchadores</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="min-fighters-event" class="form-label">Mín. Luchadores por Evento</label>
+                <select id="min-fighters-event" v-model="createLeagueForm.minFightersEvent" class="form-select">
+                  <option value="1">1 Luchador</option>
+                  <option value="2">2 Luchadores</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="modal-actions">
+              <button 
+                type="button" 
+                class="btn btn-secondary" 
+                @click="closeCreateLeagueModal"
+                :disabled="isCreatingLeague"
+              >
+                Cancelar
+              </button>
+              <button 
+                type="submit" 
+                class="btn btn-primary"
+                :disabled="!createLeagueForm.name.trim() || isCreatingLeague"
+              >
+                <span v-if="isCreatingLeague">Creando...</span>
+                <span v-else>Crear Liga</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
     <!-- Notificación flotante -->
     <div v-if="showNotification" class="notification" :class="notificationType" @click="hideNotification">
       <div class="notification-icon">
@@ -258,7 +344,7 @@
 <script>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuth } from '../composables/useAuth.js'
+import { useAuthStore } from '../store/auth.js'
 import { eventsService, leaguesService, leaderboardService } from '../api/index.js'
 import { useDateFormatter } from '../composables/useDateFormatter.js'
 
@@ -266,11 +352,26 @@ export default {
   name: 'HomeLoggedView',
   setup() {
     const router = useRouter()
-    const { user, logout } = useAuth()
+    const authStore = useAuthStore()
     const { formatEventDate } = useDateFormatter()
+
+    // ✅ Obtener user del store correctamente
+    const user = computed(() => authStore.user)
 
     // Estados
     const privateCode = ref('')
+    
+    // Estados para crear liga privada
+    const showCreateLeagueModal = ref(false)
+    const isCreatingLeague = ref(false)
+    const createLeagueForm = ref({
+      name: '',
+      description: '',
+      initialBudget: 100000,
+      maxFighters: 10,
+      maxFightersEvent: 3,
+      minFightersEvent: 1
+    })
     const showNotification = ref(false)
     const notificationType = ref('success')
     const notificationText = ref('')
@@ -290,18 +391,40 @@ export default {
     // Computed properties
     const userDisplayName = computed(() => {
       if (!user.value) return 'Usuario'
+      
+      console.log('🔍 Datos del usuario para displayName:', user.value)
+      
+      // Primero intentar con firstName y lastName
       if (user.value.firstName && user.value.lastName) {
         return `${user.value.firstName} ${user.value.lastName}`
       }
-      return user.value.username
+      
+      // Si no hay firstName/lastName, usar username
+      if (user.value.username) {
+        return user.value.username
+      }
+      
+      // Fallback
+      return 'Usuario'
     })
 
     const userInitials = computed(() => {
       if (!user.value) return 'U'
+      
+      console.log('🔍 Datos del usuario para initials:', user.value)
+      
+      // Primero intentar con firstName y lastName
       if (user.value.firstName && user.value.lastName) {
         return `${user.value.firstName[0]}${user.value.lastName[0]}`.toUpperCase()
       }
-      return user.value.username.substring(0, 2).toUpperCase()
+      
+      // Si no hay firstName/lastName, usar username
+      if (user.value.username && user.value.username.length >= 2) {
+        return user.value.username.substring(0, 2).toUpperCase()
+      }
+      
+      // Fallback
+      return 'U'
     })
 
     const eventBadge = computed(() => {
@@ -378,7 +501,13 @@ export default {
       isLoadingPublicLeagues.value = true
       try {
         const leagues = await leaguesService.getPublicLeagues()
-        publicLeagues.value = leagues
+        
+        // Filtrar ligas donde ya soy miembro
+        const myLeagueIds = myLeagues.value.map(league => league.id)
+        const filteredLeagues = leagues.filter(league => !myLeagueIds.includes(league.id))
+        
+        publicLeagues.value = filteredLeagues
+        console.log('🔍 Ligas públicas cargadas (filtradas):', filteredLeagues.length)
       } catch (error) {
         console.error('Error al cargar ligas públicas:', error)
         showFloatingNotification('error', 'Error al cargar ligas públicas')
@@ -391,23 +520,45 @@ export default {
     const joinPrivateLeague = async () => {
       if (!privateCode.value.trim()) return
       
+      // Verificar si ya estoy en una liga con este código (aunque no deberíamos saberlo)
       isJoiningPrivate.value = true
       try {
         const response = await leaguesService.joinPrivateLeague(privateCode.value)
-        showFloatingNotification('success', `¡Te has unido a la liga: ${response.message || 'Liga privada'}!`)
+        showFloatingNotification('success', `¡Te has unido a la liga!`)
         privateCode.value = ''
         
         // Recargar mis ligas después de unirse
         await loadMyLeagues()
+        // También recargar ligas públicas por si alguna cambió de estado
+        await loadPublicLeagues()
       } catch (error) {
         console.error('Error al unirse a liga privada:', error)
-        showFloatingNotification('error', error.message || 'Error al unirse a la liga privada')
+        
+        // Manejo específico de errores
+        if (error.message.includes('miembro') || error.message.includes('member')) {
+          showFloatingNotification('error', 'Ya eres miembro de esta liga')
+          // Limpiar el código
+          privateCode.value = ''
+          // Refrescar las listas para sincronizar
+          await loadMyLeagues()
+        } else if (error.message.includes('código') || error.message.includes('inválido') || error.message.includes('invalid')) {
+          showFloatingNotification('error', 'Código de invitación inválido')
+        } else {
+          showFloatingNotification('error', error.message || 'Error al unirse a la liga privada')
+        }
       } finally {
         isJoiningPrivate.value = false
       }
     }
 
     const joinPublicLeague = async (league) => {
+      // Verificar si ya estoy en esta liga (doble check)
+      const alreadyMember = myLeagues.value.some(myLeague => myLeague.id === league.id)
+      if (alreadyMember) {
+        showFloatingNotification('error', 'Ya eres miembro de esta liga')
+        return
+      }
+      
       isJoiningPublic.value = league.id
       try {
         const response = await leaguesService.joinPublicLeague(league.id)
@@ -416,17 +567,76 @@ export default {
         // Recargar ambas listas
         await Promise.all([
           loadMyLeagues(),
-          loadPublicLeagues()
+          loadPublicLeagues() // Esto filtrará automáticamente la liga donde me acabo de unir
         ])
       } catch (error) {
         console.error('Error al unirse a liga pública:', error)
-        showFloatingNotification('error', error.message || 'Error al unirse a la liga')
+        
+        // Manejo específico de errores
+        if (error.message.includes('miembro') || error.message.includes('member')) {
+          showFloatingNotification('error', 'Ya eres miembro de esta liga')
+          // Refrescar las listas para sincronizar
+          await Promise.all([
+            loadMyLeagues(),
+            loadPublicLeagues()
+          ])
+        } else {
+          showFloatingNotification('error', error.message || 'Error al unirse a la liga')
+        }
       } finally {
         isJoiningPublic.value = null
       }
     }
 
-    // Funciones de navegación
+    // Funciones para crear liga privada
+    const openCreateLeagueModal = () => {
+      showCreateLeagueModal.value = true
+      // Resetear formulario
+      createLeagueForm.value = {
+        name: '',
+        description: '',
+        initialBudget: 100000,
+        maxFighters: 10,
+        maxFightersEvent: 3,
+        minFightersEvent: 1
+      }
+    }
+
+    const closeCreateLeagueModal = () => {
+      showCreateLeagueModal.value = false
+    }
+
+    const createPrivateLeague = async () => {
+      if (!createLeagueForm.value.name.trim()) {
+        showFloatingNotification('error', 'El nombre de la liga es obligatorio')
+        return
+      }
+
+      isCreatingLeague.value = true
+      try {
+        const response = await leaguesService.createPrivateLeague(createLeagueForm.value)
+        showFloatingNotification('success', `¡Liga "${createLeagueForm.value.name}" creada exitosamente!`)
+        
+        // Cerrar modal
+        closeCreateLeagueModal()
+        
+        // Recargar mis ligas
+        await loadMyLeagues()
+        
+        // Opcional: mostrar código de invitación
+        if (response.invitationCode) {
+          setTimeout(() => {
+            showFloatingNotification('success', `Código de invitación: ${response.invitationCode}`)
+          }, 2000)
+        }
+      } catch (error) {
+        console.error('Error al crear liga privada:', error)
+        showFloatingNotification('error', error.message || 'Error al crear la liga')
+      } finally {
+        isCreatingLeague.value = false
+      }
+    }
+
     const enterLeague = (league) => {
       router.push(`/league/${league.id}`)
     }
@@ -437,11 +647,10 @@ export default {
 
     const handleLogout = async () => {
       try {
-        await logout()
+        await authStore.logout()
         router.push('/')
       } catch (error) {
         console.error('Error al cerrar sesión:', error)
-        // Forzar redirección aunque haya error
         router.push('/')
       }
     }
@@ -479,19 +688,33 @@ export default {
     // Cargar datos al montar
     onMounted(async () => {
       console.log('🚀 Cargando datos del dashboard...')
+      console.log('👤 Usuario actual:', user.value)
+      
+      // Debug del usuario
+      if (user.value) {
+        console.log('📧 Email:', user.value.email)
+        console.log('👨‍💼 Username:', user.value.username) 
+        console.log('🏷️ First Name:', user.value.firstName)
+        console.log('🏷️ Last Name:', user.value.lastName)
+        console.log('🔐 Email confirmado:', user.value.emailConfirmed)
+        console.log('👥 Roles:', user.value.roles)
+      }
       
       // Cargar datos en paralelo
       await Promise.all([
         loadNextEvent(),
-        loadMyLeagues(),
-        loadPublicLeagues()
+        loadMyLeagues()
       ])
+      
+      // Cargar ligas públicas después de cargar mis ligas (para filtrar correctamente)
+      await loadPublicLeagues()
       
       console.log('✅ Datos del dashboard cargados')
     })
 
     return {
-      // Estado del usuario
+      // ✅ Estado del usuario - ahora como computed
+      user,
       userDisplayName,
       userInitials,
       
@@ -507,6 +730,11 @@ export default {
       myLeagues,
       publicLeagues,
       privateCode,
+      
+      // Estados del modal de crear liga
+      showCreateLeagueModal,
+      isCreatingLeague,
+      createLeagueForm,
       
       // Computed del evento
       eventBadge,
@@ -528,7 +756,12 @@ export default {
       goToUFCEvents,
       getPositionClass,
       handleImageError,
-      hideNotification
+      hideNotification,
+      
+      // Funciones de crear liga
+      openCreateLeagueModal,
+      closeCreateLeagueModal,
+      createPrivateLeague
     }
   }
 }
@@ -662,15 +895,204 @@ export default {
   font-size: 0.75rem;
 }
 
-.btn-logout {
-  background: transparent;
-  color: var(--error);
-  border: 1px solid var(--error);
+.btn-create-league {
+  background: var(--gradient-primary);
+  color: var(--white);
+  border: 1px solid var(--primary);
 }
 
-.btn-logout:hover {
-  background: var(--error);
+.btn-create-league:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* === MODAL === */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modal-content {
+  background: var(--gradient-card);
+  backdrop-filter: blur(15px);
+  border: 2px solid rgba(255, 107, 53, 0.3);
+  border-radius: var(--radius-xl);
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-xl);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-title {
+  font-family: var(--font-impact);
+  font-size: 1.5rem;
   color: var(--white);
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--gray-light);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: var(--space-sm);
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+  color: var(--white);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.modal-body {
+  padding: var(--space-xl);
+}
+
+.form-group {
+  margin-bottom: var(--space-lg);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-lg);
+}
+
+.form-label {
+  display: block;
+  color: var(--white);
+  font-weight: 600;
+  margin-bottom: var(--space-sm);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.form-input,
+.form-textarea,
+.form-select {
+  width: 100%;
+  padding: var(--space-md);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-md);
+  color: var(--white);
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+  color: var(--gray-light);
+}
+
+.form-input:focus,
+.form-textarea:focus,
+.form-select:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.form-select {
+  cursor: pointer;
+}
+
+.modal-actions {
+  display: flex;
+  gap: var(--space-md);
+  justify-content: flex-end;
+  margin-top: var(--space-xl);
+  padding-top: var(--space-lg);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-actions .btn {
+  padding: var(--space-md) var(--space-xl);
+  font-weight: 600;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--gray-light);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-secondary:hover {
+  color: var(--white);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.btn-primary {
+  background: var(--gradient-primary);
+  color: var(--white);
+  border: none;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* === RESPONSIVE MODAL === */
+@media (max-width: 768px) {
+  .modal-content {
+    width: 95%;
+    margin: var(--space-md);
+  }
+  
+  .modal-header,
+  .modal-body {
+    padding: var(--space-lg);
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: var(--space-md);
+  }
+  
+  .modal-actions {
+    flex-direction: column;
+  }
+  
+  .modal-actions .btn {
+    width: 100%;
+  }
 }
 
 /* === CONTENIDO PRINCIPAL === */
