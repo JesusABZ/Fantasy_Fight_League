@@ -6,6 +6,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -49,26 +51,33 @@ public class FileUploadController {
             UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
             User user = userService.findByUsername(userDetails.getUsername())
                     .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-            
+
             // Generar un nombre único para el archivo
             String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
-            
+
             // Crear directorio si no existe
             Path uploadPath = Paths.get(uploadDir);
             if (!Files.exists(uploadPath)) {
                 Files.createDirectories(uploadPath);
             }
-            
+
             // Guardar el archivo
             Path filePath = uploadPath.resolve(fileName);
             Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-            
+
             // Actualizar la URL de la imagen de perfil del usuario
             String imageUrl = baseUrl + "/uploads/" + fileName;
             user.setProfileImageUrl(imageUrl);
             userService.saveUser(user);
+
+            // 🔥 CAMBIO PRINCIPAL: Devolver la URL en la respuesta
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Imagen de perfil actualizada correctamente");
+            response.put("imageUrl", imageUrl);
+            response.put("fileName", fileName);
             
-            return ResponseEntity.ok(new MessageResponseDTO("Imagen de perfil actualizada correctamente"));
+            return ResponseEntity.ok(response);
+            
         } catch (IOException e) {
             return ResponseEntity.badRequest().body(new MessageResponseDTO("Error al subir la imagen: " + e.getMessage()));
         }

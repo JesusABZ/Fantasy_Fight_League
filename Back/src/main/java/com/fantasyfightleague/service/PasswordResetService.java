@@ -38,7 +38,7 @@ public class PasswordResetService {
     @Autowired
     private PasswordEncoder passwordEncoder;
     
-    @Value("${app.baseUrl}")
+    @Value("${app.baseUrlMessage}")
     private String baseUrl;
     
     /**

@@ -25,7 +25,7 @@ public class EmailVerificationService {
     @Autowired
     private VerificationTokenRepository tokenRepository;
     
-    @Value("${app.baseUrl}")
+    @Value("${app.baseUrlMessage}")
     private String baseUrl;
     
     @Transactional

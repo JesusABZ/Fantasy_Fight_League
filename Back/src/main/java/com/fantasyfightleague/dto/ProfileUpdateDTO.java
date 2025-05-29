@@ -1,8 +1,13 @@
 package com.fantasyfightleague.dto;
 
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 public class ProfileUpdateDTO {
     private String firstName;
     private String lastName;
+    
+    @JsonInclude(JsonInclude.Include.ALWAYS)
     private String profileImageUrl;
     
     // Getters y setters...

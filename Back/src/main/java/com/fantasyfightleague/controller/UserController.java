@@ -72,11 +72,11 @@ public class UserController {
             user.setLastName(profileDTO.getLastName());
         }
         
-        if (profileDTO.getProfileImageUrl() != null) {
-            user.setProfileImageUrl(profileDTO.getProfileImageUrl());
-        }
+        user.setProfileImageUrl(profileDTO.getProfileImageUrl());
         
         userService.saveUser(user);
+        
+        System.out.println("✅ Usuario actualizado - profileImageUrl: " + user.getProfileImageUrl());
         
         // No enviamos la contraseña
         user.setPassword(null);
