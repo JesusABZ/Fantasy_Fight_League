@@ -21,8 +21,16 @@
       </div>
     </div>
 
+    <!-- Loading state -->
+    <div v-if="isLoading" class="loading-profile">
+      <div class="loading-spinner">
+        <span class="spinner"></span>
+        <p>Cargando perfil...</p>
+      </div>
+    </div>
+
     <!-- Contenido principal -->
-    <div class="main-content">
+    <div v-else-if="currentUser" class="main-content">
       <div class="container">
         
         <!-- Tarjeta principal del perfil -->
@@ -36,6 +44,7 @@
                 :src="currentUser.profileImageUrl" 
                 :alt="currentUser.username"
                 class="avatar-image"
+                @error="handleImageError"
               />
               <span v-else class="avatar-initials">{{ userInitials }}</span>
             </div>
@@ -44,7 +53,7 @@
           <!-- Información del usuario vertical -->
           <div class="user-info-vertical">
             <h2 class="username-large">{{ currentUser.username }}</h2>
-            <p class="full-name-large">{{ fullName }}</p>
+            <p v-if="fullName" class="full-name-large">{{ fullName }}</p>
             <p class="email-large">{{ currentUser.email }}</p>
             
             <div class="verification-status-centered">
@@ -58,6 +67,18 @@
                 {{ currentUser.emailConfirmed ? 'Email Verificado' : 'Email No Verificado' }}
               </span>
             </div>
+
+            <!-- Información adicional del usuario -->
+            <div class="user-additional-info">
+              <div class="info-item">
+                <span class="info-label">Miembro desde:</span>
+                <span class="info-value">{{ memberSince }}</span>
+              </div>
+              <div class="info-item" v-if="userRoles.length > 0">
+                <span class="info-label">Roles:</span>
+                <span class="info-value">{{ formattedRoles }}</span>
+              </div>
+            </div>
           </div>
 
           <!-- Botones de acción centrados -->
@@ -69,6 +90,17 @@
             <button class="btn btn-secondary-large" @click="goToSupport">
               📧 Contactar Soporte
             </button>
+
+            <!-- Mostrar botón de reenvío si email no verificado -->
+            <button 
+              v-if="!currentUser.emailConfirmed" 
+              class="btn btn-warning-large"
+              @click="resendVerificationEmail"
+              :disabled="isResending"
+            >
+              <span v-if="isResending">📤 Enviando...</span>
+              <span v-else>📧 Verificar Email</span>
+            </button>
           </div>
 
         </div>
@@ -76,10 +108,23 @@
       </div>
     </div>
 
+    <!-- Estado de error -->
+    <div v-else-if="hasError" class="error-state">
+      <div class="error-content">
+        <div class="error-icon">❌</div>
+        <h3 class="error-title">Error al cargar el perfil</h3>
+        <p class="error-message">{{ errorMessage }}</p>
+        <button class="btn btn-primary" @click="loadUserProfile">
+          🔄 Reintentar
+        </button>
+      </div>
+    </div>
+
     <!-- Notificación flotante -->
     <div v-if="showNotification" class="notification" :class="notificationType" @click="hideNotification">
       <div class="notification-icon">
         <span v-if="notificationType === 'success'">✅</span>
+        <span v-else-if="notificationType === 'warning'">⚠️</span>
         <span v-else>❌</span>
       </div>
       <div class="notification-text">{{ notificationText }}</div>
@@ -88,54 +133,25 @@
 </template>
 
 <script>
-import { ref, reactive, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '../store/auth.js'
+import { userService } from '../api/index.js'
+import { useDateFormatter } from '../composables/useDateFormatter.js'
 
 export default {
   name: 'ProfileView',
   setup() {
     const router = useRouter()
+    const authStore = useAuthStore()
+    const { formatEventDate } = useDateFormatter()
 
-    // Estado del usuario (simulado - datos básicos que necesitas)
-    const currentUser = reactive({
-      id: 2,
-      username: 'usuario_prueba2',
-      firstName: 'Juan Carlos',
-      lastName: 'Pérez García',
-      email: 'usuario@yopmail.com',
-      emailConfirmed: true,
-      profileImageUrl: null // Cambia esto por una URL real si tienes imagen
-    })
-
-    // Estadísticas básicas del usuario (simuladas)
-    const userStats = reactive({
-      activeLeagues: 3,
-      totalPoints: 2890,
-      bestPosition: 1,
-      level: 5
-    })
-
-    // Actividad reciente simplificada
-    const recentActivity = ref([
-      {
-        id: 1,
-        icon: '🏆',
-        description: 'Ganaste la liga "Oficina Warriors"',
-        date: 'Hace 2 días'
-      },
-      {
-        id: 2,
-        icon: '⚔️',
-        description: 'Te uniste a la liga "UFC Vegas 107"',
-        date: 'Hace 3 días'
-      },
-      {
-        id: 3,
-        icon: '🎯',
-        description: 'Obtuviste 285 puntos en el último evento',
-        date: 'Hace 5 días'
-      }
-    ])
+    // Estados reactivos
+    const currentUser = ref(null)
+    const isLoading = ref(true)
+    const hasError = ref(false)
+    const errorMessage = ref('')
+    const isResending = ref(false)
 
     // Estados para notificaciones
     const showNotification = ref(false)
@@ -144,26 +160,159 @@ export default {
 
     // Computed properties
     const fullName = computed(() => {
-      return `${currentUser.firstName} ${currentUser.lastName}`
+      if (!currentUser.value) return ''
+      
+      const firstName = currentUser.value.firstName?.trim()
+      const lastName = currentUser.value.lastName?.trim()
+      
+      if (firstName && lastName) {
+        return `${firstName} ${lastName}`
+      } else if (firstName) {
+        return firstName
+      } else if (lastName) {
+        return lastName
+      }
+      
+      return ''
     })
 
     const userInitials = computed(() => {
-      return `${currentUser.firstName[0]}${currentUser.lastName[0]}`.toUpperCase()
+      if (!currentUser.value) return 'U'
+      
+      const firstName = currentUser.value.firstName?.trim()
+      const lastName = currentUser.value.lastName?.trim()
+      const username = currentUser.value.username?.trim()
+      
+      // Prioridad: firstName + lastName > username > fallback
+      if (firstName && lastName) {
+        return `${firstName[0]}${lastName[0]}`.toUpperCase()
+      } else if (username && username.length >= 2) {
+        return username.substring(0, 2).toUpperCase()
+      } else if (firstName) {
+        return firstName[0].toUpperCase()
+      } else if (username) {
+        return username[0].toUpperCase()
+      }
+      
+      return 'U'
     })
+
+    const memberSince = computed(() => {
+      if (!currentUser.value?.createdAt) return 'Fecha no disponible'
+      
+      try {
+        return formatEventDate(currentUser.value.createdAt)
+      } catch (error) {
+        console.error('Error al formatear fecha de creación:', error)
+        return 'Fecha no disponible'
+      }
+    })
+
+    const userRoles = computed(() => {
+      if (!currentUser.value?.roles) return []
+      return currentUser.value.roles
+    })
+
+    const formattedRoles = computed(() => {
+      if (!userRoles.value.length) return 'Usuario'
+      
+      return userRoles.value
+        .map(role => {
+          // Convertir ROLE_ADMIN -> Administrador, ROLE_USER -> Usuario
+          if (role === 'ROLE_ADMIN') return 'Administrador'
+          if (role === 'ROLE_USER') return 'Usuario'
+          return role.replace('ROLE_', '').toLowerCase()
+        })
+        .join(', ')
+    })
+
+    // Funciones para cargar datos
+    const loadUserProfile = async () => {
+      isLoading.value = true
+      hasError.value = false
+      errorMessage.value = ''
+
+      try {
+        console.log('🔄 Cargando perfil de usuario...')
+        
+        // Intentar obtener el perfil del usuario
+        const userProfile = await userService.getProfile()
+        console.log('✅ Perfil cargado:', userProfile)
+        
+        currentUser.value = userProfile
+        
+        // Actualizar también el store de autenticación si es necesario
+        if (authStore.user && authStore.user.id === userProfile.id) {
+          // Sincronizar datos del store con los del perfil
+          Object.assign(authStore.user, userProfile)
+        }
+        
+      } catch (error) {
+        console.error('❌ Error al cargar perfil:', error)
+        hasError.value = true
+        
+        if (error.message.includes('401') || error.message.includes('unauthorized')) {
+          errorMessage.value = 'Sesión expirada. Por favor, inicia sesión nuevamente.'
+          // Redirigir al login después de un breve delay
+          setTimeout(() => {
+            authStore.logout()
+            router.push('/login')
+          }, 2000)
+        } else {
+          errorMessage.value = error.message || 'No se pudo cargar la información del perfil'
+        }
+      } finally {
+        isLoading.value = false
+      }
+    }
+
+    // Función para reenviar email de verificación
+    const resendVerificationEmail = async () => {
+      if (!currentUser.value?.email) {
+        showFloatingNotification('error', 'No se encontró el email del usuario')
+        return
+      }
+
+      isResending.value = true
+      try {
+        console.log('📧 Reenviando email de verificación a:', currentUser.value.email)
+        
+        await authStore.resendVerificationEmail(currentUser.value.email)
+        showFloatingNotification('success', 'Email de verificación enviado. Revisa tu bandeja de entrada.')
+        
+      } catch (error) {
+        console.error('❌ Error al reenviar email:', error)
+        showFloatingNotification('error', error.message || 'Error al enviar el email de verificación')
+      } finally {
+        isResending.value = false
+      }
+    }
 
     // Funciones de navegación
     const goBack = () => {
-      router.push('/dashboard')
+      // Usar la funcionalidad inteligente de navegación
+      if (window.history.length > 1) {
+        router.go(-1)
+      } else {
+        router.push('/dashboard')
+      }
     }
 
-    const handleLogout = () => {
-      // TODO: Limpiar store de autenticación
-      console.log('Cerrando sesión...')
-      showFloatingNotification('success', 'Sesión cerrada correctamente')
-      
-      setTimeout(() => {
+    const handleLogout = async () => {
+      try {
+        showFloatingNotification('success', 'Cerrando sesión...')
+        
+        // Esperar un momento para que se vea la notificación
+        setTimeout(async () => {
+          await authStore.logout()
+          router.push('/')
+        }, 1000)
+        
+      } catch (error) {
+        console.error('Error al cerrar sesión:', error)
+        // Incluso si hay error, redirigir al inicio
         router.push('/')
-      }, 1000)
+      }
     }
 
     const goToEditProfile = () => {
@@ -174,6 +323,13 @@ export default {
       router.push('/support')
     }
 
+    // Función para manejar errores de imagen
+    const handleImageError = (event) => {
+      console.warn('Error al cargar imagen de perfil:', event.target.src)
+      // Ocultar la imagen y mostrar las iniciales
+      event.target.style.display = 'none'
+    }
+
     // Función para mostrar notificaciones
     const showFloatingNotification = (type, text) => {
       notificationType.value = type
@@ -182,26 +338,54 @@ export default {
       
       setTimeout(() => {
         hideNotification()
-      }, 3000)
+      }, 4000)
     }
 
     const hideNotification = () => {
       showNotification.value = false
     }
 
+    // Cargar datos al montar el componente
+    onMounted(async () => {
+      console.log('🚀 Componente ProfileView montado')
+      
+      // Verificar si el usuario está autenticado
+      if (!authStore.isAuthenticated) {
+        console.warn('⚠️ Usuario no autenticado, redirigiendo al login')
+        router.push('/login')
+        return
+      }
+      
+      // Cargar el perfil del usuario
+      await loadUserProfile()
+    })
+
     return {
+      // Estado
       currentUser,
-      userStats,
-      recentActivity,
+      isLoading,
+      hasError,
+      errorMessage,
+      isResending,
       showNotification,
       notificationType,
       notificationText,
+      
+      // Computed
       fullName,
       userInitials,
+      memberSince,
+      userRoles,
+      formattedRoles,
+      
+      // Funciones
+      loadUserProfile,
+      resendVerificationEmail,
       goBack,
       handleLogout,
       goToEditProfile,
       goToSupport,
+      handleImageError,
       hideNotification
     }
   }
@@ -284,7 +468,80 @@ export default {
   -webkit-text-fill-color: transparent;
   background-clip: text;
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.05em;
+  line-height: 1.3;
+}
+
+/* === ESTADOS DE CARGA === */
+.loading-profile {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
+  color: var(--gray-light);
+}
+
+.spinner {
+  width: 60px;
+  height: 60px;
+  border: 4px solid rgba(255, 107, 53, 0.3);
+  border-top: 4px solid var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* === ESTADO DE ERROR === */
+.error-state {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+
+.error-content {
+  text-align: center;
+  background: var(--gradient-card);
+  backdrop-filter: blur(15px);
+  border: 2px solid var(--error);
+  border-radius: var(--radius-xl);
+  padding: var(--space-2xl);
+  max-width: 500px;
+  margin: 0 var(--space-lg);
+}
+
+.error-icon {
+  font-size: 4rem;
+  margin-bottom: var(--space-lg);
+}
+
+.error-title {
+  font-family: var(--font-impact);
+  font-size: 1.5rem;
+  color: var(--white);
+  margin-bottom: var(--space-md);
+  text-transform: uppercase;
+}
+
+.error-message {
+  color: var(--gray-light);
+  margin-bottom: var(--space-xl);
+  line-height: 1.5;
 }
 
 /* === BOTONES === */
@@ -416,9 +673,9 @@ export default {
   color: var(--white);
   margin-bottom: var(--space-lg);
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.05em;
+  line-height: 1.3;
   text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
-  line-height: 1;
 }
 
 .full-name-large {
@@ -441,6 +698,7 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
+  margin-bottom: var(--space-xl);
 }
 
 .status-badge-large {
@@ -471,6 +729,33 @@ export default {
   font-size: 1.3rem;
 }
 
+/* === INFORMACIÓN ADICIONAL === */
+.user-additional-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+}
+
+.info-label {
+  color: var(--gray-light);
+  font-weight: 500;
+}
+
+.info-value {
+  color: var(--white);
+  font-weight: 600;
+}
+
 /* === BOTONES CENTRADOS === */
 .profile-actions-centered {
   display: flex;
@@ -480,7 +765,8 @@ export default {
 }
 
 .btn-primary-large,
-.btn-secondary-large {
+.btn-secondary-large,
+.btn-warning-large {
   width: 100%;
   max-width: 300px;
   padding: var(--space-lg) var(--space-xl);
@@ -520,14 +806,22 @@ export default {
   transform: translateY(-3px);
 }
 
-/* === SECCIÓN DE ACTIVIDAD === */
-.activity-section {
-  background: var(--gradient-card);
-  backdrop-filter: blur(15px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-xl);
-  padding: var(--space-2xl);
-  box-shadow: var(--shadow-lg);
+.btn-warning-large {
+  background: transparent;
+  color: var(--warning);
+  border: 2px solid var(--warning);
+}
+
+.btn-warning-large:hover {
+  background: var(--warning);
+  color: var(--white);
+  transform: translateY(-3px);
+}
+
+.btn-warning-large:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
 }
 
 /* === NOTIFICACIÓN FLOTANTE === */
@@ -558,8 +852,8 @@ export default {
   border: 2px solid var(--error);
 }
 
-.notification.info {
-  border: 2px solid var(--info);
+.notification.warning {
+  border: 2px solid var(--warning);
 }
 
 @keyframes slideIn {
@@ -619,9 +913,16 @@ export default {
   }
 
   .btn-primary-large,
-  .btn-secondary-large {
+  .btn-secondary-large,
+  .btn-warning-large {
     max-width: 280px;
     font-size: 1.1rem;
+  }
+
+  .info-item {
+    flex-direction: column;
+    text-align: center;
+    gap: var(--space-xs);
   }
 
   .notification {
@@ -667,7 +968,8 @@ export default {
   }
 
   .btn-primary-large,
-  .btn-secondary-large {
+  .btn-secondary-large,
+  .btn-warning-large {
     max-width: 100%;
     font-size: 1rem;
     min-height: 50px;

@@ -279,34 +279,6 @@
               ></textarea>
             </div>
 
-            <div class="form-group">
-              <label for="initial-budget" class="form-label">Presupuesto Inicial</label>
-              <select id="initial-budget" v-model="createLeagueForm.initialBudget" class="form-select">
-                <option value="50000">50,000 (Principiante)</option>
-                <option value="100000">100,000 (Estándar)</option>
-                <option value="150000">150,000 (Avanzado)</option>
-              </select>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label for="max-fighters-event" class="form-label">Máx. Luchadores por Evento</label>
-                <select id="max-fighters-event" v-model="createLeagueForm.maxFightersEvent" class="form-select">
-                  <option value="1">1 Luchador</option>
-                  <option value="2">2 Luchadores</option>
-                  <option value="3">3 Luchadores</option>
-                </select>
-              </div>
-
-              <div class="form-group">
-                <label for="min-fighters-event" class="form-label">Mín. Luchadores por Evento</label>
-                <select id="min-fighters-event" v-model="createLeagueForm.minFightersEvent" class="form-select">
-                  <option value="1">1 Luchador</option>
-                  <option value="2">2 Luchadores</option>
-                </select>
-              </div>
-            </div>
-
             <div class="modal-actions">
               <button 
                 type="button" 
@@ -355,7 +327,6 @@ export default {
     const authStore = useAuthStore()
     const { formatEventDate } = useDateFormatter()
 
-    // ✅ Obtener user del store correctamente
     const user = computed(() => authStore.user)
 
     // Estados
@@ -367,6 +338,7 @@ export default {
     const createLeagueForm = ref({
       name: '',
       description: '',
+      // Valores por defecto fijos que se enviarán sin mostrar al usuario
       initialBudget: 100000,
       maxFighters: 10,
       maxFightersEvent: 3,
@@ -381,7 +353,7 @@ export default {
     const isLoadingMyLeagues = ref(false)
     const isLoadingPublicLeagues = ref(false)
     const isJoiningPrivate = ref(false)
-    const isJoiningPublic = ref(null) // ID de la liga que se está uniendo
+    const isJoiningPublic = ref(null)
 
     // Datos
     const nextEvent = ref(null)
@@ -394,12 +366,7 @@ export default {
       
       console.log('🔍 Datos del usuario para displayName:', user.value)
       
-      // Primero intentar con firstName y lastName
-      if (user.value.firstName && user.value.lastName) {
-        return `${user.value.firstName} ${user.value.lastName}`
-      }
-      
-      // Si no hay firstName/lastName, usar username
+      // 🔄 CAMBIO: Usar siempre el username en lugar del nombre completo
       if (user.value.username) {
         return user.value.username
       }
@@ -413,12 +380,12 @@ export default {
       
       console.log('🔍 Datos del usuario para initials:', user.value)
       
-      // Primero intentar con firstName y lastName
+      // Para las iniciales seguimos usando el nombre si está disponible
       if (user.value.firstName && user.value.lastName) {
         return `${user.value.firstName[0]}${user.value.lastName[0]}`.toUpperCase()
       }
       
-      // Si no hay firstName/lastName, usar username
+      // Si no hay nombre, usar username
       if (user.value.username && user.value.username.length >= 2) {
         return user.value.username.substring(0, 2).toUpperCase()
       }
@@ -452,7 +419,6 @@ export default {
         nextEvent.value = event
       } catch (error) {
         console.error('Error al cargar el próximo evento:', error)
-        // No mostrar error para el evento ya que es opcional
       } finally {
         isLoadingEvent.value = false
       }
@@ -463,11 +429,9 @@ export default {
       try {
         const leagues = await leaguesService.getMyLeagues()
         
-        // Enriquecer cada liga con datos de posición y puntos
         const enrichedLeagues = await Promise.all(
           leagues.map(async (league) => {
             try {
-              // Obtener mi posición en esta liga
               const position = await leaderboardService.getMyPosition(league.id)
               
               return {
@@ -502,7 +466,6 @@ export default {
       try {
         const leagues = await leaguesService.getPublicLeagues()
         
-        // Filtrar ligas donde ya soy miembro
         const myLeagueIds = myLeagues.value.map(league => league.id)
         const filteredLeagues = leagues.filter(league => !myLeagueIds.includes(league.id))
         
@@ -520,26 +483,20 @@ export default {
     const joinPrivateLeague = async () => {
       if (!privateCode.value.trim()) return
       
-      // Verificar si ya estoy en una liga con este código (aunque no deberíamos saberlo)
       isJoiningPrivate.value = true
       try {
         const response = await leaguesService.joinPrivateLeague(privateCode.value)
         showFloatingNotification('success', `¡Te has unido a la liga!`)
         privateCode.value = ''
         
-        // Recargar mis ligas después de unirse
         await loadMyLeagues()
-        // También recargar ligas públicas por si alguna cambió de estado
         await loadPublicLeagues()
       } catch (error) {
         console.error('Error al unirse a liga privada:', error)
         
-        // Manejo específico de errores
         if (error.message.includes('miembro') || error.message.includes('member')) {
           showFloatingNotification('error', 'Ya eres miembro de esta liga')
-          // Limpiar el código
           privateCode.value = ''
-          // Refrescar las listas para sincronizar
           await loadMyLeagues()
         } else if (error.message.includes('código') || error.message.includes('inválido') || error.message.includes('invalid')) {
           showFloatingNotification('error', 'Código de invitación inválido')
@@ -552,7 +509,6 @@ export default {
     }
 
     const joinPublicLeague = async (league) => {
-      // Verificar si ya estoy en esta liga (doble check)
       const alreadyMember = myLeagues.value.some(myLeague => myLeague.id === league.id)
       if (alreadyMember) {
         showFloatingNotification('error', 'Ya eres miembro de esta liga')
@@ -564,18 +520,15 @@ export default {
         const response = await leaguesService.joinPublicLeague(league.id)
         showFloatingNotification('success', `¡Te has unido a ${league.name}!`)
         
-        // Recargar ambas listas
         await Promise.all([
           loadMyLeagues(),
-          loadPublicLeagues() // Esto filtrará automáticamente la liga donde me acabo de unir
+          loadPublicLeagues()
         ])
       } catch (error) {
         console.error('Error al unirse a liga pública:', error)
         
-        // Manejo específico de errores
         if (error.message.includes('miembro') || error.message.includes('member')) {
           showFloatingNotification('error', 'Ya eres miembro de esta liga')
-          // Refrescar las listas para sincronizar
           await Promise.all([
             loadMyLeagues(),
             loadPublicLeagues()
@@ -591,15 +544,10 @@ export default {
     // Funciones para crear liga privada
     const openCreateLeagueModal = () => {
       showCreateLeagueModal.value = true
-      // Resetear formulario
-      createLeagueForm.value = {
-        name: '',
-        description: '',
-        initialBudget: 100000,
-        maxFighters: 10,
-        maxFightersEvent: 3,
-        minFightersEvent: 1
-      }
+      // Resetear solo los campos visibles
+      createLeagueForm.value.name = ''
+      createLeagueForm.value.description = ''
+      // Los valores por defecto se mantienen automáticamente
     }
 
     const closeCreateLeagueModal = () => {
@@ -614,21 +562,21 @@ export default {
 
       isCreatingLeague.value = true
       try {
-        const response = await leaguesService.createPrivateLeague(createLeagueForm.value)
+        // 🔄 CAMBIO: Asegurar que se envían todos los valores por defecto
+        const leagueData = {
+          name: createLeagueForm.value.name.trim(),
+          description: createLeagueForm.value.description.trim(),
+          initialBudget: 100000,    // Valor fijo
+          maxFighters: 10,          // Valor fijo
+          maxFightersEvent: 3,      // Valor fijo
+          minFightersEvent: 1       // Valor fijo
+        }
+
+        const response = await leaguesService.createPrivateLeague(leagueData)
         showFloatingNotification('success', `¡Liga "${createLeagueForm.value.name}" creada exitosamente!`)
         
-        // Cerrar modal
         closeCreateLeagueModal()
-        
-        // Recargar mis ligas
         await loadMyLeagues()
-        
-        // Opcional: mostrar código de invitación
-        if (response.invitationCode) {
-          setTimeout(() => {
-            showFloatingNotification('success', `Código de invitación: ${response.invitationCode}`)
-          }, 2000)
-        }
       } catch (error) {
         console.error('Error al crear liga privada:', error)
         showFloatingNotification('error', error.message || 'Error al crear la liga')
@@ -690,30 +638,17 @@ export default {
       console.log('🚀 Cargando datos del dashboard...')
       console.log('👤 Usuario actual:', user.value)
       
-      // Debug del usuario
-      if (user.value) {
-        console.log('📧 Email:', user.value.email)
-        console.log('👨‍💼 Username:', user.value.username) 
-        console.log('🏷️ First Name:', user.value.firstName)
-        console.log('🏷️ Last Name:', user.value.lastName)
-        console.log('🔐 Email confirmado:', user.value.emailConfirmed)
-        console.log('👥 Roles:', user.value.roles)
-      }
-      
-      // Cargar datos en paralelo
       await Promise.all([
         loadNextEvent(),
         loadMyLeagues()
       ])
       
-      // Cargar ligas públicas después de cargar mis ligas (para filtrar correctamente)
       await loadPublicLeagues()
       
       console.log('✅ Datos del dashboard cargados')
     })
 
     return {
-      // ✅ Estado del usuario - ahora como computed
       user,
       userDisplayName,
       userInitials,
@@ -947,6 +882,8 @@ export default {
   color: var(--white);
   text-transform: uppercase;
   margin: 0;
+  letter-spacing: 0.05em;
+  line-height: 1.3;
 }
 
 .modal-close {
@@ -973,12 +910,6 @@ export default {
   margin-bottom: var(--space-lg);
 }
 
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-lg);
-}
-
 .form-label {
   display: block;
   color: var(--white);
@@ -990,8 +921,7 @@ export default {
 }
 
 .form-input,
-.form-textarea,
-.form-select {
+.form-textarea {
   width: 100%;
   padding: var(--space-md);
   background: rgba(255, 255, 255, 0.1);
@@ -1008,8 +938,7 @@ export default {
 }
 
 .form-input:focus,
-.form-textarea:focus,
-.form-select:focus {
+.form-textarea:focus {
   outline: none;
   border-color: var(--primary);
   background: rgba(255, 255, 255, 0.15);
@@ -1019,10 +948,6 @@ export default {
 .form-textarea {
   resize: vertical;
   min-height: 80px;
-}
-
-.form-select {
-  cursor: pointer;
 }
 
 .modal-actions {
@@ -1079,11 +1004,6 @@ export default {
   .modal-header,
   .modal-body {
     padding: var(--space-lg);
-  }
-  
-  .form-row {
-    grid-template-columns: 1fr;
-    gap: var(--space-md);
   }
   
   .modal-actions {
@@ -1178,14 +1098,17 @@ export default {
   color: var(--white);
   margin-bottom: var(--space-xs);
   text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.3;
 }
 
+/* 🔄 CAMBIO: Descripción del evento con color normal y más grande */
 .event-subtitle {
-  font-family: var(--font-impact);
-  font-size: 1.3rem;
-  color: var(--primary);
+  font-family: var(--font-primary);
+  font-size: 1.2rem;
+  color: var(--gray-light);
   margin-bottom: var(--space-md);
-  text-transform: uppercase;
+  font-weight: 400;
 }
 
 .event-meta {
@@ -1276,7 +1199,8 @@ export default {
   font-weight: 400;
   color: var(--white);
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.05em;
+  line-height: 1.3;
 }
 
 .leagues-count {
@@ -1322,6 +1246,8 @@ export default {
   font-size: 1.2rem;
   color: var(--white);
   text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.3;
 }
 
 .league-badges {
@@ -1467,6 +1393,8 @@ export default {
   color: var(--white);
   margin-bottom: var(--space-xs);
   text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.3;
 }
 
 .option-description {
@@ -1582,6 +1510,8 @@ export default {
   color: var(--white);
   margin-bottom: var(--space-xs);
   text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.3;
 }
 
 .public-league-description {
