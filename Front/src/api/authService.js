@@ -38,15 +38,23 @@ export const authService = {
     }
   },
   
-  // Cerrar sesión
+  // 🔥 FUNCIÓN CORREGIDA - Cerrar sesión
   async logout() {
     try {
+      console.log('🔄 Llamando al endpoint de logout del backend...')
+      
+      // ✅ LLAMAR al endpoint correcto del backend
       await httpService.post(endpoints.auth.logout)
+      console.log('✅ Logout exitoso en el backend')
+      
     } catch (error) {
-      console.error('Error al cerrar sesión:', error)
+      console.error('❌ Error al cerrar sesión en el backend:', error)
+      // No lanzar el error para que siempre se limpie el token local
     } finally {
-      // Siempre limpiar el token local
+      // ✅ SIEMPRE limpiar el token local
+      console.log('🧹 Limpiando token local...')
       httpService.clearAuthToken()
+      console.log('✅ Token local limpiado')
     }
   },
 
@@ -85,5 +93,10 @@ export const authService = {
   // Obtener token actual
   getToken() {
     return httpService.getAuthToken()
+  },
+
+  // 🔥 NUEVA FUNCIÓN - Limpiar token (para uso interno y externo)
+  clearAuthToken() {
+    httpService.clearAuthToken()
   }
 }

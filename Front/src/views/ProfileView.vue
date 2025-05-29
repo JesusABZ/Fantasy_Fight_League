@@ -68,15 +68,11 @@
               </span>
             </div>
 
-            <!-- Información adicional del usuario -->
+            <!-- NO MOSTRAR información de roles en la pantalla de perfil -->
             <div class="user-additional-info">
               <div class="info-item">
                 <span class="info-label">Miembro desde:</span>
                 <span class="info-value">{{ memberSince }}</span>
-              </div>
-              <div class="info-item" v-if="userRoles.length > 0">
-                <span class="info-label">Roles:</span>
-                <span class="info-value">{{ formattedRoles }}</span>
               </div>
             </div>
           </div>
@@ -152,6 +148,7 @@ export default {
     const hasError = ref(false)
     const errorMessage = ref('')
     const isResending = ref(false)
+    const imageLoadError = ref(false)
 
     // Estados para notificaciones
     const showNotification = ref(false)
@@ -208,23 +205,7 @@ export default {
       }
     })
 
-    const userRoles = computed(() => {
-      if (!currentUser.value?.roles) return []
-      return currentUser.value.roles
-    })
-
-    const formattedRoles = computed(() => {
-      if (!userRoles.value.length) return 'Usuario'
-      
-      return userRoles.value
-        .map(role => {
-          // Convertir ROLE_ADMIN -> Administrador, ROLE_USER -> Usuario
-          if (role === 'ROLE_ADMIN') return 'Administrador'
-          if (role === 'ROLE_USER') return 'Usuario'
-          return role.replace('ROLE_', '').toLowerCase()
-        })
-        .join(', ')
-    })
+    // 🔥 ELIMINAMOS LOS COMPUTED DE ROLES YA QUE NO SE MUESTRAN EN ESTA PANTALLA
 
     // Funciones para cargar datos
     const loadUserProfile = async () => {
@@ -298,12 +279,14 @@ export default {
       }
     }
 
+    // 🔥 FUNCIÓN CORREGIDA - handleLogout debe usar el endpoint correcto
     const handleLogout = async () => {
       try {
         showFloatingNotification('success', 'Cerrando sesión...')
         
         // Esperar un momento para que se vea la notificación
         setTimeout(async () => {
+          // ✅ USAR el método logout del store que SÍ llama al endpoint correcto
           await authStore.logout()
           router.push('/')
         }, 1000)
@@ -329,6 +312,12 @@ export default {
       // Ocultar la imagen y mostrar las iniciales
       event.target.style.display = 'none'
     }
+
+    const shouldShowImage = computed(() => {
+      return user.value?.profileImageUrl && 
+            !user.value.profileImageUrl.startsWith('blob:') && 
+            !imageLoadError.value
+    })
 
     // Función para mostrar notificaciones
     const showFloatingNotification = (type, text) => {
@@ -375,8 +364,6 @@ export default {
       fullName,
       userInitials,
       memberSince,
-      userRoles,
-      formattedRoles,
       
       // Funciones
       loadUserProfile,
@@ -385,7 +372,9 @@ export default {
       handleLogout,
       goToEditProfile,
       goToSupport,
+      shouldShowImage,
       handleImageError,
+      imageLoadError,
       hideNotification
     }
   }

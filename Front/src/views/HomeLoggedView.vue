@@ -16,7 +16,16 @@
           </div>
           <div class="user-actions">
             <button class="btn btn-profile" @click="goToProfile">
-              <span class="profile-avatar">{{ userInitials }}</span>
+              <div class="profile-avatar">
+                <img 
+                  v-if="user && user.profileImageUrl" 
+                  :src="user.profileImageUrl" 
+                  :alt="userDisplayName"
+                  class="avatar-image"
+                  @error="handleAvatarError"
+                />
+                <span v-else class="avatar-initials">{{ userInitials }}</span>
+              </div>
               Mi Perfil
             </button>
             <button class="btn btn-create-league" @click="openCreateLeagueModal">
@@ -400,6 +409,12 @@ export default {
       return parts[0].trim()
     })
 
+    const handleAvatarError = (event) => {
+      console.warn('Error al cargar avatar en header:', event.target.src)
+      // Ocultar imagen y mostrar iniciales
+      event.target.style.display = 'none'
+    }
+
     const eventTitle = computed(() => {
       if (!nextEvent.value?.name) return ''
       const parts = nextEvent.value.name.split(':')
@@ -692,6 +707,7 @@ export default {
       getPositionClass,
       handleImageError,
       hideNotification,
+      handleAvatarError,
       
       // Funciones de crear liga
       openCreateLeagueModal,
@@ -828,7 +844,26 @@ export default {
   justify-content: center;
   font-weight: bold;
   font-size: 0.75rem;
+  overflow: hidden; /* 🆕 Para que la imagen se corte bien */
+  position: relative; /* 🆕 Para posicionamiento */
 }
+
+/* 🆕 NUEVOS ESTILOS PARA LA IMAGEN */
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+/* Asegurar que las iniciales se muestren bien cuando no hay imagen */
+.avatar-initials {
+  color: var(--white);
+  font-weight: bold;
+  font-size: 0.75rem;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
 
 .btn-create-league {
   background: var(--gradient-primary);

@@ -69,7 +69,7 @@
                     @click="showCurrentPassword = !showCurrentPassword"
                   >
                     <span v-if="showCurrentPassword">👁️</span>
-                    <span v-else">🙈</span>
+                    <span v-else>🙈</span>
                   </button>
                 </div>
                 <span v-if="errors.currentPassword" class="error-message">{{ errors.currentPassword }}</span>
@@ -122,7 +122,7 @@
                 :class="{ 'loading': isSubmitting, 'disabled': !isFormValid }"
               >
                 <span v-if="isSubmitting">Cambiando Email...</span>
-                <span v-else">📧 Cambiar Email</span>
+                <span v-else>📧 Cambiar Email</span>
               </button>
             </div>
 
@@ -136,7 +136,7 @@
     <div v-if="showNotification" class="notification" :class="notificationType" @click="hideNotification">
       <div class="notification-icon">
         <span v-if="notificationType === 'success'">✅</span>
-        <span v-else">❌</span>
+        <span v-else>❌</span>
       </div>
       <div class="notification-text">{{ notificationText }}</div>
     </div>
@@ -144,18 +144,20 @@
 </template>
 
 <script>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { userService } from '../api/index.js' // Importar el servicio
+//import { useAuth } from '../composables/useAuth.js' // Para obtener el usuario actual
 
 export default {
   name: 'ChangeEmailView',
   setup() {
     const router = useRouter()
 
-    // Estado del usuario actual
+    // Estado del usuario actual - ACTUALIZADO para usar datos reales
     const currentUser = reactive({
-      email: 'usuario@yopmail.com',
-      emailConfirmed: true
+      email: '',
+      emailConfirmed: false
     })
 
     // Estado del formulario
@@ -174,6 +176,23 @@ export default {
     const showNotification = ref(false)
     const notificationType = ref('success')
     const notificationText = ref('')
+
+    // Cargar datos del usuario al montar el componente
+    onMounted(async () => {
+      try {
+        // Obtener el perfil actual del usuario
+        const profile = await userService.getProfile()
+        currentUser.email = profile.email
+        currentUser.emailConfirmed = profile.emailConfirmed || false
+      } catch (error) {
+        console.error('Error al cargar perfil:', error)
+        // Usar datos del store como fallback
+        if (authUser.value) {
+          currentUser.email = authUser.value.email
+          currentUser.emailConfirmed = authUser.value.emailConfirmed || false
+        }
+      }
+    })
 
     // Computed property para validar si el formulario está completo y válido
     const isFormValid = computed(() => {
@@ -232,27 +251,40 @@ export default {
       isSubmitting.value = true
 
       try {
-        // TODO: Conectar con el backend
+        // 🔥 CAMBIO PRINCIPAL: Conectar con el backend
         const changeData = {
           currentPassword: formData.currentPassword,
           newEmail: formData.newEmail
         }
 
-        console.log('Cambiando email:', changeData)
+        console.log('Cambiando email...')
         
-        // Simular llamada al API
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        // Llamar al endpoint del backend
+        await userService.changeEmail(changeData)
         
         showFloatingNotification('success', '¡Email cambiado correctamente! Verifica tu nuevo email.')
         
-        // Esperar un momento para mostrar la notificación
-        setTimeout(() => {
-          // Volver a la edición de perfil
-          router.push('/profile/edit')
-        }, 2000)
+        // Limpiar formulario
+        formData.currentPassword = ''
+        formData.newEmail = ''
+        
+        // Actualizar el email mostrado (aunque no esté verificado)
+        currentUser.email = changeData.newEmail
+        currentUser.emailConfirmed = false
         
       } catch (error) {
+        console.error('Error al cambiar email:', error)
         generalError.value = error.message || 'Error al cambiar el email. Verifica tu contraseña.'
+        
+        // Si el error es específico de contraseña incorrecta
+        if (error.message.includes('incorrecta') || error.message.includes('invalid')) {
+          errors.currentPassword = 'Contraseña actual incorrecta'
+        }
+        
+        // Si el error es específico de email en uso
+        if (error.message.includes('ya está en uso') || error.message.includes('already exists')) {
+          errors.newEmail = 'Este email ya está registrado por otro usuario'
+        }
       } finally {
         isSubmitting.value = false
       }

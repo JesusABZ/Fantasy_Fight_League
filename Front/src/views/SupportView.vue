@@ -270,11 +270,6 @@ export default {
           }
         })
         
-        // Esperar un momento para que el usuario vea el mensaje
-        setTimeout(() => {
-          goBack()
-        }, 3000)
-        
       } catch (error) {
         console.error('Error al enviar ticket:', error)
         generalError.value = error.message || 'Error al enviar el mensaje. Inténtalo de nuevo más tarde.'

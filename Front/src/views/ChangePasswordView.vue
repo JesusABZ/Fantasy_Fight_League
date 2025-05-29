@@ -31,39 +31,9 @@
             <div class="security-info">
               <h3 class="section-title">🔐 Cambiar Contraseña</h3>
               <p class="security-description">
-                Por tu seguridad, necesitamos verificar tu contraseña actual antes de cambiarla.
+                Ingresa tu nueva contraseña para actualizarla.
               </p>
             </div>
-
-            <!-- Contraseña actual -->
-            <div class="form-group">
-              <label for="currentPassword" class="form-label">Contraseña Actual</label>
-              <div class="password-field">
-                <input
-                  id="currentPassword"
-                  v-model="formData.currentPassword"
-                  :type="showCurrentPassword ? 'text' : 'password'"
-                  class="form-input"
-                  :class="{ 'error': errors.currentPassword }"
-                  placeholder="Ingresa tu contraseña actual"
-                  @blur="validateField('currentPassword')"
-                  @input="clearFieldError('currentPassword')"
-                  required
-                />
-                <button
-                  type="button"
-                  class="password-toggle"
-                  @click="showCurrentPassword = !showCurrentPassword"
-                >
-                  <span v-if="showCurrentPassword">👁️</span>
-                  <span v-else>🙈</span>
-                </button>
-              </div>
-              <span v-if="errors.currentPassword" class="error-message">{{ errors.currentPassword }}</span>
-            </div>
-
-            <!-- Separador -->
-            <div class="section-divider"></div>
 
             <!-- Nueva contraseña -->
             <div class="form-group">
@@ -183,6 +153,7 @@
 <script>
 import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { userService } from '../api/index.js'
 
 export default {
   name: 'ChangePasswordView',
@@ -191,7 +162,6 @@ export default {
 
     // Estado del formulario
     const formData = reactive({
-      currentPassword: '',
       newPassword: '',
       confirmPassword: ''
     })
@@ -202,7 +172,6 @@ export default {
     // Estado general
     const isSubmitting = ref(false)
     const generalError = ref('')
-    const showCurrentPassword = ref(false)
     const showNewPassword = ref(false)
     const showConfirmPassword = ref(false)
     const showNotification = ref(false)
@@ -239,11 +208,9 @@ export default {
     })
 
     const isFormValid = computed(() => {
-      return formData.currentPassword.trim() !== '' &&
-             formData.newPassword.trim() !== '' &&
+      return formData.newPassword.trim() !== '' &&
              formData.confirmPassword.trim() !== '' &&
              formData.newPassword === formData.confirmPassword &&
-             formData.currentPassword !== formData.newPassword &&
              Object.keys(errors).length === 0
     })
 
@@ -258,24 +225,13 @@ export default {
       clearFieldError(fieldName)
 
       switch (fieldName) {
-        case 'currentPassword':
-          if (!formData.currentPassword.trim()) {
-            errors.currentPassword = 'La contraseña actual es obligatoria'
-          } else if (formData.currentPassword.length < 6) {
-            errors.currentPassword = 'La contraseña debe tener al menos 6 caracteres'
-          }
-          break
-
         case 'newPassword':
           if (!formData.newPassword.trim()) {
             errors.newPassword = 'La nueva contraseña es obligatoria'
           } else if (formData.newPassword.length < 6) {
             errors.newPassword = 'La contraseña debe tener al menos 6 caracteres'
-          } else if (formData.newPassword === formData.currentPassword) {
-            errors.newPassword = 'La nueva contraseña debe ser diferente a la actual'
           }
           
-          // Re-validar confirmación si ya se llenó
           if (formData.confirmPassword) {
             validateField('confirmPassword')
           }
@@ -293,7 +249,6 @@ export default {
 
     const validateForm = () => {
       Object.keys(errors).forEach(key => delete errors[key])
-      validateField('currentPassword')
       validateField('newPassword')
       validateField('confirmPassword')
       return Object.keys(errors).length === 0
@@ -310,34 +265,34 @@ export default {
       isSubmitting.value = true
 
       try {
-        // TODO: Conectar con el backend
+        // 🔥 CAMBIO: Usar el nuevo método que requiere contraseña actual
         const changeData = {
-          currentPassword: formData.currentPassword,
           newPassword: formData.newPassword
         }
 
-        console.log('Cambiando contraseña:', changeData)
+        console.log('Cambiando contraseña con verificación...')
         
-        // Simular llamada al API
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        // 🆕 USAR EL NUEVO MÉTODO
+        await userService.changePasswordWithCurrentPassword(changeData)
         
         showFloatingNotification('success', '¡Contraseña cambiada correctamente!')
         
         // Limpiar formulario
         Object.keys(formData).forEach(key => formData[key] = '')
         
-        // Esperar un momento para mostrar la notificación
-        setTimeout(() => {
-          // Volver a la edición de perfil
-          router.push('/profile/edit')
-        }, 2000)
-        
       } catch (error) {
+        console.error('Error al cambiar contraseña:', error)
         generalError.value = error.message || 'Error al cambiar la contraseña. Verifica tu contraseña actual.'
+        
+        // Si el error es específico de contraseña incorrecta
+        if (error.message.includes('incorrecta') || error.message.includes('incorrect') || error.message.includes('wrong')) {
+          errors.currentPassword = 'Contraseña actual incorrecta'
+        }
       } finally {
         isSubmitting.value = false
       }
     }
+
 
     const goBack = () => {
       if (window.history.length > 1) {
@@ -367,7 +322,6 @@ export default {
       isSubmitting,
       generalError,
       isFormValid,
-      showCurrentPassword,
       showNewPassword,
       showConfirmPassword,
       showNotification,

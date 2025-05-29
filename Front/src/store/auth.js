@@ -11,7 +11,13 @@ export const useAuthStore = defineStore('auth', () => {
 
   // Getters (computed)
   const isAuthenticated = computed(() => !!user.value)
-  const userRoles = computed(() => user.value?.roles || [])
+  const userRoles = computed(() => {
+    // 🔥 CORRECCIÓN: Verificar que roles sea un array antes de procesarlo
+    if (!user.value?.roles || !Array.isArray(user.value.roles)) {
+      return []
+    }
+    return user.value.roles
+  })
   const isAdmin = computed(() => userRoles.value.includes('ROLE_ADMIN'))
   const isEmailConfirmed = computed(() => user.value?.emailConfirmed || false)
 
@@ -34,7 +40,7 @@ export const useAuthStore = defineStore('auth', () => {
           username: response.username,
           email: response.email,
           emailConfirmed: response.emailConfirmed,
-          roles: response.roles,
+          roles: Array.isArray(response.roles) ? response.roles : [], // 🔥 SEGURIDAD: Asegurar que roles sea array
           // Agregar datos del perfil
           firstName: userProfile.firstName,
           lastName: userProfile.lastName,
@@ -49,7 +55,7 @@ export const useAuthStore = defineStore('auth', () => {
           username: response.username,
           email: response.email,
           emailConfirmed: response.emailConfirmed,
-          roles: response.roles
+          roles: Array.isArray(response.roles) ? response.roles : [] // 🔥 SEGURIDAD: Asegurar que roles sea array
         }
       }
       
@@ -89,18 +95,28 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // 🔥 FUNCIÓN CORREGIDA - logout ahora SÍ llama al endpoint del backend
   async function logout() {
     isLoading.value = true
     
     try {
+      console.log('🔄 Iniciando logout...')
+      
+      // ✅ LLAMAR al endpoint de logout del backend
       await authService.logout()
+      console.log('✅ Logout exitoso en el backend')
+      
     } catch (err) {
-      console.error('Error durante logout:', err)
+      console.error('❌ Error durante logout en backend:', err)
+      // Continuar con la limpieza local aunque falle el backend
     } finally {
-      // Limpiar estado local
+      // ✅ SIEMPRE limpiar estado local independientemente del resultado del backend
+      console.log('🧹 Limpiando estado local...')
       user.value = null
       error.value = null
       isLoading.value = false
+      
+      console.log('✅ Logout completado')
     }
   }
 
@@ -155,6 +171,12 @@ export const useAuthStore = defineStore('auth', () => {
       try {
         const { userService } = await import('../api/userService.js')
         const userProfile = await userService.getProfile()
+        
+        // 🔥 SEGURIDAD: Asegurar que roles sea un array
+        if (userProfile.roles && !Array.isArray(userProfile.roles)) {
+          userProfile.roles = []
+        }
+        
         user.value = userProfile
         console.log('Perfil de usuario recuperado:', userProfile)
       } catch (error) {

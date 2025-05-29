@@ -19,8 +19,16 @@
       </div>
     </div>
 
+    <!-- Loading state -->
+    <div v-if="isLoading" class="loading-container">
+      <div class="loading-spinner">
+        <span class="spinner"></span>
+        <p>Cargando datos del perfil...</p>
+      </div>
+    </div>
+
     <!-- Contenido principal -->
-    <div class="main-content">
+    <div v-else class="main-content">
       <div class="container">
         
         <!-- Formulario de edición -->
@@ -36,8 +44,9 @@
                   <img 
                     v-if="formData.profileImageUrl" 
                     :src="formData.profileImageUrl" 
-                    :alt="fullName"
+                    :alt="fullName || currentUser.username"
                     class="avatar-image"
+                    @error="handleImageError"
                   />
                   <span v-else class="avatar-initials">{{ userInitials }}</span>
                 </div>
@@ -59,14 +68,17 @@
                     type="button" 
                     class="btn btn-upload"
                     @click="$refs.fileInput.click()"
+                    :disabled="isUploading"
                   >
-                    📁 Subir Nueva Foto
+                    <span v-if="isUploading">📤 Subiendo...</span>
+                    <span v-else>📁 Subir Nueva Foto</span>
                   </button>
                   <button 
                     v-if="formData.profileImageUrl"
                     type="button" 
                     class="btn btn-remove"
                     @click="removePhoto"
+                    :disabled="isUploading"
                   >
                     🗑️ Eliminar Foto
                   </button>
@@ -126,10 +138,11 @@
               <button
                 type="submit"
                 class="btn btn-primary btn-large"
-                :disabled="isSubmitting || !isFormValid"
-                :class="{ 'loading': isSubmitting, 'disabled': !isFormValid }"
+                :disabled="isSubmitting || !isFormValid || isUploading"
+                :class="{ 'loading': isSubmitting, 'disabled': !isFormValid || isUploading }"
               >
-                <span v-if="isSubmitting">Guardando...</span>
+                <span v-if="isSubmitting">💾 Guardando...</span>
+                <span v-else-if="!hasChanges">✅ Sin Cambios</span>
                 <span v-else>💾 Guardar Cambios</span>
               </button>
             </div>
@@ -170,6 +183,7 @@
     <div v-if="showNotification" class="notification" :class="notificationType" @click="hideNotification">
       <div class="notification-icon">
         <span v-if="notificationType === 'success'">✅</span>
+        <span v-else-if="notificationType === 'warning'">⚠️</span>
         <span v-else>❌</span>
       </div>
       <div class="notification-text">{{ notificationText }}</div>
@@ -180,11 +194,16 @@
 <script>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '../store/auth.js'
+import { userService } from '../api/index.js'
+import { useNavigation } from '../composables/useNavigation.js'
 
 export default {
   name: 'EditProfileView',
   setup() {
     const router = useRouter()
+    const authStore = useAuthStore()
+    const { goBackWithAuth } = useNavigation()
 
     // Estado del formulario (datos que se pueden editar)
     const formData = reactive({
@@ -198,15 +217,17 @@ export default {
 
     // Datos del usuario actual (incluye username que no se puede editar)
     const currentUser = reactive({
-      username: 'usuario_prueba2',
-      email: 'usuario@yopmail.com'
+      username: '',
+      email: ''
     })
 
     // Estado de errores
     const errors = reactive({})
     
     // Estado general
+    const isLoading = ref(true)
     const isSubmitting = ref(false)
+    const isUploading = ref(false)
     const generalError = ref('')
     const showNotification = ref(false)
     const notificationType = ref('success')
@@ -220,7 +241,15 @@ export default {
     const userInitials = computed(() => {
       const first = formData.firstName ? formData.firstName[0] : ''
       const last = formData.lastName ? formData.lastName[0] : ''
-      return `${first}${last}`.toUpperCase()
+      const username = currentUser.username ? currentUser.username[0] : ''
+      
+      if (first && last) {
+        return `${first}${last}`.toUpperCase()
+      } else if (username) {
+        return username.toUpperCase()
+      }
+      
+      return 'U'
     })
 
     const hasChanges = computed(() => {
@@ -232,28 +261,56 @@ export default {
     const isFormValid = computed(() => {
       return formData.firstName.trim() !== '' &&
              formData.lastName.trim() !== '' &&
-             Object.keys(errors).length === 0 &&
-             hasChanges.value
+             Object.keys(errors).length === 0
     })
 
     // Cargar datos del usuario al montar el componente
-    onMounted(() => {
-      loadUserData()
+    onMounted(async () => {
+      await loadUserData()
     })
 
     // Funciones
-    const loadUserData = () => {
-      // TODO: Obtener datos del store o API
-      // Simulando datos actuales del usuario
-      const userData = {
-        firstName: 'Juan Carlos',
-        lastName: 'Pérez García',
-        profileImageUrl: null // o URL de la imagen si existe
-      }
+    const loadUserData = async () => {
+      isLoading.value = true
+      generalError.value = ''
 
-      // Cargar en el formulario
-      Object.assign(formData, userData)
-      Object.assign(originalData, userData)
+      try {
+        console.log('🔄 Cargando datos del usuario para edición...')
+        
+        // Obtener el perfil completo del usuario
+        const userProfile = await userService.getProfile()
+        console.log('✅ Datos del usuario cargados:', userProfile)
+
+        // Cargar datos en el formulario
+        formData.firstName = userProfile.firstName || ''
+        formData.lastName = userProfile.lastName || ''
+        formData.profileImageUrl = userProfile.profileImageUrl || null
+
+        // Guardar datos originales para comparar cambios
+        originalData.firstName = userProfile.firstName || ''
+        originalData.lastName = userProfile.lastName || ''
+        originalData.profileImageUrl = userProfile.profileImageUrl || null
+
+        // Cargar datos del usuario que no se pueden editar
+        currentUser.username = userProfile.username
+        currentUser.email = userProfile.email
+
+        console.log('✅ Formulario inicializado con datos del usuario')
+
+      } catch (error) {
+        console.error('❌ Error al cargar datos del usuario:', error)
+        generalError.value = error.message || 'Error al cargar los datos del perfil'
+        
+        if (error.message.includes('401') || error.message.includes('unauthorized')) {
+          showFloatingNotification('error', 'Sesión expirada. Redirigiendo al login...')
+          setTimeout(() => {
+            authStore.logout()
+            router.push('/login')
+          }, 2000)
+        }
+      } finally {
+        isLoading.value = false
+      }
     }
 
     const clearFieldError = (fieldName) => {
@@ -271,6 +328,8 @@ export default {
             errors.firstName = 'El nombre es obligatorio'
           } else if (formData.firstName.trim().length < 2) {
             errors.firstName = 'El nombre debe tener al menos 2 caracteres'
+          } else if (formData.firstName.trim().length > 50) {
+            errors.firstName = 'El nombre no puede tener más de 50 caracteres'
           }
           break
 
@@ -279,6 +338,8 @@ export default {
             errors.lastName = 'Los apellidos son obligatorios'
           } else if (formData.lastName.trim().length < 2) {
             errors.lastName = 'Los apellidos deben tener al menos 2 caracteres'
+          } else if (formData.lastName.trim().length > 50) {
+            errors.lastName = 'Los apellidos no pueden tener más de 50 caracteres'
           }
           break
       }
@@ -291,89 +352,192 @@ export default {
       return Object.keys(errors).length === 0
     }
 
-    const handleFileSelect = (event) => {
+    const handleFileSelect = async (event) => {
       const file = event.target.files[0]
       if (file) {
-        // Validar tipo de archivo
+        // Validaciones existentes...
         if (!file.type.startsWith('image/')) {
           showFloatingNotification('error', 'Por favor selecciona una imagen válida')
           return
         }
 
-        // Validar tamaño (max 5MB)
         if (file.size > 5 * 1024 * 1024) {
           showFloatingNotification('error', 'La imagen no puede ser mayor a 5MB')
           return
         }
 
-        // Crear URL temporal para preview
-        const imageUrl = URL.createObjectURL(file)
-        formData.profileImageUrl = imageUrl
-
-        // TODO: Aquí subirías la imagen al servidor y obtendrías la URL real
-        console.log('Archivo seleccionado:', file)
-        showFloatingNotification('success', 'Imagen cargada correctamente')
+        try {
+          isSubmitting.value = true
+          showFloatingNotification('info', 'Subiendo imagen...')
+          
+          console.log('📁 Subiendo archivo:', {
+            name: file.name,
+            size: file.size,
+            type: file.type
+          })
+          
+          // Subir la imagen al servidor
+          const uploadResult = await userService.uploadProfileImage(file)
+          
+          // 🔍 DEBUG: Ver exactamente qué devuelve el servidor
+          console.log('📋 Respuesta completa del servidor:', uploadResult)
+          console.log('📋 Tipo de respuesta:', typeof uploadResult)
+          console.log('📋 Keys de la respuesta:', Object.keys(uploadResult || {}))
+          
+          // Intentar diferentes posibles campos donde puede estar la URL
+          const possibleUrls = [
+            uploadResult?.imageUrl,
+            uploadResult?.url,
+            uploadResult?.profileImageUrl,
+            uploadResult?.message, // A veces viene en el message
+            uploadResult?.data?.url,
+            uploadResult?.data?.imageUrl
+          ]
+          
+          console.log('🔍 URLs posibles encontradas:', possibleUrls.filter(Boolean))
+          
+          // Buscar la primera URL válida
+          const imageUrl = possibleUrls.find(url => url && typeof url === 'string' && url.length > 0)
+          
+          if (imageUrl) {
+            formData.profileImageUrl = imageUrl
+            console.log('✅ URL de imagen establecida:', imageUrl)
+            showFloatingNotification('success', 'Imagen subida correctamente')
+          } else {
+            // Mostrar toda la respuesta para debugging
+            console.error('❌ No se encontró URL en la respuesta:', uploadResult)
+            throw new Error(`No se encontró URL de imagen. Respuesta del servidor: ${JSON.stringify(uploadResult)}`)
+          }
+          
+        } catch (error) {
+          console.error('💥 Error completo al subir imagen:', error)
+          showFloatingNotification('error', error.message || 'Error al subir la imagen')
+          
+          if (event.target) {
+            event.target.value = ''
+          }
+        } finally {
+          isSubmitting.value = false
+        }
       }
     }
 
     const removePhoto = () => {
       formData.profileImageUrl = null
       showFloatingNotification('success', 'Foto eliminada')
+      
+      // Limpiar el input file
+      if (fileInput.value) {
+        fileInput.value.value = ''
+      }
+    }
+
+    const fileInput = ref(null)
+
+    const handleImageError = (event) => {
+      console.warn('Error al cargar imagen:', event.target.src)
+      // Ocultar imagen rota y mostrar iniciales
+      event.target.style.display = 'none'
     }
 
     const handleSubmit = async () => {
+      console.log('📝 Intentando guardar cambios del perfil...')
+      
       generalError.value = ''
 
       if (!validateForm()) {
+        console.warn('⚠️ Formulario no válido')
         return
       }
 
       if (!hasChanges.value) {
-        showFloatingNotification('info', 'No hay cambios que guardar')
+        showFloatingNotification('warning', 'No hay cambios que guardar')
         return
       }
 
       isSubmitting.value = true
 
       try {
-        // TODO: Conectar con el backend
+        // Preparar datos para enviar
         const updateData = {
           firstName: formData.firstName.trim(),
           lastName: formData.lastName.trim(),
-          profileImageUrl: formData.profileImageUrl
+          profileImageUrl: formData.profileImageUrl === null ? null : formData.profileImageUrl
         }
 
-        console.log('Actualizando perfil:', updateData)
+        console.log('📤 Enviando datos de actualización:', updateData)
         
-        // Simular llamada al API
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        // Llamar al servicio de actualización
+        const updatedUser = await userService.updateProfile(updateData)
+        console.log('✅ Perfil actualizado exitosamente:', updatedUser)
         
-        // Actualizar datos originales
+        // Actualizar datos originales para evitar detectar cambios fantasma
         Object.assign(originalData, formData)
         
+        // Actualizar también el store de autenticación
+        if (authStore.user) {
+          authStore.user.firstName = updatedUser.firstName
+          authStore.user.lastName = updatedUser.lastName
+          authStore.user.profileImageUrl = updatedUser.profileImageUrl
+        }
+        
         showFloatingNotification('success', '¡Perfil actualizado correctamente!')
+        // 🆕 NUEVO: Log para confirmar el estado final
+        console.log('✅ Estado final del usuario en store:', authStore.user)
         
       } catch (error) {
-        generalError.value = error.message || 'Error al actualizar el perfil. Inténtalo de nuevo.'
+        console.error('❌ Error al actualizar perfil:', error)
+        
+        if (error.message.includes('401') || error.message.includes('unauthorized')) {
+          generalError.value = 'Sesión expirada. Por favor, inicia sesión nuevamente.'
+          setTimeout(() => {
+            authStore.logout()
+            router.push('/login')
+          }, 2000)
+        } else {
+          generalError.value = error.message || 'Error al actualizar el perfil. Inténtalo de nuevo.'
+        }
       } finally {
         isSubmitting.value = false
       }
     }
 
     const goBack = () => {
-      if (window.history.length > 1) {
-        router.go(-1)
-      } else {
-        router.push('/profile')
+      // Si hay cambios sin guardar, preguntar antes de salir
+      if (hasChanges.value) {
+        const confirmLeave = window.confirm(
+          '¿Estás seguro de que quieres salir? Tienes cambios sin guardar que se perderán.'
+        )
+        if (!confirmLeave) {
+          return
+        }
       }
+
+      goBackWithAuth(authStore.isAuthenticated)
     }
 
     const goToChangeEmail = () => {
-        router.push('/profile/change-email')
+      if (hasChanges.value) {
+        const confirmLeave = window.confirm(
+          '¿Quieres cambiar de página? Tienes cambios sin guardar que se perderán.'
+        )
+        if (!confirmLeave) {
+          return
+        }
+      }
+      router.push('/profile/change-email')
     }
 
     const goToChangePassword = () => {
-        router.push('/profile/change-password')
+      if (hasChanges.value) {
+        const confirmLeave = window.confirm(
+          '¿Quieres cambiar de página? Tienes cambios sin guardar que se perderán.'
+        )
+        if (!confirmLeave) {
+          return
+        }
+      }
+      router.push('/profile/change-password')
     }
 
     const showFloatingNotification = (type, text) => {
@@ -383,7 +547,7 @@ export default {
       
       setTimeout(() => {
         hideNotification()
-      }, 3000)
+      }, 4000)
     }
 
     const hideNotification = () => {
@@ -391,10 +555,13 @@ export default {
     }
 
     return {
+      // Estado
       currentUser,
       formData,
       errors,
+      isLoading,
       isSubmitting,
+      isUploading,
       generalError,
       isFormValid,
       hasChanges,
@@ -403,11 +570,15 @@ export default {
       notificationText,
       fullName,
       userInitials,
+      fileInput,
+      
+      // Funciones
       handleSubmit,
       validateField,
       clearFieldError,
       handleFileSelect,
       removePhoto,
+      handleImageError,
       goBack,
       goToChangeEmail,
       goToChangePassword,
@@ -485,7 +656,7 @@ export default {
 }
 
 .header-spacer {
-  width: 120px; /* Para equilibrar el diseño */
+  width: 120px;
 }
 
 .title-hero {
@@ -498,6 +669,38 @@ export default {
   background-clip: text;
   text-transform: uppercase;
   letter-spacing: 0.02em;
+}
+
+/* === LOADING === */
+.loading-container {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
+  color: var(--gray-light);
+}
+
+.spinner {
+  width: 60px;
+  height: 60px;
+  border: 4px solid rgba(255, 107, 53, 0.3);
+  border-top: 4px solid var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 /* === BOTONES === */
@@ -638,9 +841,15 @@ export default {
   padding: var(--space-md) var(--space-lg);
 }
 
-.btn-upload:hover {
+.btn-upload:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
+}
+
+.btn-upload:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .btn-remove {
@@ -650,9 +859,14 @@ export default {
   padding: var(--space-sm) var(--space-lg);
 }
 
-.btn-remove:hover {
+.btn-remove:hover:not(:disabled) {
   background: var(--error);
   color: var(--white);
+}
+
+.btn-remove:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* === FORMULARIO === */
@@ -814,8 +1028,8 @@ export default {
   border: 2px solid var(--error);
 }
 
-.notification.info {
-  border: 2px solid var(--info);
+.notification.warning {
+  border: 2px solid var(--warning);
 }
 
 @keyframes slideIn {
