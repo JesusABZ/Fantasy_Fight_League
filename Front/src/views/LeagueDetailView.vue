@@ -41,6 +41,15 @@
               <button class="btn btn-info" @click="showLeagueInfo = true">
                 ℹ️ Info
               </button>
+              <!-- 🆕 Botón para salir de la liga -->
+              <button 
+                v-if="canLeaveLeague" 
+                class="btn btn-leave" 
+                @click="showLeaveLeagueConfirmation"
+                :disabled="isLeavingLeague"
+              >
+                {{ isLeavingLeague ? '⏳ Saliendo...' : '🚪 Salir de Liga' }}
+              </button>
             </div>
           </div>
         </div>
@@ -107,7 +116,7 @@
                 <div 
                   v-for="(member, index) in globalLeaderboard" 
                   :key="member.id"
-                  class="leaderboard-item"
+                  class="leaderboard-item enhanced"
                   :class="{ 'is-you': member.isCurrentUser, 'top-three': index < 3 }"
                 >
                   <div class="position">
@@ -120,21 +129,55 @@
                   </div>
                   
                   <div class="member-info">
+                    <!-- 🔥 MEJORADO: Avatar con imagen de perfil -->
                     <div class="member-avatar">
-                      {{ member.username.substring(0, 2).toUpperCase() }}
+                      <img 
+                        v-if="member.profileImageUrl" 
+                        :src="member.profileImageUrl" 
+                        :alt="member.username"
+                        class="avatar-image"
+                      />
+                      <span v-else class="avatar-initials">
+                        {{ getUserInitials(member) }}
+                      </span>
                     </div>
                     <div class="member-details">
                       <h4 class="member-name">
                         {{ member.username }}
                         <span v-if="member.isCurrentUser" class="you-badge">TÚ</span>
                       </h4>
-                      <p class="member-subtitle">{{ member.eventsParticipated }} eventos participados</p>
+                      <!-- 🔥 MEJORADO: Mostrar nombre completo si está disponible -->
+                      <p class="member-subtitle">
+                        <span v-if="member.firstName && member.lastName">
+                          {{ member.firstName }} {{ member.lastName }}
+                        </span>
+                        <span v-else>{{ member.eventsParticipated }} eventos participados</span>
+                      </p>
                     </div>
                   </div>
                   
-                  <div class="member-stats">
-                    <div class="total-points">{{ member.totalPoints }} pts</div>
-                    <div class="last-event-points">Último: {{ member.lastEventPoints }} pts</div>
+                  <!-- 🔥 MEJORADO: Estadísticas completas -->
+                  <div class="member-stats enhanced">
+                    <div class="stat-column">
+                      <div class="stat-item primary">
+                        <span class="stat-value">{{ member.totalPoints }}</span>
+                        <span class="stat-label">Total Puntos</span>
+                      </div>
+                    </div>
+                    
+                    <div class="stat-column">
+                      <div class="stat-item">
+                        <span class="stat-value">{{ member.lastEventPoints }}</span>
+                        <span class="stat-label">Último Evento</span>
+                      </div>
+                    </div>
+                    
+                    <div class="stat-column">
+                      <div class="stat-item">
+                        <span class="stat-value">{{ member.eventsParticipated }}</span>
+                        <span class="stat-label">Eventos</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -227,8 +270,17 @@
                   </div>
                   
                   <div class="member-info">
+                    <!-- 🔥 MEJORADO: Avatar con imagen de perfil también en eventos -->
                     <div class="member-avatar small">
-                      {{ member.username.substring(0, 2).toUpperCase() }}
+                      <img 
+                        v-if="member.profileImageUrl" 
+                        :src="member.profileImageUrl" 
+                        :alt="member.username"
+                        class="avatar-image"
+                      />
+                      <span v-else class="avatar-initials">
+                        {{ getUserInitials(member) }}
+                      </span>
                     </div>
                     <div class="member-details">
                       <h4 class="member-name">
@@ -273,6 +325,42 @@
       </div>
     </div>
 
+    <!-- 🆕 Modal: Confirmación para salir de la liga -->
+    <div v-if="showLeaveConfirmation" class="modal-overlay" @click="hideLeaveConfirmation">
+      <div class="modal-content confirmation-modal" @click.stop>
+        <div class="modal-header">
+          <h3 class="modal-title">🚪 Salir de la Liga</h3>
+          <button class="modal-close" @click="hideLeaveConfirmation">✕</button>
+        </div>
+        
+        <div class="confirmation-content">
+          <div class="warning-icon">⚠️</div>
+          <h4 class="warning-title">¿Estás seguro?</h4>
+          <p class="warning-message">
+            Vas a salir de la liga "<strong>{{ currentLeague.name }}</strong>". 
+            Perderás acceso a todas las clasificaciones y picks de esta liga.
+          </p>
+          
+          <div class="confirmation-actions">
+            <button 
+              class="btn btn-cancel" 
+              @click="hideLeaveConfirmation"
+              :disabled="isLeavingLeague"
+            >
+              Cancelar
+            </button>
+            <button 
+              class="btn btn-confirm-leave" 
+              @click="leaveLeague"
+              :disabled="isLeavingLeague"
+            >
+              {{ isLeavingLeague ? '⏳ Saliendo...' : '🚪 Sí, Salir' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Modal: Info de la Liga -->
     <div v-if="showLeagueInfo && currentLeague" class="modal-overlay" @click="showLeagueInfo = false">
       <div class="modal-content info-modal" @click.stop>
@@ -301,9 +389,15 @@
                 <span class="info-label">Creada:</span>
                 <span class="info-value">{{ formatDate(currentLeague.createdAt) }}</span>
               </div>
-              <div class="info-item" v-if="isPrivateLeague && currentLeague.invitationCode">
-                <span class="info-label">Código:</span>
-                <span class="info-value invitation-code">{{ currentLeague.invitationCode }}</span>
+              <!-- 🔥 MEJORADO: Código con botón de copiar -->
+              <div class="info-item full-width" v-if="isPrivateLeague && currentLeague.invitationCode">
+                <span class="info-label">Código de Invitación:</span>
+                <div class="invitation-code-container">
+                  <span class="invitation-code">{{ currentLeague.invitationCode }}</span>
+                  <button class="btn btn-copy" @click="copyInvitationCode" title="Copiar código">
+                    📋
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -446,6 +540,7 @@ export default {
       isLoadingLeague,
       isLoadingGlobal,
       isLoadingCurrentEvent,
+      isLeavingLeague, // 🆕
       
       // Estados UI
       activeTab,
@@ -453,22 +548,29 @@ export default {
       showLeagueInfo,
       showNotificationModal,
       notificationText,
+      showLeaveConfirmation, // 🆕
       
       // Computed
       isPublicLeague,
       isPrivateLeague,
       canMakePicks,
+      canLeaveLeague, // 🆕
       formattedEventDate,
       
       // Funciones
       loadAllData,
       refreshTabData,
+      leaveLeague, // 🆕
+      copyInvitationCode, // 🆕
       getPositionClass,
       getFighterInitials,
+      getUserInitials, // 🆕
       showFighterDetails,
       hideNotification,
       goBackToDashboard,
-      goToPicksSelection
+      goToPicksSelection,
+      showLeaveLeagueConfirmation, // 🆕
+      hideLeaveConfirmation // 🆕
     } = useLeagueDetail(leagueId)
 
     // Funciones adicionales del componente
@@ -550,6 +652,7 @@ export default {
       isLoadingLeague,
       isLoadingGlobal,
       isLoadingCurrentEvent,
+      isLeavingLeague, // 🆕
       
       // Estados UI
       activeTab,
@@ -557,21 +660,28 @@ export default {
       showLeagueInfo,
       showNotificationModal,
       notificationText,
+      showLeaveConfirmation, // 🆕
       
       // Computed
       isPublicLeague,
       isPrivateLeague,
       canMakePicks,
+      canLeaveLeague, // 🆕
       formattedEventDate,
       
       // Funciones del composable
       loadAllData,
+      leaveLeague, // 🆕
+      copyInvitationCode, // 🆕
       getPositionClass,
       getFighterInitials,
+      getUserInitials, // 🆕
       showFighterDetails,
       hideNotification,
       goBackToDashboard,
       goToPicksSelection,
+      showLeaveLeagueConfirmation, // 🆕
+      hideLeaveConfirmation, // 🆕
       
       // Funciones del componente
       formatDate,
@@ -585,9 +695,342 @@ export default {
 </script>
 
 <style scoped>
-/* Todos los estilos existentes se mantienen igual... */
+/* Todos los estilos existentes se mantienen + nuevos estilos */
 
-/* === NUEVOS ESTILOS PARA LOS ESTADOS DE CARGA === */
+/* === 🆕 BOTÓN SALIR DE LIGA === */
+.btn-leave {
+  background: transparent;
+  border: 2px solid var(--error);
+  color: var(--error);
+  font-size: 0.9rem;
+  padding: var(--space-sm) var(--space-md);
+}
+
+.btn-leave:hover:not(:disabled) {
+  background: var(--error);
+  color: var(--white);
+  transform: translateY(-2px);
+}
+
+.btn-leave:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* === 🆕 MODAL DE CONFIRMACIÓN === */
+.confirmation-modal {
+  max-width: 500px;
+}
+
+.confirmation-content {
+  padding: var(--space-xl);
+  text-align: center;
+}
+
+.warning-icon {
+  font-size: 3rem;
+  margin-bottom: var(--space-lg);
+}
+
+.warning-title {
+  font-family: var(--font-impact);
+  font-size: 1.5rem;
+  color: var(--white);
+  margin-bottom: var(--space-md);
+  text-transform: uppercase;
+}
+
+.warning-message {
+  color: var(--gray-light);
+  line-height: 1.6;
+  margin-bottom: var(--space-xl);
+}
+
+.confirmation-actions {
+  display: flex;
+  gap: var(--space-md);
+  justify-content: center;
+}
+
+.btn-cancel {
+  background: transparent;
+  border: 2px solid var(--gray);
+  color: var(--gray-light);
+}
+
+.btn-cancel:hover:not(:disabled) {
+  border-color: var(--white);
+  color: var(--white);
+}
+
+.btn-confirm-leave {
+  background: var(--error);
+  border: 2px solid var(--error);
+  color: var(--white);
+}
+
+.btn-confirm-leave:hover:not(:disabled) {
+  background: #dc2626;
+  border-color: #dc2626;
+  transform: translateY(-2px);
+}
+
+/* === 🆕 CÓDIGO DE INVITACIÓN MEJORADO === */
+.info-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.invitation-code-container {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  background: rgba(255, 255, 255, 0.05);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 107, 53, 0.3);
+}
+
+.invitation-code {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  color: var(--primary) !important;
+  font-weight: bold;
+  letter-spacing: 0.15em;
+  flex: 1;
+}
+
+.btn-copy {
+  background: var(--gradient-primary);
+  border: none;
+  color: var(--white);
+  padding: var(--space-sm);
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-copy:hover {
+  transform: scale(1.1);
+  background: var(--primary-dark);
+}
+
+.btn-copy:active {
+  transform: scale(0.95);
+}
+
+/* === 🔥 CLASIFICACIÓN GLOBAL MEJORADA === */
+.leaderboard-item.enhanced {
+  padding: var(--space-lg) var(--space-xl);
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.08) 0%, 
+    rgba(255, 255, 255, 0.04) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-xl);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.leaderboard-item.enhanced:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 
+    var(--shadow-lg), 
+    0 0 30px rgba(255, 107, 53, 0.15);
+  border-color: rgba(255, 107, 53, 0.4);
+}
+
+/* === 🔥 AVATARES MEJORADOS === */
+.member-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+  border: 3px solid transparent;
+  background: var(--gradient-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.member-avatar.small {
+  width: 50px;
+  height: 50px;
+  border-width: 2px;
+}
+
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.avatar-initials {
+  font-family: var(--font-impact);
+  font-size: 1.3rem;
+  color: var(--white);
+  font-weight: bold;
+}
+
+.member-avatar.small .avatar-initials {
+  font-size: 1.1rem;
+}
+
+/* === 🔥 ESTADÍSTICAS MEJORADAS === */
+.member-stats.enhanced {
+  display: flex;
+  gap: var(--space-lg);
+  align-items: center;
+}
+
+.stat-column {
+  text-align: center;
+  min-width: 80px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.stat-item.primary .stat-value {
+  font-family: var(--font-impact);
+  font-size: 1.8rem;
+  color: var(--primary);
+  line-height: 1;
+}
+
+.stat-value {
+  font-family: var(--font-impact);
+  font-size: 1.3rem;
+  color: var(--white);
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: var(--gray-light);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+/* === MEJORAS EN RESPONSIVE === */
+@media (max-width: 1024px) {
+  .member-stats.enhanced {
+    flex-direction: column;
+    gap: var(--space-sm);
+    align-items: flex-end;
+  }
+  
+  .stat-column {
+    min-width: auto;
+  }
+  
+  .stat-item.primary .stat-value {
+    font-size: 1.5rem;
+  }
+  
+  .stat-value {
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .league-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    width: 100%;
+  }
+  
+  .btn-leave,
+  .btn-info {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .confirmation-actions {
+    flex-direction: column;
+  }
+  
+  .btn-cancel,
+  .btn-confirm-leave {
+    width: 100%;
+  }
+  
+  .invitation-code-container {
+    flex-direction: column;
+    gap: var(--space-sm);
+    text-align: center;
+  }
+  
+  .leaderboard-item.enhanced {
+    padding: var(--space-lg);
+  }
+  
+  .member-stats.enhanced {
+    flex-direction: row;
+    justify-content: space-around;
+    gap: var(--space-md);
+  }
+}
+
+/* === MANTENER TODOS LOS ESTILOS ORIGINALES === */
+.league-detail {
+  position: relative;
+  min-height: 100vh;
+}
+
+/* === FONDO === */
+.background-static {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+  overflow: hidden;
+}
+
+.background-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('/images/carrusel3.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: brightness(0.2) contrast(0.8) grayscale(0.3);
+}
+
+.background-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    135deg,
+    rgba(10, 10, 10, 0.95) 0%,
+    rgba(26, 26, 26, 0.85) 30%,
+    rgba(42, 42, 42, 0.75) 50%,
+    rgba(26, 26, 26, 0.85) 70%,
+    rgba(10, 10, 10, 0.95) 100%
+  );
+  backdrop-filter: blur(1px);
+}
+
+/* === LOADING Y ERROR STATES === */
 .main-loading {
   position: fixed;
   top: 0;
@@ -632,7 +1075,6 @@ export default {
   font-size: 1rem;
 }
 
-/* === ESTADO DE ERROR === */
 .error-state {
   position: fixed;
   top: 0;
@@ -678,183 +1120,6 @@ export default {
   color: var(--white);
   margin-right: var(--space-md);
   margin-bottom: var(--space-md);
-}
-
-/* === LOADING SECCIONES === */
-.loading-section {
-  padding: var(--space-2xl);
-  text-align: center;
-}
-
-.loading-spinner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-md);
-  color: var(--gray-light);
-}
-
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid rgba(255, 107, 53, 0.3);
-  border-top: 3px solid var(--primary);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-/* === ESTADOS VACÍOS === */
-.empty-leaderboard {
-  text-align: center;
-  padding: var(--space-2xl) var(--space-lg);
-  color: var(--gray-light);
-}
-
-.empty-icon {
-  font-size: 3rem;
-  margin-bottom: var(--space-lg);
-}
-
-.empty-title {
-  font-family: var(--font-impact);
-  font-size: 1.3rem;
-  color: var(--white);
-  margin-bottom: var(--space-sm);
-  text-transform: uppercase;
-}
-
-.empty-description {
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
-
-/* === INFORMACIÓN ADICIONAL EN MODAL === */
-.invitation-code {
-  font-family: var(--font-display);
-  font-size: 1.1rem;
-  color: var(--primary) !important;
-  font-weight: bold;
-  letter-spacing: 0.1em;
-}
-
-.current-event-info {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: var(--radius-md);
-  padding: var(--space-md);
-}
-
-.event-name {
-  font-family: var(--font-impact);
-  color: var(--primary);
-  margin-bottom: var(--space-sm);
-  text-transform: uppercase;
-  font-size: 1.1rem;
-}
-
-.event-details p {
-  margin-bottom: var(--space-xs);
-  font-size: 0.9rem;
-  line-height: 1.4;
-}
-
-.performance-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: var(--space-md);
-}
-
-.performance-stats .stat-item {
-  background: rgba(255, 255, 255, 0.05);
-  padding: var(--space-md);
-  border-radius: var(--radius-md);
-  text-align: center;
-}
-
-.performance-stats .stat-label {
-  display: block;
-  color: var(--gray-light);
-  font-size: 0.8rem;
-  margin-bottom: var(--space-xs);
-  text-transform: uppercase;
-}
-
-.performance-stats .stat-value {
-  display: block;
-  color: var(--primary);
-  font-weight: bold;
-  font-size: 1.2rem;
-}
-
-/* === MEJORAS EN STATUS BADGES === */
-.status-badge.upcoming {
-  background: rgba(59, 130, 246, 0.2);
-  border: 1px solid var(--info);
-  color: var(--info);
-}
-
-.status-badge.current {
-  background: rgba(239, 68, 68, 0.2);
-  border: 1px solid var(--error);
-  color: var(--error);
-  animation: pulse 2s infinite;
-}
-
-.status-badge.completed {
-  background: rgba(16, 185, 129, 0.2);
-  border: 1px solid var(--success);
-  color: var(--success);
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-
-/* Mantener todos los estilos originales del componente... */
-.league-detail {
-  position: relative;
-  min-height: 100vh;
-}
-
-/* === FONDO === */
-.background-static {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: -2;
-  overflow: hidden;
-}
-
-.background-image {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-image: url('/images/carrusel3.jpg');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  filter: brightness(0.2) contrast(0.8) grayscale(0.3);
-}
-
-.background-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(
-    135deg,
-    rgba(10, 10, 10, 0.95) 0%,
-    rgba(26, 26, 26, 0.85) 30%,
-    rgba(42, 42, 42, 0.75) 50%,
-    rgba(26, 26, 26, 0.85) 70%,
-    rgba(10, 10, 10, 0.95) 100%
-  );
-  backdrop-filter: blur(1px);
 }
 
 /* === HEADER === */
@@ -921,6 +1186,12 @@ export default {
 .league-type.private {
   border: 1px solid var(--warning);
   color: var(--warning);
+}
+
+.league-actions {
+  display: flex;
+  gap: var(--space-md);
+  align-items: center;
 }
 
 /* === BOTONES === */
@@ -1070,16 +1341,28 @@ export default {
   text-transform: uppercase;
 }
 
+.status-badge.upcoming {
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid var(--info);
+  color: var(--info);
+}
+
 .status-badge.current {
   background: rgba(239, 68, 68, 0.2);
   border: 1px solid var(--error);
   color: var(--error);
+  animation: pulse 2s infinite;
 }
 
 .status-badge.completed {
   background: rgba(16, 185, 129, 0.2);
   border: 1px solid var(--success);
   color: var(--success);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 }
 
 /* === SECCIÓN DE PICKS === */
@@ -1184,10 +1467,6 @@ export default {
   font-size: 1.5rem;
 }
 
-.medal.small {
-  font-size: 1.2rem;
-}
-
 .member-info {
   display: flex;
   align-items: center;
@@ -1195,23 +1474,8 @@ export default {
   flex: 1;
 }
 
-.member-avatar {
-  width: 50px;
-  height: 50px;
-  background: var(--gradient-primary);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  color: var(--white);
-  font-size: 1.2rem;
-}
-
-.member-avatar.small {
-  width: 40px;
-  height: 40px;
-  font-size: 1rem;
+.member-details {
+  flex: 1;
 }
 
 .member-name {
@@ -1256,15 +1520,20 @@ export default {
   font-size: 0.9rem;
 }
 
-/* === TU LINEUP === */
-.your-picks-section {
+/* === SECCIONES === */
+.your-picks-section,
+.event-leaderboard-section {
   background: var(--gradient-card);
   backdrop-filter: blur(15px);
-  border: 2px solid rgba(255, 107, 53, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-xl);
   padding: var(--space-xl);
   margin-bottom: var(--space-2xl);
   box-shadow: var(--shadow-lg);
+}
+
+.your-picks-section {
+  border: 2px solid rgba(255, 107, 53, 0.3);
 }
 
 .section-title {
@@ -1361,48 +1630,57 @@ export default {
   font-size: 0.9rem;
 }
 
-.fighter-pick.completed {
-  border-color: var(--success);
+/* === ESTADOS VACÍOS === */
+.empty-leaderboard {
+  text-align: center;
+  padding: var(--space-2xl) var(--space-lg);
+  color: var(--gray-light);
 }
 
-.points.final {
-  color: var(--success);
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: var(--space-lg);
 }
 
-.result {
-  padding: var(--space-xs) var(--space-sm);
-  border-radius: var(--radius-full);
-  font-size: 0.8rem;
-  font-weight: bold;
+.empty-title {
+  font-family: var(--font-impact);
+  font-size: 1.3rem;
+  color: var(--white);
+  margin-bottom: var(--space-sm);
   text-transform: uppercase;
 }
 
-.result.WIN {
-  background: rgba(16, 185, 129, 0.2);
-  color: var(--success);
+.empty-description {
+  font-size: 0.9rem;
+  line-height: 1.5;
 }
 
-.result.LOSS {
-  background: rgba(239, 68, 68, 0.2);
-  color: var(--error);
+/* === LOADING SECCIONES === */
+.loading-section {
+  padding: var(--space-2xl);
+  text-align: center;
 }
 
-/* === SECCIÓN DE CLASIFICACIÓN === */
-.event-leaderboard-section {
-  background: var(--gradient-card);
-  backdrop-filter: blur(15px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-xl);
-  padding: var(--space-xl);
-  box-shadow: var(--shadow-lg);
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  color: var(--gray-light);
 }
 
-.event-item {
-  cursor: default;
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 107, 53, 0.3);
+  border-top: 3px solid var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
-.event-item.is-you {
-  cursor: pointer;
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* === MODALES === */
@@ -1463,96 +1741,6 @@ export default {
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* === DETALLES DEL LUCHADOR === */
-.fighter-details {
-  padding: var(--space-xl);
-}
-
-.fighter-image {
-  text-align: center;
-  margin-bottom: var(--space-xl);
-}
-
-.fighter-image img {
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 3px solid var(--primary);
-}
-
-.fighter-placeholder {
-  width: 120px;
-  height: 120px;
-  background: var(--gradient-primary);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto;
-  font-family: var(--font-impact);
-  font-size: 2.5rem;
-  color: var(--white);
-}
-
-.fighter-stats {
-  margin-bottom: var(--space-xl);
-}
-
-.stat-row {
-  display: flex;
-  justify-content: space-between;
-  padding: var(--space-md) 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.stat-label {
-  color: var(--gray-light);
-  font-weight: 600;
-}
-
-.stat-value {
-  color: var(--white);
-  font-weight: bold;
-}
-
-.breakdown-title {
-  font-family: var(--font-impact);
-  font-size: 1.3rem;
-  color: var(--white);
-  margin-bottom: var(--space-lg);
-  text-transform: uppercase;
-}
-
-.points-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.points-item {
-  display: flex;
-  justify-content: space-between;
-  padding: var(--space-sm) var(--space-md);
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: var(--radius-md);
-}
-
-.points-item.total {
-  background: rgba(255, 107, 53, 0.2);
-  border: 1px solid var(--primary);
-  font-weight: bold;
-}
-
-.points-category {
-  color: var(--gray-light);
-}
-
-.points-value {
-  color: var(--primary);
-  font-weight: bold;
-}
-
 /* === INFO DE LA LIGA === */
 .league-info-content {
   padding: var(--space-xl);
@@ -1604,6 +1792,144 @@ export default {
   line-height: 1.5;
 }
 
+.current-event-info {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+}
+
+.event-name {
+  font-family: var(--font-impact);
+  color: var(--primary);
+  margin-bottom: var(--space-sm);
+  text-transform: uppercase;
+  font-size: 1.1rem;
+}
+
+.event-details p {
+  margin-bottom: var(--space-xs);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.performance-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-md);
+}
+
+.performance-stats .stat-item {
+  background: rgba(255, 255, 255, 0.05);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.performance-stats .stat-label {
+  display: block;
+  color: var(--gray-light);
+  font-size: 0.8rem;
+  margin-bottom: var(--space-xs);
+  text-transform: uppercase;
+}
+
+.performance-stats .stat-value {
+  display: block;
+  color: var(--primary);
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+/* === DETALLES DEL LUCHADOR === */
+.fighter-details {
+  padding: var(--space-xl);
+}
+
+.fighter-image {
+  text-align: center;
+  margin-bottom: var(--space-xl);
+}
+
+.fighter-image img {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--primary);
+}
+
+.fighter-placeholder {
+  width: 120px;
+  height: 120px;
+  background: var(--gradient-primary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  font-family: var(--font-impact);
+  font-size: 2.5rem;
+  color: var(--white);
+}
+
+.fighter-stats {
+  margin-bottom: var(--space-xl);
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-md) 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stat-row .stat-label {
+  color: var(--gray-light);
+  font-weight: 600;
+}
+
+.stat-row .stat-value {
+  color: var(--white);
+  font-weight: bold;
+}
+
+.breakdown-title {
+  font-family: var(--font-impact);
+  font-size: 1.3rem;
+  color: var(--white);
+  margin-bottom: var(--space-lg);
+  text-transform: uppercase;
+}
+
+.points-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.points-item {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-sm) var(--space-md);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
+}
+
+.points-item.total {
+  background: rgba(255, 107, 53, 0.2);
+  border: 1px solid var(--primary);
+  font-weight: bold;
+}
+
+.points-category {
+  color: var(--gray-light);
+}
+
+.points-value {
+  color: var(--primary);
+  font-weight: bold;
+}
+
 /* === NOTIFICACIÓN === */
 .notification {
   position: fixed;
@@ -1623,154 +1949,6 @@ export default {
   transform: translateX(100%);
   animation: slideIn 0.3s ease forwards;
   max-width: 350px;
-}
-
-/* === ANIMACIONES SUAVES === */
-.tab-content {
-  animation: fadeInUp 0.4s ease-out;
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* === SKELETON LOADING === */
-.skeleton {
-  background: linear-gradient(90deg, 
-    rgba(255, 255, 255, 0.1) 25%, 
-    rgba(255, 255, 255, 0.2) 50%, 
-    rgba(255, 255, 255, 0.1) 75%);
-  background-size: 200% 100%;
-  animation: skeleton-loading 1.5s infinite;
-}
-
-@keyframes skeleton-loading {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-.skeleton-leaderboard-item {
-  height: 80px;
-  border-radius: var(--radius-lg);
-  margin-bottom: var(--space-md);
-}
-
-.skeleton-text {
-  height: 20px;
-  border-radius: var(--radius-sm);
-  margin-bottom: var(--space-sm);
-}
-
-.skeleton-text.title {
-  height: 24px;
-  width: 60%;
-}
-
-.skeleton-text.subtitle {
-  height: 16px;
-  width: 40%;
-}
-
-/* === HOVER EFFECTS MEJORADOS === */
-.leaderboard-item {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.leaderboard-item:hover {
-  transform: translateY(-3px) scale(1.01);
-  box-shadow: 
-    var(--shadow-lg), 
-    0 0 20px rgba(255, 107, 53, 0.1);
-}
-
-.fighter-pick:hover {
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: 
-    var(--shadow-md), 
-    0 0 15px rgba(255, 107, 53, 0.15);
-}
-
-/* === INDICADORES DE ESTADO === */
-.league-type::before {
-  content: '';
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-right: var(--space-xs);
-  animation: pulse 2s infinite;
-}
-
-.league-type.public::before {
-  background: var(--info);
-}
-
-.league-type.private::before {
-  background: var(--warning);
-}
-
-/* === MEJORAS RESPONSIVE === */
-@media (max-width: 768px) {
-  .main-loading .loading-title {
-    font-size: 1.5rem;
-  }
-  
-  .error-title {
-    font-size: 1.5rem;
-  }
-  
-  .league-name {
-    font-size: 2rem;
-    line-height: 1.2;
-  }
-  
-  .tabs {
-    gap: var(--space-sm);
-  }
-  
-  .tab-button {
-    padding: var(--space-sm) var(--space-md);
-    font-size: 0.8rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .league-header {
-    padding: var(--space-md) 0;
-  }
-  
-  .header-content {
-    gap: var(--space-md);
-  }
-  
-  .league-meta {
-    gap: var(--space-sm);
-  }
-  
-  .tabs-navigation {
-    padding: var(--space-sm) 0;
-  }
-  
-  .tab-button {
-    padding: var(--space-sm);
-    font-size: 0.75rem;
-  }
-  
-  .picks-call-to-action {
-    padding: var(--space-md);
-  }
-  
-  .btn-picks {
-    padding: var(--space-md) var(--space-lg);
-    font-size: 1rem;
-  }
 }
 
 @keyframes slideIn {

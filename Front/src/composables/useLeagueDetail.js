@@ -2,7 +2,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../store/auth.js'
-import { leagueDetailService, eventsService, leaderboardService } from '../api/index.js'
+import { leagueDetailService, eventsService, leaderboardService, leaguesService } from '../api/index.js'
 import { useDateFormatter } from './useDateFormatter.js'
 
 export function useLeagueDetail(leagueId) {
@@ -27,6 +27,7 @@ export function useLeagueDetail(leagueId) {
   const isLoadingGlobal = ref(false)
   const isLoadingCurrentEvent = ref(false)
   const isLoadingPreviousEvent = ref(false)
+  const isLeavingLeague = ref(false) // 🆕 Estado para salir de liga
   
   // Estados UI
   const activeTab = ref('global')
@@ -34,6 +35,7 @@ export function useLeagueDetail(leagueId) {
   const showLeagueInfo = ref(false)
   const showNotificationModal = ref(false)
   const notificationText = ref('')
+  const showLeaveConfirmation = ref(false) // 🆕 Confirmación para salir
 
   // Computed properties
   const user = computed(() => authStore.user)
@@ -65,6 +67,14 @@ export function useLeagueDetail(leagueId) {
   const formattedPreviousEventDate = computed(() => {
     if (!previousEvent.value?.startDate) return ''
     return formatEventDate(previousEvent.value.startDate)
+  })
+
+  // 🆕 Verificar si el usuario puede salir de la liga
+  const canLeaveLeague = computed(() => {
+    if (!currentLeague.value || !user.value) return false
+    
+    // El creador no puede salir de su propia liga
+    return currentLeague.value.creator?.id !== user.value.id
   })
 
   // Funciones para cargar datos
@@ -131,15 +141,20 @@ export function useLeagueDetail(leagueId) {
       
       const response = await leaderboardService.getGlobalLeaderboard(leagueId)
       
-      // Procesar los datos para el formato esperado por el componente
+      // 🔥 MEJORADO: Procesar los datos para incluir toda la información de miembros
       const processedLeaderboard = response.leaderboard.map((entry, index) => ({
         id: entry.userId,
         username: entry.username,
+        firstName: entry.firstName,
+        lastName: entry.lastName,
+        profileImageUrl: entry.profileImageUrl,
         totalPoints: entry.totalPoints || 0,
         lastEventPoints: 0, // TODO: Implementar último evento
         eventsParticipated: entry.eventsParticipated || 0,
         isCurrentUser: entry.userId === user.value?.id,
-        position: index + 1
+        position: index + 1,
+        // 🆕 Calcular promedio de puntos por evento
+        averagePointsPerEvent: entry.averagePointsPerEvent || 0
       }))
       
       globalLeaderboard.value = processedLeaderboard
@@ -166,6 +181,9 @@ export function useLeagueDetail(leagueId) {
       const processedLeaderboard = response.leaderboard.map((entry, index) => ({
         id: entry.userId,
         username: entry.username,
+        firstName: entry.firstName,
+        lastName: entry.lastName,
+        profileImageUrl: entry.profileImageUrl,
         eventPoints: entry.eventPoints || 0,
         fightersSelected: entry.selectedFighters?.length || 0,
         isCurrentUser: entry.userId === user.value?.id,
@@ -240,6 +258,49 @@ export function useLeagueDetail(leagueId) {
     }
   }
 
+  // 🆕 Función para salir de la liga
+  async function leaveLeague() {
+    if (!currentLeague.value || !canLeaveLeague.value) {
+      displayNotification('No puedes salir de esta liga')
+      return
+    }
+    
+    isLeavingLeague.value = true
+    try {
+      console.log('🚪 Saliendo de la liga:', leagueId)
+      
+      const response = await leaguesService.leaveLeague(leagueId)
+      
+      console.log('✅ Has salido de la liga exitosamente')
+      displayNotification('Has salido de la liga exitosamente')
+      
+      // Redirigir al dashboard después de un breve delay
+      setTimeout(() => {
+        router.push('/dashboard')
+      }, 2000)
+      
+    } catch (error) {
+      console.error('❌ Error al salir de la liga:', error)
+      displayNotification('Error al salir de la liga: ' + error.message)
+    } finally {
+      isLeavingLeague.value = false
+      showLeaveConfirmation.value = false
+    }
+  }
+
+  // 🆕 Función para copiar código de invitación
+  async function copyInvitationCode() {
+    if (!currentLeague.value?.invitationCode) return
+    
+    try {
+      await navigator.clipboard.writeText(currentLeague.value.invitationCode)
+      displayNotification('Código copiado al portapapeles')
+    } catch (error) {
+      console.error('Error al copiar código:', error)
+      displayNotification('Error al copiar el código')
+    }
+  }
+
   // Funciones de utilidad
   function getPositionClass(position) {
     if (position === 1) return 'gold'
@@ -250,6 +311,13 @@ export function useLeagueDetail(leagueId) {
 
   function getFighterInitials(name) {
     return name.split(' ').map(word => word[0]).join('').toUpperCase()
+  }
+
+  function getUserInitials(user) {
+    if (user.firstName && user.lastName) {
+      return (user.firstName[0] + user.lastName[0]).toUpperCase()
+    }
+    return user.username.substring(0, 2).toUpperCase()
   }
 
   function showFighterDetails(fighter) {
@@ -279,6 +347,15 @@ export function useLeagueDetail(leagueId) {
     }
     
     router.push(`/league/${leagueId}/picks/${currentEvent.value.id}`)
+  }
+
+  // 🆕 Funciones para manejo de modales
+  function showLeaveLeagueConfirmation() {
+    showLeaveConfirmation.value = true
+  }
+
+  function hideLeaveConfirmation() {
+    showLeaveConfirmation.value = false
   }
 
   // Función principal para cargar todos los datos
@@ -341,6 +418,7 @@ export function useLeagueDetail(leagueId) {
     isLoadingGlobal,
     isLoadingCurrentEvent,
     isLoadingPreviousEvent,
+    isLeavingLeague, // 🆕
     
     // Estados UI
     activeTab,
@@ -348,23 +426,30 @@ export function useLeagueDetail(leagueId) {
     showLeagueInfo,
     showNotificationModal,
     notificationText,
+    showLeaveConfirmation, // 🆕
     
     // Computed
     isPublicLeague,
     isPrivateLeague,
     canMakePicks,
+    canLeaveLeague, // 🆕
     formattedEventDate,
     formattedPreviousEventDate,
     
     // Funciones
     loadAllData,
     refreshTabData,
+    leaveLeague, // 🆕
+    copyInvitationCode, // 🆕
     getPositionClass,
     getFighterInitials,
+    getUserInitials, // 🆕
     showFighterDetails,
     displayNotification,
     hideNotification,
     goBackToDashboard,
-    goToPicksSelection
+    goToPicksSelection,
+    showLeaveLeagueConfirmation, // 🆕
+    hideLeaveConfirmation // 🆕
   }
 }

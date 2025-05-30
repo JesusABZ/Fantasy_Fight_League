@@ -1,4 +1,4 @@
-// Crear: src/main/java/com/fantasyfightleague/controller/LeaderboardController.java
+// Back/src/main/java/com/fantasyfightleague/controller/LeaderboardController.java
 package com.fantasyfightleague.controller;
 
 import com.fantasyfightleague.model.*;
@@ -54,7 +54,7 @@ public class LeaderboardController {
             
             List<Map<String, Object>> leaderboard = pickService.getGlobalLeaderboard(league);
             
-            // Enriquecer los datos con información adicional
+            // 🔥 MEJORADO: Enriquecer los datos con información completa del usuario
             List<Map<String, Object>> enrichedLeaderboard = new ArrayList<>();
             int position = 1;
             
@@ -63,12 +63,17 @@ public class LeaderboardController {
                 User entryUser = (User) entry.get("user");
                 Long totalPoints = (Long) entry.get("totalPoints");
                 
+                // Información básica del usuario
                 enrichedEntry.put("position", position);
                 enrichedEntry.put("userId", entryUser.getId());
                 enrichedEntry.put("username", entryUser.getUsername());
+                
+                // 🆕 AGREGADO: Información completa del perfil
                 enrichedEntry.put("firstName", entryUser.getFirstName());
                 enrichedEntry.put("lastName", entryUser.getLastName());
                 enrichedEntry.put("profileImageUrl", entryUser.getProfileImageUrl());
+                
+                // Estadísticas de puntos
                 enrichedEntry.put("totalPoints", totalPoints != null ? totalPoints : 0);
                 
                 // Contar número de eventos participados
@@ -82,6 +87,9 @@ public class LeaderboardController {
                 } else {
                     enrichedEntry.put("averagePointsPerEvent", 0.0);
                 }
+                
+                // 🆕 AGREGADO: Puntos del último evento (por ahora 0, TODO: implementar)
+                enrichedEntry.put("lastEventPoints", getLastEventPoints(entryUser, league));
                 
                 enrichedLeaderboard.add(enrichedEntry);
                 position++;
@@ -123,18 +131,27 @@ public class LeaderboardController {
             
             List<Pick> eventPicks = pickService.getEventLeaderboard(league, event);
             
-            // Crear respuesta detallada
+            // 🔥 MEJORADO: Crear respuesta detallada con información completa del usuario
             List<Map<String, Object>> leaderboard = new ArrayList<>();
             int position = 1;
             
             for (Pick pick : eventPicks) {
                 Map<String, Object> entry = new HashMap<>();
+                User pickUser = pick.getUser();
+                
+                // Información de posición
                 entry.put("position", position);
-                entry.put("userId", pick.getUser().getId());
-                entry.put("username", pick.getUser().getUsername());
-                entry.put("firstName", pick.getUser().getFirstName());
-                entry.put("lastName", pick.getUser().getLastName());
-                entry.put("profileImageUrl", pick.getUser().getProfileImageUrl());
+                
+                // Información básica del usuario
+                entry.put("userId", pickUser.getId());
+                entry.put("username", pickUser.getUsername());
+                
+                // 🆕 AGREGADO: Información completa del perfil
+                entry.put("firstName", pickUser.getFirstName());
+                entry.put("lastName", pickUser.getLastName());
+                entry.put("profileImageUrl", pickUser.getProfileImageUrl());
+                
+                // Estadísticas del evento
                 entry.put("eventPoints", pick.getEventPoints());
                 entry.put("totalCost", pick.getTotalCost());
                 entry.put("remainingBudget", pick.getRemainingBudget());
@@ -167,6 +184,8 @@ public class LeaderboardController {
                 }
                 
                 entry.put("selectedFighters", fighterDetails);
+                entry.put("fightersSelected", pick.getSelectedFighters().size()); // Para compatibilidad
+                
                 leaderboard.add(entry);
                 position++;
             }
@@ -310,6 +329,30 @@ public class LeaderboardController {
             
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 🆕 MÉTODO HELPER: Obtener puntos del último evento para un usuario
+     */
+    private int getLastEventPoints(User user, League league) {
+        try {
+            // Obtener todos los picks del usuario en esta liga
+            List<Pick> userPicks = pickService.findByUserAndLeague(user, league);
+            
+            if (userPicks.isEmpty()) {
+                return 0;
+            }
+            
+            // Ordenar por fecha del evento (más reciente primero)
+            userPicks.sort((a, b) -> b.getEvent().getStartDate().compareTo(a.getEvent().getStartDate()));
+            
+            // Devolver los puntos del evento más reciente
+            return userPicks.get(0).getEventPoints();
+            
+        } catch (Exception e) {
+            // En caso de error, devolver 0
+            return 0;
         }
     }
 }
