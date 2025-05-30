@@ -6,289 +6,348 @@
       <div class="background-overlay"></div>
     </div>
 
-    <!-- Header de la Liga -->
-    <div class="league-header">
-      <div class="container">
-        <div class="header-content">
-          <button class="btn btn-back" @click="goBackToDashboard">
-            ← Volver a Ligas
-          </button>
-          
-          <div class="league-info">
-            <h1 class="league-name">{{ currentLeague.name }}</h1>
-            <div class="league-meta">
-              <span class="league-type" :class="currentLeague.type.toLowerCase()">
-                {{ currentLeague.type === 'PUBLIC' ? '🌍 Pública' : '🔒 Privada' }}
-              </span>
-              <span class="member-count">👥 {{ currentLeague.memberCount }} miembros</span>
-            </div>
-          </div>
-          
-          <div class="league-actions">
-            <button class="btn btn-info" @click="showLeagueInfo = true">
-              ℹ️ Info
-            </button>
-          </div>
+    <!-- Loading Principal -->
+    <div v-if="isLoadingLeague" class="main-loading">
+      <div class="loading-container">
+        <div class="loading-spinner-large">
+          <div class="spinner"></div>
         </div>
+        <h3 class="loading-title">Cargando Liga...</h3>
+        <p class="loading-subtitle">Obteniendo datos de la liga</p>
       </div>
     </div>
 
-    <!-- Navegación por pestañas -->
-    <div class="tabs-navigation">
-      <div class="container">
-        <div class="tabs">
-          <!-- Para ligas privadas: Global, Evento Actual y Evento Anterior -->
-          <template v-if="currentLeague.type === 'PRIVATE'">
-            <button 
-              class="tab-button" 
-              :class="{ 'active': activeTab === 'global' }"
-              @click="activeTab = 'global'"
-            >
-              🏆 Clasificación Global
+    <!-- Contenido Principal -->
+    <template v-else-if="currentLeague">
+      <!-- Header de la Liga -->
+      <div class="league-header">
+        <div class="container">
+          <div class="header-content">
+            <button class="btn btn-back" @click="goBackToDashboard">
+              ← Volver a Ligas
             </button>
-            <button 
-              class="tab-button" 
-              :class="{ 'active': activeTab === 'current' }"
-              @click="activeTab = 'current'"
-              v-if="currentEvent"
-            >
-              ⚡ Evento Actual
-            </button>
-            <button 
-              class="tab-button" 
-              :class="{ 'active': activeTab === 'previous' }"
-              @click="activeTab = 'previous'"
-              v-if="previousEvent"
-            >
-              📈 Evento Anterior
-            </button>
-          </template>
-          
-          <!-- Para ligas públicas: Solo Evento Actual -->
-          <template v-else>
-            <button 
-              class="tab-button active"
-              @click="activeTab = 'current'"
-              v-if="currentEvent"
-            >
-              ⚡ {{ currentEvent.name }}
-            </button>
-          </template>
-        </div>
-      </div>
-    </div>
-
-    <!-- Contenido de las pestañas -->
-    <div class="main-content">
-      <div class="container">
-        
-        <!-- Pestaña: Clasificación Global (Solo para ligas privadas) -->
-        <div v-if="activeTab === 'global' && currentLeague.type === 'PRIVATE'" class="tab-content">
-          <div class="content-header">
-            <h2 class="content-title">🏆 Clasificación Global de la Liga</h2>
-            <p class="content-subtitle">Puntuación acumulada de todos los eventos</p>
-          </div>
-
-          <div class="leaderboard-container">
-            <div class="leaderboard">
-              <div 
-                v-for="(member, index) in globalLeaderboard" 
-                :key="member.id"
-                class="leaderboard-item"
-                :class="{ 'is-you': member.isCurrentUser, 'top-three': index < 3 }"
-              >
-                <div class="position">
-                  <span class="position-number" :class="getPositionClass(index + 1)">
-                    #{{ index + 1 }}
-                  </span>
-                  <div v-if="index < 3" class="medal">
-                    {{ index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉' }}
-                  </div>
-                </div>
-                
-                <div class="member-info">
-                  <div class="member-avatar">
-                    {{ member.username.substring(0, 2).toUpperCase() }}
-                  </div>
-                  <div class="member-details">
-                    <h4 class="member-name">{{ member.username }}</h4>
-                    <p class="member-subtitle">{{ member.eventsParticipated }} eventos participados</p>
-                  </div>
-                </div>
-                
-                <div class="member-stats">
-                  <div class="total-points">{{ member.totalPoints }} pts</div>
-                  <div class="last-event-points">Último: {{ member.lastEventPoints }} pts</div>
-                </div>
+            
+            <div class="league-info">
+              <h1 class="league-name">{{ currentLeague.name }}</h1>
+              <div class="league-meta">
+                <span class="league-type" :class="currentLeague.type.toLowerCase()">
+                  {{ currentLeague.type === 'PUBLIC' ? '🌍 Pública' : '🔒 Privada' }}
+                </span>
+                <span class="member-count">👥 {{ currentLeague.memberCount || currentLeague.members?.length || 0 }} miembros</span>
               </div>
             </div>
-          </div>
-        </div>
-
-        <!-- Pestaña: Evento Actual -->
-        <div v-if="activeTab === 'current' && currentEvent" class="tab-content">
-          <div class="content-header">
-            <h2 class="content-title">⚡ {{ currentEvent.name }}</h2>
-            <p class="content-subtitle">{{ formatDate(currentEvent.date) }} • {{ currentEvent.location }}</p>
-            <div class="event-status">
-              <span class="status-badge current">🔴 En Curso</span>
-            </div>
-          </div>
-
-          <!-- Botón para elegir picks (Solo si el usuario no tiene picks o puede modificarlos) -->
-          <div v-if="canMakePicks" class="picks-action-section">
-            <div class="picks-call-to-action">
-              <div class="cta-content">
-                <h3 class="cta-title">🎯 ¡Elige tu Lineup!</h3>
-                <p class="cta-description">
-                  {{ currentUserPicks.length > 0 ? 'Modifica tu lineup antes de que comience el evento' : 'Selecciona hasta 3 luchadores para este evento' }}
-                </p>
-              </div>
-              <button class="btn btn-picks" @click="goToPicksSelection">
-                {{ currentUserPicks.length > 0 ? '✏️ Modificar Picks' : '⚔️ Elegir Luchadores' }}
+            
+            <div class="league-actions">
+              <button class="btn btn-info" @click="showLeagueInfo = true">
+                ℹ️ Info
               </button>
             </div>
           </div>
+        </div>
+      </div>
 
-          <!-- Tu lineup para este evento -->
-          <div v-if="currentUserPicks.length > 0" class="your-picks-section">
-            <h3 class="section-title">👤 Tu Lineup para este Evento</h3>
-            <div class="picks-grid">
-              <div 
-                v-for="pick in currentUserPicks" 
-                :key="pick.id"
-                class="fighter-pick"
-                @click="showFighterDetails(pick)"
+      <!-- Navegación por pestañas -->
+      <div class="tabs-navigation">
+        <div class="container">
+          <div class="tabs">
+            <!-- Para ligas privadas: Global, Evento Actual -->
+            <template v-if="isPrivateLeague">
+              <button 
+                class="tab-button" 
+                :class="{ 'active': activeTab === 'global' }"
+                @click="setActiveTab('global')"
               >
-                <div class="fighter-avatar">
-                  <img v-if="pick.imageUrl" :src="pick.imageUrl" :alt="pick.name" />
-                  <span v-else class="fighter-initials">{{ getFighterInitials(pick.name) }}</span>
-                </div>
-                <div class="fighter-info">
-                  <h4 class="fighter-name">{{ pick.name }}</h4>
-                  <p class="fighter-record">{{ pick.record }}</p>
-                  <div class="fighter-points">
-                    <span class="points">{{ pick.points || 0 }} pts</span>
-                    <span class="cost">${{ pick.cost }}</span>
+                🏆 Clasificación Global
+              </button>
+              <button 
+                class="tab-button" 
+                :class="{ 'active': activeTab === 'current' }"
+                @click="setActiveTab('current')"
+                v-if="currentEvent"
+              >
+                ⚡ Evento Actual
+              </button>
+            </template>
+            
+            <!-- Para ligas públicas: Solo Evento Actual -->
+            <template v-else>
+              <button 
+                class="tab-button active"
+                @click="setActiveTab('current')"
+                v-if="currentEvent"
+              >
+                ⚡ {{ currentEvent.name }}
+              </button>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contenido de las pestañas -->
+      <div class="main-content">
+        <div class="container">
+          
+          <!-- Pestaña: Clasificación Global (Solo para ligas privadas) -->
+          <div v-if="activeTab === 'global' && isPrivateLeague" class="tab-content">
+            <div class="content-header">
+              <h2 class="content-title">🏆 Clasificación Global de la Liga</h2>
+              <p class="content-subtitle">Puntuación acumulada de todos los eventos</p>
+            </div>
+
+            <!-- Loading clasificación global -->
+            <div v-if="isLoadingGlobal" class="loading-section">
+              <div class="loading-spinner">
+                <span class="spinner"></span>
+                <p>Cargando clasificación global...</p>
+              </div>
+            </div>
+
+            <div v-else class="leaderboard-container">
+              <div class="leaderboard">
+                <div 
+                  v-for="(member, index) in globalLeaderboard" 
+                  :key="member.id"
+                  class="leaderboard-item"
+                  :class="{ 'is-you': member.isCurrentUser, 'top-three': index < 3 }"
+                >
+                  <div class="position">
+                    <span class="position-number" :class="getPositionClass(index + 1)">
+                      #{{ index + 1 }}
+                    </span>
+                    <div v-if="index < 3" class="medal">
+                      {{ index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉' }}
+                    </div>
                   </div>
+                  
+                  <div class="member-info">
+                    <div class="member-avatar">
+                      {{ member.username.substring(0, 2).toUpperCase() }}
+                    </div>
+                    <div class="member-details">
+                      <h4 class="member-name">
+                        {{ member.username }}
+                        <span v-if="member.isCurrentUser" class="you-badge">TÚ</span>
+                      </h4>
+                      <p class="member-subtitle">{{ member.eventsParticipated }} eventos participados</p>
+                    </div>
+                  </div>
+                  
+                  <div class="member-stats">
+                    <div class="total-points">{{ member.totalPoints }} pts</div>
+                    <div class="last-event-points">Último: {{ member.lastEventPoints }} pts</div>
+                  </div>
+                </div>
+
+                <!-- Estado vacío -->
+                <div v-if="globalLeaderboard.length === 0" class="empty-leaderboard">
+                  <div class="empty-icon">🏆</div>
+                  <h3 class="empty-title">No hay participantes aún</h3>
+                  <p class="empty-description">Los miembros de la liga aparecerán aquí cuando participen en eventos</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Clasificación del evento actual -->
-          <div class="event-leaderboard-section">
-            <h3 class="section-title">📊 Clasificación del Evento</h3>
-            <div class="leaderboard">
-              <div 
-                v-for="(member, index) in currentEventLeaderboard" 
-                :key="member.id"
-                class="leaderboard-item event-item"
-                :class="{ 'is-you': member.isCurrentUser }"
-                @click="member.isCurrentUser && showUserEventDetails(member)"
-              >
-                <div class="position">
-                  <span class="position-number">#{{ index + 1 }}</span>
+          <!-- Pestaña: Evento Actual -->
+          <div v-if="activeTab === 'current' && currentEvent" class="tab-content">
+            <div class="content-header">
+              <h2 class="content-title">⚡ {{ currentEvent.name }}</h2>
+              <p class="content-subtitle">
+                {{ formattedEventDate }} 
+                <span v-if="currentEvent.location">• {{ currentEvent.location }}</span>
+              </p>
+              <div class="event-status">
+                <span class="status-badge" :class="getEventStatusClass(currentEvent.status)">
+                  {{ getEventStatusText(currentEvent.status) }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Botón para elegir picks -->
+            <div v-if="canMakePicks" class="picks-action-section">
+              <div class="picks-call-to-action">
+                <div class="cta-content">
+                  <h3 class="cta-title">🎯 ¡Elige tu Lineup!</h3>
+                  <p class="cta-description">
+                    {{ currentUserPicks.length > 0 ? 'Modifica tu lineup antes de que comience el evento' : 'Selecciona hasta 3 luchadores para este evento' }}
+                  </p>
                 </div>
-                
-                <div class="member-info">
-                  <div class="member-avatar small">
-                    {{ member.username.substring(0, 2).toUpperCase() }}
+                <button class="btn btn-picks" @click="goToPicksSelection">
+                  {{ currentUserPicks.length > 0 ? '✏️ Modificar Picks' : '⚔️ Elegir Luchadores' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Tu lineup para este evento -->
+            <div v-if="currentUserPicks.length > 0" class="your-picks-section">
+              <h3 class="section-title">👤 Tu Lineup para este Evento</h3>
+              <div class="picks-grid">
+                <div 
+                  v-for="pick in currentUserPicks" 
+                  :key="pick.id"
+                  class="fighter-pick"
+                  @click="showFighterDetails(pick)"
+                >
+                  <div class="fighter-avatar">
+                    <img v-if="pick.imageUrl" :src="pick.imageUrl" :alt="pick.name" />
+                    <span v-else class="fighter-initials">{{ getFighterInitials(pick.name) }}</span>
                   </div>
-                  <div class="member-details">
-                    <h4 class="member-name">
-                      {{ member.username }}
-                      <span v-if="member.isCurrentUser" class="you-badge">TÚ</span>
-                    </h4>
-                    <p class="fighters-count">{{ member.fightersSelected }} luchadores</p>
+                  <div class="fighter-info">
+                    <h4 class="fighter-name">{{ pick.name }}</h4>
+                    <p class="fighter-record">{{ pick.record }}</p>
+                    <div class="fighter-points">
+                      <span class="points">{{ pick.points || 0 }} pts</span>
+                      <span class="cost">${{ pick.cost }}</span>
+                    </div>
                   </div>
                 </div>
-                
-                <div class="event-points">
-                  <span class="points">{{ member.eventPoints }} pts</span>
+              </div>
+            </div>
+
+            <!-- Loading clasificación del evento -->
+            <div v-if="isLoadingCurrentEvent" class="loading-section">
+              <div class="loading-spinner">
+                <span class="spinner"></span>
+                <p>Cargando clasificación del evento...</p>
+              </div>
+            </div>
+
+            <!-- Clasificación del evento actual -->
+            <div v-else class="event-leaderboard-section">
+              <h3 class="section-title">📊 Clasificación del Evento</h3>
+              <div class="leaderboard">
+                <div 
+                  v-for="(member, index) in currentEventLeaderboard" 
+                  :key="member.id"
+                  class="leaderboard-item event-item"
+                  :class="{ 'is-you': member.isCurrentUser }"
+                >
+                  <div class="position">
+                    <span class="position-number">#{{ index + 1 }}</span>
+                  </div>
+                  
+                  <div class="member-info">
+                    <div class="member-avatar small">
+                      {{ member.username.substring(0, 2).toUpperCase() }}
+                    </div>
+                    <div class="member-details">
+                      <h4 class="member-name">
+                        {{ member.username }}
+                        <span v-if="member.isCurrentUser" class="you-badge">TÚ</span>
+                      </h4>
+                      <p class="fighters-count">{{ member.fightersSelected }} luchadores</p>
+                    </div>
+                  </div>
+                  
+                  <div class="event-points">
+                    <span class="points">{{ member.eventPoints }} pts</span>
+                  </div>
                 </div>
+
+                <!-- Estado vacío -->
+                <div v-if="currentEventLeaderboard.length === 0" class="empty-leaderboard">
+                  <div class="empty-icon">📊</div>
+                  <h3 class="empty-title">No hay participantes aún</h3>
+                  <p class="empty-description">Los participantes aparecerán cuando hagan sus picks</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </template>
+
+    <!-- Error State -->
+    <div v-else class="error-state">
+      <div class="error-container">
+        <div class="error-icon">❌</div>
+        <h3 class="error-title">Error al cargar la liga</h3>
+        <p class="error-description">No se pudieron obtener los datos de la liga</p>
+        <button class="btn btn-retry" @click="loadAllData">
+          🔄 Intentar de nuevo
+        </button>
+        <button class="btn btn-back" @click="goBackToDashboard">
+          ← Volver al Dashboard
+        </button>
+      </div>
+    </div>
+
+    <!-- Modal: Info de la Liga -->
+    <div v-if="showLeagueInfo && currentLeague" class="modal-overlay" @click="showLeagueInfo = false">
+      <div class="modal-content info-modal" @click.stop>
+        <div class="modal-header">
+          <h3 class="modal-title">📋 Información de la Liga</h3>
+          <button class="modal-close" @click="showLeagueInfo = false">✕</button>
+        </div>
+        
+        <div class="league-info-content">
+          <div class="info-section">
+            <h4 class="info-title">Detalles de la Liga</h4>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="info-label">Nombre:</span>
+                <span class="info-value">{{ currentLeague.name }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Tipo:</span>
+                <span class="info-value">{{ currentLeague.type === 'PUBLIC' ? 'Pública' : 'Privada' }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Miembros:</span>
+                <span class="info-value">{{ currentLeague.memberCount || currentLeague.members?.length || 0 }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Creada:</span>
+                <span class="info-value">{{ formatDate(currentLeague.createdAt) }}</span>
+              </div>
+              <div class="info-item" v-if="isPrivateLeague && currentLeague.invitationCode">
+                <span class="info-label">Código:</span>
+                <span class="info-value invitation-code">{{ currentLeague.invitationCode }}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="info-section">
+            <h4 class="info-title">Reglas</h4>
+            <ul class="rules-list">
+              <li>Presupuesto inicial: ${{ formatCurrency(currentLeague.initialBudget || 100000) }}</li>
+              <li>Máximo {{ currentLeague.maxFightersEvent || 3 }} luchadores por evento</li>
+              <li>Mínimo {{ currentLeague.minFightersEvent || 1 }} luchador por evento</li>
+              <li>Los puntos se calculan automáticamente tras cada evento</li>
+            </ul>
+          </div>
+
+          <div class="info-section" v-if="currentEvent">
+            <h4 class="info-title">Evento Actual</h4>
+            <div class="current-event-info">
+              <h5 class="event-name">{{ currentEvent.name }}</h5>
+              <div class="event-details">
+                <p><strong>📅 Fecha:</strong> {{ formattedEventDate }}</p>
+                <p v-if="currentEvent.location"><strong>📍 Lugar:</strong> {{ currentEvent.location }}</p>
+                <p><strong>🎯 Estado:</strong> {{ getEventStatusText(currentEvent.status) }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="info-section" v-if="myPosition">
+            <h4 class="info-title">Tu Rendimiento</h4>
+            <div class="performance-stats">
+              <div class="stat-item">
+                <span class="stat-label">Posición Actual:</span>
+                <span class="stat-value">#{{ myPosition.position || 'N/A' }}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Total Puntos:</span>
+                <span class="stat-value">{{ myPosition.totalPoints || 0 }} pts</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Eventos Participados:</span>
+                <span class="stat-value">{{ myPosition.eventsParticipated || 0 }}</span>
               </div>
             </div>
           </div>
         </div>
-
-        <!-- Pestaña: Evento Anterior (Solo para ligas privadas) -->
-        <div v-if="activeTab === 'previous' && previousEvent && currentLeague.type === 'PRIVATE'" class="tab-content">
-          <div class="content-header">
-            <h2 class="content-title">📈 {{ previousEvent.name }}</h2>
-            <p class="content-subtitle">{{ formatDate(previousEvent.date) }} • {{ previousEvent.location }}</p>
-            <div class="event-status">
-              <span class="status-badge completed">✅ Finalizado</span>
-            </div>
-          </div>
-
-          <!-- Tu lineup del evento anterior -->
-          <div v-if="previousUserPicks.length > 0" class="your-picks-section">
-            <h3 class="section-title">👤 Tu Lineup Final</h3>
-            <div class="picks-grid">
-              <div 
-                v-for="pick in previousUserPicks" 
-                :key="pick.id"
-                class="fighter-pick completed"
-                @click="showFighterDetails(pick)"
-              >
-                <div class="fighter-avatar">
-                  <img v-if="pick.imageUrl" :src="pick.imageUrl" :alt="pick.name" />
-                  <span v-else class="fighter-initials">{{ getFighterInitials(pick.name) }}</span>
-                </div>
-                <div class="fighter-info">
-                  <h4 class="fighter-name">{{ pick.name }}</h4>
-                  <p class="fighter-record">{{ pick.record }}</p>
-                  <div class="fighter-points">
-                    <span class="points final">{{ pick.finalPoints }} pts</span>
-                    <span class="result" :class="pick.result">{{ pick.result }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Clasificación final del evento anterior -->
-          <div class="event-leaderboard-section">
-            <h3 class="section-title">🏁 Clasificación Final</h3>
-            <div class="leaderboard">
-              <div 
-                v-for="(member, index) in previousEventLeaderboard" 
-                :key="member.id"
-                class="leaderboard-item event-item"
-                :class="{ 'is-you': member.isCurrentUser, 'top-three': index < 3 }"
-                @click="member.isCurrentUser && showUserEventDetails(member)"
-              >
-                <div class="position">
-                  <span class="position-number" :class="getPositionClass(index + 1)">
-                    #{{ index + 1 }}
-                  </span>
-                  <div v-if="index < 3" class="medal small">
-                    {{ index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉' }}
-                  </div>
-                </div>
-                
-                <div class="member-info">
-                  <div class="member-avatar small">
-                    {{ member.username.substring(0, 2).toUpperCase() }}
-                  </div>
-                  <div class="member-details">
-                    <h4 class="member-name">
-                      {{ member.username }}
-                      <span v-if="member.isCurrentUser" class="you-badge">TÚ</span>
-                    </h4>
-                    <p class="fighters-count">{{ member.fightersSelected }} luchadores</p>
-                  </div>
-                </div>
-                
-                <div class="event-points">
-                  <span class="points final">{{ member.finalPoints }} pts</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
       </div>
     </div>
 
@@ -311,15 +370,15 @@
           <div class="fighter-stats">
             <div class="stat-row">
               <span class="stat-label">Record:</span>
-              <span class="stat-value">{{ selectedFighter.record }}</span>
+              <span class="stat-value">{{ selectedFighter.record || 'N/A' }}</span>
             </div>
             <div class="stat-row">
               <span class="stat-label">Categoría:</span>
-              <span class="stat-value">{{ selectedFighter.weightClass }}</span>
+              <span class="stat-value">{{ selectedFighter.weightClass || 'N/A' }}</span>
             </div>
             <div class="stat-row">
               <span class="stat-label">Costo:</span>
-              <span class="stat-value">${{ selectedFighter.cost }}</span>
+              <span class="stat-value">${{ formatCurrency(selectedFighter.cost || 0) }}</span>
             </div>
           </div>
           
@@ -352,308 +411,406 @@
       </div>
     </div>
 
-    <!-- Modal: Info de la Liga -->
-    <div v-if="showLeagueInfo" class="modal-overlay" @click="showLeagueInfo = false">
-      <div class="modal-content info-modal" @click.stop>
-        <div class="modal-header">
-          <h3 class="modal-title">📋 Información de la Liga</h3>
-          <button class="modal-close" @click="showLeagueInfo = false">✕</button>
-        </div>
-        
-        <div class="league-info-content">
-          <div class="info-section">
-            <h4 class="info-title">Detalles de la Liga</h4>
-            <div class="info-grid">
-              <div class="info-item">
-                <span class="info-label">Nombre:</span>
-                <span class="info-value">{{ currentLeague.name }}</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">Tipo:</span>
-                <span class="info-value">{{ currentLeague.type === 'PUBLIC' ? 'Pública' : 'Privada' }}</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">Miembros:</span>
-                <span class="info-value">{{ currentLeague.memberCount }}</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">Creada:</span>
-                <span class="info-value">{{ formatDate(currentLeague.createdAt) }}</span>
-              </div>
-            </div>
-          </div>
-          
-          <div class="info-section">
-            <h4 class="info-title">Reglas</h4>
-            <ul class="rules-list">
-              <li>Presupuesto inicial: ${{ currentLeague.initialBudget }}</li>
-              <li>Máximo {{ currentLeague.maxFightersEvent }} luchadores por evento</li>
-              <li>Mínimo {{ currentLeague.minFightersEvent }} luchador por evento</li>
-              <li>Los puntos se calculan automáticamente tras cada evento</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Notificación flotante -->
     <div v-if="showNotificationModal" class="notification" @click="hideNotification">
-      <div class="notification-icon">✅</div>
+      <div class="notification-icon">{{ notificationText.includes('Error') ? '❌' : '✅' }}</div>
       <div class="notification-text">{{ notificationText }}</div>
     </div>
   </div>
 </template>
 
 <script>
-import { ref, reactive, computed, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { useLeagueDetail } from '../composables/useLeagueDetail.js'
+import { useDateFormatter } from '../composables/useDateFormatter.js'
 
 export default {
   name: 'LeagueDetailView',
   setup() {
-    const router = useRouter()
     const route = useRoute()
+    const leagueId = route.params.id
+    const { formatEventDate } = useDateFormatter()
     
-    // Estados principales
-    const activeTab = ref('global') // Para privadas inicia en global, para públicas será 'current'
-    const selectedFighter = ref(null)
-    const showLeagueInfo = ref(false)
-    const showNotificationModal = ref(false)
-    const notificationText = ref('')
-
-    // Datos de la liga actual (simulados)
-    const currentLeague = reactive({
-      id: 1,
-      name: 'Liga Oficina',
-      type: 'PRIVATE', // Cambiar a 'PUBLIC' para probar ligas públicas
-      memberCount: 12,
-      userPosition: 1,
-      description: 'Liga entre compañeros de trabajo',
-      createdAt: '2025-01-15',
-      initialBudget: 100000,
-      maxFightersEvent: 3,
-      minFightersEvent: 1
-    })
-
-    // Eventos (simulados)
-    const currentEvent = reactive({
-      id: 1,
-      name: 'UFC Vegas 107',
-      date: '2025-05-31',
-      location: 'Las Vegas, Nevada',
-      status: 'IN_PROGRESS'
-    })
-
-    const previousEvent = reactive({
-      id: 2,
-      name: 'UFC 295',
-      date: '2025-05-15',
-      location: 'Madison Square Garden',
-      status: 'COMPLETED'
-    })
-
-    // Clasificación global (simulada) - Con últimos puntos del evento
-    const globalLeaderboard = ref([
-      { id: 1, username: 'usuario_prueba2', totalPoints: 2890, lastEventPoints: 285, eventsParticipated: 10, isCurrentUser: true },
-      { id: 2, username: 'fighter_pro', totalPoints: 2750, lastEventPoints: 320, eventsParticipated: 10, isCurrentUser: false },
-      { id: 3, username: 'mma_expert', totalPoints: 2680, lastEventPoints: 240, eventsParticipated: 10, isCurrentUser: false },
-      { id: 4, username: 'cage_warrior', totalPoints: 2550, lastEventPoints: 190, eventsParticipated: 10, isCurrentUser: false },
-      { id: 5, username: 'octagon_king', totalPoints: 2480, lastEventPoints: 260, eventsParticipated: 10, isCurrentUser: false }
-      ])
-    // Clasificación evento anterior (simulada)
-    const previousEventLeaderboard = ref([
-      { id: 1, username: 'usuario_prueba2', finalPoints: 320, fightersSelected: 3, isCurrentUser: true },
-      { id: 2, username: 'mma_expert', finalPoints: 295, fightersSelected: 3, isCurrentUser: false },
-      { id: 3, username: 'fighter_pro', finalPoints: 285, fightersSelected: 2, isCurrentUser: false },
-      { id: 4, username: 'cage_warrior', finalPoints: 260, fightersSelected: 3, isCurrentUser: false }
-    ])
-
-    // Picks del usuario para evento anterior (simulados)
-    const previousUserPicks = ref([
-      { 
-        id: 4, 
-        name: 'Jon Jones', 
-        record: '27-1', 
-        cost: 75000, 
-        finalPoints: 150, 
-        result: 'WIN',
-        weightClass: 'Heavyweight',
-        winPoints: 100,
-        knockdownPoints: 30,
-        takedownPoints: 20,
-        submissionPoints: 0
-      },
-      { 
-        id: 5, 
-        name: 'Ilia Topuria', 
-        record: '14-0', 
-        cost: 65000, 
-        finalPoints: 120, 
-        result: 'WIN',
-        weightClass: 'Featherweight',
-        winPoints: 100,
-        knockdownPoints: 20,
-        takedownPoints: 0,
-        submissionPoints: 0
-      },
-      { 
-        id: 6, 
-        name: 'Ciryl Gane', 
-        record: '11-2', 
-        cost: 45000, 
-        finalPoints: 50, 
-        result: 'LOSS',
-        weightClass: 'Heavyweight',
-        winPoints: 0,
-        knockdownPoints: 50,
-        takedownPoints: 0,
-        submissionPoints: 0
-      }
-    ])
-
-    // Clasificación evento actual (simulada)
-    const currentEventLeaderboard = ref([
-      { id: 1, username: 'fighter_pro', eventPoints: 285, fightersSelected: 3, isCurrentUser: false },
-      { id: 2, username: 'usuario_prueba2', eventPoints: 265, fightersSelected: 3, isCurrentUser: true },
-      { id: 3, username: 'mma_expert', eventPoints: 240, fightersSelected: 2, isCurrentUser: false },
-      { id: 4, username: 'cage_warrior', eventPoints: 220, fightersSelected: 3, isCurrentUser: false }
-    ])
-
-    // Picks del usuario para evento actual (simulados)
-    const currentUserPicks = ref([
-      { 
-        id: 1, 
-        name: 'Jon Jones', 
-        record: '27-1', 
-        cost: 75000, 
-        points: 120, 
-        weightClass: 'Heavyweight',
-        imageUrl: 'https://dynl.mktgcdn.com/p/xnYGAGWMpbap_gSsJDIFPvBDPsTv5j_W3V0gCeAFyIQ/200x1.png'
-      },
-      { 
-        id: 2, 
-        name: 'Ilia Topuria', 
-        record: '14-0', 
-        cost: 65000, 
-        points: 95, 
-        weightClass: 'Featherweight',
-        imageUrl: 'https://dynl.mktgcdn.com/p/jMTyWWXdzwWDaswQzek-X6JLObRd1otuQaU4KQZElfw/200x1.png'
-      },
-      { 
-        id: 3, 
-        name: 'Ciryl Gane', 
-        record: '11-2', 
-        cost: 45000, 
-        points: 50, 
-        weightClass: 'Heavyweight',
-        imageUrl: 'https://dynl.mktgcdn.com/p/HREUg-pySQqB86Xxda5JUqmFInPekYteFBioxw1yUJw/200x1.png'
-      }
-    ])
-
-    // Computed properties
-    const canMakePicks = computed(() => {
-      // Lógica para determinar si se pueden hacer picks
-      // Por ejemplo: evento no ha comenzado, dentro del tiempo límite, etc.
-      return currentEvent.status === 'IN_PROGRESS' || currentEvent.status === 'UPCOMING'
-    })
-
-    // Inicializar tab activo basado en el tipo de liga
-    onMounted(() => {
-      if (currentLeague.type === 'PUBLIC') {
-        activeTab.value = 'current'
-      }
-    })
-
-    // Funciones
-    const formatDate = (dateString) => {
-      const date = new Date(dateString)
-      return date.toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })
-    }
-
-    const getPositionClass = (position) => {
-      if (position === 1) return 'gold'
-      if (position === 2) return 'silver'
-      if (position === 3) return 'bronze'
-      return ''
-    }
-
-    const getFighterInitials = (name) => {
-      return name.split(' ').map(word => word[0]).join('').toUpperCase()
-    }
-
-    const showFighterDetails = (fighter) => {
-      selectedFighter.value = fighter
-    }
-
-    const showUserEventDetails = (member) => {
-      if (member.isCurrentUser) {
-        displayNotification('Aquí verías los detalles de tu lineup para este evento')
-      }
-    }
-
-    const goBackToDashboard = () => {
-      router.push('/dashboard')
-    }
-
-    const goToPicksSelection = () => {
-  // Navegar a la pantalla de selección de picks
-      router.push(`/league/${currentLeague.id}/picks/${currentEvent.id}`)
-    }
-
-    const displayNotification = (message) => {
-      notificationText.value = message
-      showNotificationModal.value = true
-      setTimeout(() => {
-        showNotificationModal.value = false
-      }, 3000)
-    }
-
-    const hideNotification = () => {
-      showNotificationModal.value = false
-    }
-
-    // Cargar datos de la liga al montar
-    onMounted(() => {
-      // TODO: Cargar datos reales de la liga basándose en route.params.id
-      const leagueId = route.params.id
-      console.log('Cargando liga:', leagueId)
+    // Usar el composable con la lógica
+    const {
+      // Estados
+      currentLeague,
+      currentEvent,
+      globalLeaderboard,
+      currentEventLeaderboard,
+      currentUserPicks,
+      myPosition,
       
-      // TODO: Hacer llamadas al API para obtener datos reales
-    })
-
-    return {
+      // Estados de carga
+      isLoadingLeague,
+      isLoadingGlobal,
+      isLoadingCurrentEvent,
+      
+      // Estados UI
       activeTab,
       selectedFighter,
       showLeagueInfo,
       showNotificationModal,
       notificationText,
-      currentLeague,
-      currentEvent,
-      previousEvent,
-      globalLeaderboard,
-      currentEventLeaderboard,
-      previousEventLeaderboard,
-      currentUserPicks,
-      previousUserPicks,
+      
+      // Computed
+      isPublicLeague,
+      isPrivateLeague,
       canMakePicks,
-      formatDate,
+      formattedEventDate,
+      
+      // Funciones
+      loadAllData,
+      refreshTabData,
       getPositionClass,
       getFighterInitials,
       showFighterDetails,
-      showUserEventDetails,
+      hideNotification,
+      goBackToDashboard,
+      goToPicksSelection
+    } = useLeagueDetail(leagueId)
+
+    // Funciones adicionales del componente
+    const formatDate = (dateString) => {
+      if (!dateString) return 'N/A'
+      try {
+        const date = new Date(dateString)
+        return date.toLocaleDateString('es-ES', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        })
+      } catch (error) {
+        return 'N/A'
+      }
+    }
+
+    const formatCurrency = (amount) => {
+      if (!amount) return '0'
+      return new Intl.NumberFormat('es-ES').format(amount)
+    }
+
+    const getEventStatusClass = (status) => {
+      switch(status) {
+        case 'UPCOMING': return 'upcoming'
+        case 'LIVE': 
+        case 'IN_PROGRESS': return 'current'
+        case 'COMPLETED': return 'completed'
+        default: return 'upcoming'
+      }
+    }
+
+    const getEventStatusText = (status) => {
+      switch(status) {
+        case 'UPCOMING': return '⏳ Próximamente'
+        case 'LIVE': 
+        case 'IN_PROGRESS': return '🔴 En Vivo'
+        case 'COMPLETED': return '✅ Finalizado'
+        default: return '⏳ Próximamente'
+      }
+    }
+
+    const setActiveTab = async (tabName) => {
+      if (activeTab.value === tabName) return
+      
+      activeTab.value = tabName
+      
+      // Cargar datos de la pestaña si es necesario
+      await refreshTabData(tabName)
+    }
+
+    // Cargar todos los datos al montar el componente
+    onMounted(async () => {
+      console.log('🚀 Montando LeagueDetailView para liga:', leagueId)
+      
+      if (!leagueId) {
+        console.error('❌ No se proporcionó ID de liga')
+        goBackToDashboard()
+        return
+      }
+      
+      try {
+        await loadAllData()
+      } catch (error) {
+        console.error('💥 Error crítico al cargar la liga:', error)
+      }
+    })
+
+    return {
+      // Estados del composable
+      currentLeague,
+      currentEvent,
+      globalLeaderboard,
+      currentEventLeaderboard,
+      currentUserPicks,
+      myPosition,
+      
+      // Estados de carga
+      isLoadingLeague,
+      isLoadingGlobal,
+      isLoadingCurrentEvent,
+      
+      // Estados UI
+      activeTab,
+      selectedFighter,
+      showLeagueInfo,
+      showNotificationModal,
+      notificationText,
+      
+      // Computed
+      isPublicLeague,
+      isPrivateLeague,
+      canMakePicks,
+      formattedEventDate,
+      
+      // Funciones del composable
+      loadAllData,
+      getPositionClass,
+      getFighterInitials,
+      showFighterDetails,
+      hideNotification,
       goBackToDashboard,
       goToPicksSelection,
-      hideNotification
+      
+      // Funciones del componente
+      formatDate,
+      formatCurrency,
+      getEventStatusClass,
+      getEventStatusText,
+      setActiveTab
     }
   }
 }
 </script>
 
 <style scoped>
+/* Todos los estilos existentes se mantienen igual... */
+
+/* === NUEVOS ESTILOS PARA LOS ESTADOS DE CARGA === */
+.main-loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--gradient-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.loading-container {
+  text-align: center;
+  color: var(--white);
+}
+
+.loading-spinner-large {
+  margin-bottom: var(--space-xl);
+}
+
+.loading-spinner-large .spinner {
+  width: 60px;
+  height: 60px;
+  border: 4px solid rgba(255, 107, 53, 0.3);
+  border-top: 4px solid var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-title {
+  font-family: var(--font-impact);
+  font-size: 1.8rem;
+  margin-bottom: var(--space-sm);
+  color: var(--primary);
+  text-transform: uppercase;
+}
+
+.loading-subtitle {
+  color: var(--gray-light);
+  font-size: 1rem;
+}
+
+/* === ESTADO DE ERROR === */
+.error-state {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--gradient-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.error-container {
+  text-align: center;
+  color: var(--white);
+  max-width: 500px;
+  padding: var(--space-xl);
+}
+
+.error-icon {
+  font-size: 4rem;
+  margin-bottom: var(--space-xl);
+}
+
+.error-title {
+  font-family: var(--font-impact);
+  font-size: 1.8rem;
+  margin-bottom: var(--space-md);
+  color: var(--error);
+  text-transform: uppercase;
+}
+
+.error-description {
+  color: var(--gray-light);
+  font-size: 1rem;
+  margin-bottom: var(--space-xl);
+  line-height: 1.5;
+}
+
+.btn-retry {
+  background: var(--gradient-primary);
+  color: var(--white);
+  margin-right: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+/* === LOADING SECCIONES === */
+.loading-section {
+  padding: var(--space-2xl);
+  text-align: center;
+}
+
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  color: var(--gray-light);
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 107, 53, 0.3);
+  border-top: 3px solid var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* === ESTADOS VACÍOS === */
+.empty-leaderboard {
+  text-align: center;
+  padding: var(--space-2xl) var(--space-lg);
+  color: var(--gray-light);
+}
+
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: var(--space-lg);
+}
+
+.empty-title {
+  font-family: var(--font-impact);
+  font-size: 1.3rem;
+  color: var(--white);
+  margin-bottom: var(--space-sm);
+  text-transform: uppercase;
+}
+
+.empty-description {
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* === INFORMACIÓN ADICIONAL EN MODAL === */
+.invitation-code {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--primary) !important;
+  font-weight: bold;
+  letter-spacing: 0.1em;
+}
+
+.current-event-info {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+}
+
+.event-name {
+  font-family: var(--font-impact);
+  color: var(--primary);
+  margin-bottom: var(--space-sm);
+  text-transform: uppercase;
+  font-size: 1.1rem;
+}
+
+.event-details p {
+  margin-bottom: var(--space-xs);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.performance-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-md);
+}
+
+.performance-stats .stat-item {
+  background: rgba(255, 255, 255, 0.05);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.performance-stats .stat-label {
+  display: block;
+  color: var(--gray-light);
+  font-size: 0.8rem;
+  margin-bottom: var(--space-xs);
+  text-transform: uppercase;
+}
+
+.performance-stats .stat-value {
+  display: block;
+  color: var(--primary);
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+/* === MEJORAS EN STATUS BADGES === */
+.status-badge.upcoming {
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid var(--info);
+  color: var(--info);
+}
+
+.status-badge.current {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid var(--error);
+  color: var(--error);
+  animation: pulse 2s infinite;
+}
+
+.status-badge.completed {
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid var(--success);
+  color: var(--success);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Mantener todos los estilos originales del componente... */
 .league-detail {
   position: relative;
   min-height: 100vh;
@@ -1466,6 +1623,154 @@ export default {
   transform: translateX(100%);
   animation: slideIn 0.3s ease forwards;
   max-width: 350px;
+}
+
+/* === ANIMACIONES SUAVES === */
+.tab-content {
+  animation: fadeInUp 0.4s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* === SKELETON LOADING === */
+.skeleton {
+  background: linear-gradient(90deg, 
+    rgba(255, 255, 255, 0.1) 25%, 
+    rgba(255, 255, 255, 0.2) 50%, 
+    rgba(255, 255, 255, 0.1) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+}
+
+@keyframes skeleton-loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton-leaderboard-item {
+  height: 80px;
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-md);
+}
+
+.skeleton-text {
+  height: 20px;
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.skeleton-text.title {
+  height: 24px;
+  width: 60%;
+}
+
+.skeleton-text.subtitle {
+  height: 16px;
+  width: 40%;
+}
+
+/* === HOVER EFFECTS MEJORADOS === */
+.leaderboard-item {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.leaderboard-item:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: 
+    var(--shadow-lg), 
+    0 0 20px rgba(255, 107, 53, 0.1);
+}
+
+.fighter-pick:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 
+    var(--shadow-md), 
+    0 0 15px rgba(255, 107, 53, 0.15);
+}
+
+/* === INDICADORES DE ESTADO === */
+.league-type::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: var(--space-xs);
+  animation: pulse 2s infinite;
+}
+
+.league-type.public::before {
+  background: var(--info);
+}
+
+.league-type.private::before {
+  background: var(--warning);
+}
+
+/* === MEJORAS RESPONSIVE === */
+@media (max-width: 768px) {
+  .main-loading .loading-title {
+    font-size: 1.5rem;
+  }
+  
+  .error-title {
+    font-size: 1.5rem;
+  }
+  
+  .league-name {
+    font-size: 2rem;
+    line-height: 1.2;
+  }
+  
+  .tabs {
+    gap: var(--space-sm);
+  }
+  
+  .tab-button {
+    padding: var(--space-sm) var(--space-md);
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .league-header {
+    padding: var(--space-md) 0;
+  }
+  
+  .header-content {
+    gap: var(--space-md);
+  }
+  
+  .league-meta {
+    gap: var(--space-sm);
+  }
+  
+  .tabs-navigation {
+    padding: var(--space-sm) 0;
+  }
+  
+  .tab-button {
+    padding: var(--space-sm);
+    font-size: 0.75rem;
+  }
+  
+  .picks-call-to-action {
+    padding: var(--space-md);
+  }
+  
+  .btn-picks {
+    padding: var(--space-md) var(--space-lg);
+    font-size: 1rem;
+  }
 }
 
 @keyframes slideIn {

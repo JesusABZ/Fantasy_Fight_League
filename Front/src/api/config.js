@@ -47,7 +47,9 @@ export const endpoints = {
     myLeagues: '/leagues/my-leagues',
     join: (id) => `/leagues/${id}/join`,
     joinPrivate: '/leagues/join-private',
-    createPrivate: '/leagues/private'
+    createPrivate: '/leagues/private',
+    leave: (id) => `/leagues/${id}/leave`,
+    byId: (id) => `/leagues/${id}` // 🆕 Para obtener detalles de liga específica
   },
   
   // Picks
