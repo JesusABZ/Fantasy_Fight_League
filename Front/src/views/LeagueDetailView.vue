@@ -44,11 +44,13 @@
               <!-- 🆕 Botón para salir de la liga -->
               <button 
                 v-if="canLeaveLeague" 
-                class="btn btn-leave" 
+                class="btn btn-leave-improved" 
                 @click="showLeaveLeagueConfirmation"
                 :disabled="isLeavingLeague"
+                title="Salir de esta liga"
               >
-                {{ isLeavingLeague ? '⏳ Saliendo...' : '🚪 Salir de Liga' }}
+                <span class="leave-icon">🚪</span>
+                <span class="leave-text">{{ isLeavingLeague ? 'Saliendo...' : 'Salir' }}</span>
               </button>
             </div>
           </div>
@@ -411,36 +413,6 @@
               <li>Los puntos se calculan automáticamente tras cada evento</li>
             </ul>
           </div>
-
-          <div class="info-section" v-if="currentEvent">
-            <h4 class="info-title">Evento Actual</h4>
-            <div class="current-event-info">
-              <h5 class="event-name">{{ currentEvent.name }}</h5>
-              <div class="event-details">
-                <p><strong>📅 Fecha:</strong> {{ formattedEventDate }}</p>
-                <p v-if="currentEvent.location"><strong>📍 Lugar:</strong> {{ currentEvent.location }}</p>
-                <p><strong>🎯 Estado:</strong> {{ getEventStatusText(currentEvent.status) }}</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="info-section" v-if="myPosition">
-            <h4 class="info-title">Tu Rendimiento</h4>
-            <div class="performance-stats">
-              <div class="stat-item">
-                <span class="stat-label">Posición Actual:</span>
-                <span class="stat-value">#{{ myPosition.position || 'N/A' }}</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Total Puntos:</span>
-                <span class="stat-value">{{ myPosition.totalPoints || 0 }} pts</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Eventos Participados:</span>
-                <span class="stat-value">{{ myPosition.eventsParticipated || 0 }}</span>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -698,6 +670,74 @@ export default {
 /* Todos los estilos existentes se mantienen + nuevos estilos */
 
 /* === 🆕 BOTÓN SALIR DE LIGA === */
+/* === 🆕 BOTÓN SALIR DE LIGA MEJORADO === */
+.btn-leave-improved {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.2) 100%);
+  border: 2px solid transparent;
+  color: var(--error);
+  font-size: 0.9rem;
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  font-weight: 600;
+  min-width: 120px;
+  justify-content: center;
+}
+
+.btn-leave-improved::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.1), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn-leave-improved:hover:not(:disabled)::before {
+  left: 100%;
+}
+
+.btn-leave-improved:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.3) 100%);
+  border-color: var(--error);
+  color: var(--white);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
+}
+
+.btn-leave-improved:active:not(:disabled) {
+  transform: translateY(0);
+  transition: transform 0.1s ease;
+}
+
+.btn-leave-improved:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.leave-icon {
+  font-size: 1.1em;
+  transition: transform 0.3s ease;
+}
+
+.btn-leave-improved:hover:not(:disabled) .leave-icon {
+  transform: rotate(-10deg) scale(1.1);
+}
+
+.leave-text {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
 .btn-leave {
   background: transparent;
   border: 2px solid var(--error);
@@ -807,21 +847,24 @@ export default {
   border-radius: var(--radius-sm);
   font-size: 1rem;
   cursor: pointer;
-  transition: all 0.3s ease;
   min-width: 40px;
   height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  overflow: hidden;
 }
 
 .btn-copy:hover {
-  transform: scale(1.1);
   background: var(--primary-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(255, 107, 53, 0.3);
 }
 
-.btn-copy:active {
-  transform: scale(0.95);
+.btn-copy:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 /* === 🔥 CLASIFICACIÓN GLOBAL MEJORADA === */
