@@ -20,7 +20,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
@@ -233,6 +235,54 @@ public class LeagueController {
             
             leagueService.leaveLeague(league, user);
             return ResponseEntity.ok(new MessageResponseDTO("Has abandonado la liga: " + league.getName()));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new MessageResponseDTO("Error: " + e.getMessage()));
+        }
+    }
+    
+    @GetMapping("/leagues/{id}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> getLeagueDetails(@PathVariable Long id) {
+        try {
+            UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            User user = userService.findByUsername(userDetails.getUsername())
+                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+            
+            League league = leagueService.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Liga no encontrada"));
+            
+            // Verificar que el usuario es miembro de la liga
+            if (!leagueService.isUserInLeague(league, user)) {
+                return ResponseEntity.badRequest().body(new MessageResponseDTO("No eres miembro de esta liga"));
+            }
+            
+            // Enriquecer los datos de la liga
+            Map<String, Object> response = new HashMap<>();
+            response.put("id", league.getId());
+            response.put("name", league.getName());
+            response.put("description", league.getDescription());
+            response.put("type", league.getType());
+            response.put("createdAt", league.getCreatedAt());
+            response.put("initialBudget", league.getInitialBudget());
+            response.put("maxFighters", league.getMaxFighters());
+            response.put("maxFightersEvent", league.getMaxFightersEvent());
+            response.put("minFightersEvent", league.getMinFightersEvent());
+            response.put("invitationCode", league.getInvitationCode()); // Solo para privadas
+            response.put("memberCount", league.getMembers().size());
+            
+            // Para ligas públicas, incluir el evento asociado
+            if ("PUBLIC".equals(league.getType()) && league.getEvent() != null) {
+                response.put("event", league.getEvent());
+            }
+            
+            // Incluir información del creador
+            Map<String, Object> creator = new HashMap<>();
+            creator.put("id", league.getCreator().getId());
+            creator.put("username", league.getCreator().getUsername());
+            response.put("creator", creator);
+            
+            return ResponseEntity.ok(response);
+            
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(new MessageResponseDTO("Error: " + e.getMessage()));
         }
