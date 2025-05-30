@@ -41,16 +41,13 @@
               <button class="btn btn-info" @click="showLeagueInfo = true">
                 ℹ️ Info
               </button>
-              <!-- 🆕 Botón para salir de la liga -->
               <button 
                 v-if="canLeaveLeague" 
-                class="btn btn-leave-improved" 
+                class="btn btn-leave" 
                 @click="showLeaveLeagueConfirmation"
                 :disabled="isLeavingLeague"
-                title="Salir de esta liga"
               >
-                <span class="leave-icon">🚪</span>
-                <span class="leave-text">{{ isLeavingLeague ? 'Saliendo...' : 'Salir' }}</span>
+                🚪 {{ isLeavingLeague ? 'Saliendo...' : 'Salir' }}
               </button>
             </div>
           </div>
@@ -61,7 +58,7 @@
       <div class="tabs-navigation">
         <div class="container">
           <div class="tabs">
-            <!-- Para ligas privadas: Global, Evento Actual -->
+            <!-- Para ligas privadas: Global, Evento Actual, Evento Anterior -->
             <template v-if="isPrivateLeague">
               <button 
                 class="tab-button" 
@@ -77,6 +74,13 @@
                 v-if="currentEvent"
               >
                 ⚡ Evento Actual
+              </button>
+              <button 
+                class="tab-button" 
+                :class="{ 'active': activeTab === 'previous' }"
+                @click="setActiveTab('previous')"
+              >
+                📊 Evento Anterior
               </button>
             </template>
             
@@ -105,7 +109,6 @@
               <p class="content-subtitle">Puntuación acumulada de todos los eventos</p>
             </div>
 
-            <!-- Loading clasificación global -->
             <div v-if="isLoadingGlobal" class="loading-section">
               <div class="loading-spinner">
                 <span class="spinner"></span>
@@ -121,6 +124,7 @@
                   class="leaderboard-item enhanced"
                   :class="{ 'is-you': member.isCurrentUser, 'top-three': index < 3 }"
                 >
+                  <!-- Posición y Medalla -->
                   <div class="position">
                     <span class="position-number" :class="getPositionClass(index + 1)">
                       #{{ index + 1 }}
@@ -130,14 +134,15 @@
                     </div>
                   </div>
                   
+                  <!-- Info del Miembro -->
                   <div class="member-info">
-                    <!-- 🔥 MEJORADO: Avatar con imagen de perfil -->
                     <div class="member-avatar">
                       <img 
                         v-if="member.profileImageUrl" 
                         :src="member.profileImageUrl" 
                         :alt="member.username"
                         class="avatar-image"
+                        @error="handleImageError"
                       />
                       <span v-else class="avatar-initials">
                         {{ getUserInitials(member) }}
@@ -148,36 +153,42 @@
                         {{ member.username }}
                         <span v-if="member.isCurrentUser" class="you-badge">TÚ</span>
                       </h4>
-                      <!-- 🔥 MEJORADO: Mostrar nombre completo si está disponible -->
                       <p class="member-subtitle">
                         <span v-if="member.firstName && member.lastName">
                           {{ member.firstName }} {{ member.lastName }}
                         </span>
-                        <span v-else>{{ member.eventsParticipated }} eventos participados</span>
+                        <span v-else>{{ member.eventsParticipated || 0 }} eventos participados</span>
                       </p>
                     </div>
                   </div>
                   
-                  <!-- 🔥 MEJORADO: Estadísticas completas -->
+                  <!-- Estadísticas Completas -->
                   <div class="member-stats enhanced">
                     <div class="stat-column">
                       <div class="stat-item primary">
-                        <span class="stat-value">{{ member.totalPoints }}</span>
+                        <span class="stat-value">{{ member.totalPoints || 0 }}</span>
                         <span class="stat-label">Total Puntos</span>
                       </div>
                     </div>
                     
                     <div class="stat-column">
                       <div class="stat-item">
-                        <span class="stat-value">{{ member.lastEventPoints }}</span>
+                        <span class="stat-value">{{ member.lastEventPoints || 0 }}</span>
                         <span class="stat-label">Último Evento</span>
                       </div>
                     </div>
                     
                     <div class="stat-column">
                       <div class="stat-item">
-                        <span class="stat-value">{{ member.eventsParticipated }}</span>
+                        <span class="stat-value">{{ member.eventsParticipated || 0 }}</span>
                         <span class="stat-label">Eventos</span>
+                      </div>
+                    </div>
+                    
+                    <div class="stat-column">
+                      <div class="stat-item">
+                        <span class="stat-value">{{ formatAverage(member.averagePointsPerEvent) }}</span>
+                        <span class="stat-label">Promedio</span>
                       </div>
                     </div>
                   </div>
@@ -187,7 +198,7 @@
                 <div v-if="globalLeaderboard.length === 0" class="empty-leaderboard">
                   <div class="empty-icon">🏆</div>
                   <h3 class="empty-title">No hay participantes aún</h3>
-                  <p class="empty-description">Los miembros de la liga aparecerán aquí cuando participen en eventos</p>
+                  <p class="empty-description">Los miembros aparecerán cuando participen en eventos</p>
                 </div>
               </div>
             </div>
@@ -234,51 +245,58 @@
                   @click="showFighterDetails(pick)"
                 >
                   <div class="fighter-avatar">
-                    <img v-if="pick.imageUrl" :src="pick.imageUrl" :alt="pick.name" />
+                    <img v-if="pick.imageUrl" :src="pick.imageUrl" :alt="pick.name" @error="handleImageError" />
                     <span v-else class="fighter-initials">{{ getFighterInitials(pick.name) }}</span>
                   </div>
                   <div class="fighter-info">
                     <h4 class="fighter-name">{{ pick.name }}</h4>
-                    <p class="fighter-record">{{ pick.record }}</p>
+                    <p class="fighter-record">{{ pick.record || 'N/A' }}</p>
                     <div class="fighter-points">
                       <span class="points">{{ pick.points || 0 }} pts</span>
-                      <span class="cost">${{ pick.cost }}</span>
+                      <span class="cost">${{ formatCurrency(pick.cost) }}</span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Loading clasificación del evento -->
-            <div v-if="isLoadingCurrentEvent" class="loading-section">
-              <div class="loading-spinner">
-                <span class="spinner"></span>
-                <p>Cargando clasificación del evento...</p>
-              </div>
-            </div>
-
             <!-- Clasificación del evento actual -->
-            <div v-else class="event-leaderboard-section">
+            <div class="event-leaderboard-section">
               <h3 class="section-title">📊 Clasificación del Evento</h3>
-              <div class="leaderboard">
+              
+              <div v-if="isLoadingCurrentEvent" class="loading-section">
+                <div class="loading-spinner">
+                  <span class="spinner"></span>
+                  <p>Cargando clasificación del evento...</p>
+                </div>
+              </div>
+
+              <div v-else class="leaderboard">
                 <div 
                   v-for="(member, index) in currentEventLeaderboard" 
                   :key="member.id"
-                  class="leaderboard-item event-item"
-                  :class="{ 'is-you': member.isCurrentUser }"
+                  class="leaderboard-item event-item enhanced"
+                  :class="{ 'is-you': member.isCurrentUser, 'top-three': index < 3 }"
                 >
+                  <!-- Posición -->
                   <div class="position">
-                    <span class="position-number">#{{ index + 1 }}</span>
+                    <span class="position-number" :class="getPositionClass(index + 1)">
+                      #{{ index + 1 }}
+                    </span>
+                    <div v-if="index < 3" class="medal">
+                      {{ index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉' }}
+                    </div>
                   </div>
                   
+                  <!-- Info del Miembro -->
                   <div class="member-info">
-                    <!-- 🔥 MEJORADO: Avatar con imagen de perfil también en eventos -->
-                    <div class="member-avatar small">
+                    <div class="member-avatar">
                       <img 
                         v-if="member.profileImageUrl" 
                         :src="member.profileImageUrl" 
                         :alt="member.username"
                         class="avatar-image"
+                        @error="handleImageError"
                       />
                       <span v-else class="avatar-initials">
                         {{ getUserInitials(member) }}
@@ -289,12 +307,44 @@
                         {{ member.username }}
                         <span v-if="member.isCurrentUser" class="you-badge">TÚ</span>
                       </h4>
-                      <p class="fighters-count">{{ member.fightersSelected }} luchadores</p>
+                      <p class="member-subtitle">
+                        <span v-if="member.firstName && member.lastName">
+                          {{ member.firstName }} {{ member.lastName }}
+                        </span>
+                        <span v-else>{{ member.fightersSelected || 0 }} luchadores seleccionados</span>
+                      </p>
                     </div>
                   </div>
                   
-                  <div class="event-points">
-                    <span class="points">{{ member.eventPoints }} pts</span>
+                  <!-- Estadísticas del Evento -->
+                  <div class="member-stats enhanced">
+                    <div class="stat-column">
+                      <div class="stat-item primary">
+                        <span class="stat-value">{{ member.eventPoints || 0 }}</span>
+                        <span class="stat-label">Puntos Evento</span>
+                      </div>
+                    </div>
+                    
+                    <div class="stat-column">
+                      <div class="stat-item">
+                        <span class="stat-value">{{ member.fightersSelected || 0 }}</span>
+                        <span class="stat-label">Luchadores</span>
+                      </div>
+                    </div>
+                    
+                    <div class="stat-column">
+                      <div class="stat-item">
+                        <span class="stat-value">{{ member.totalCost || 0 }}</span>
+                        <span class="stat-label">Costo Total</span>
+                      </div>
+                    </div>
+                    
+                    <div class="stat-column">
+                      <div class="stat-item">
+                        <span class="stat-value">{{ member.remainingBudget || 0 }}</span>
+                        <span class="stat-label">Restante</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -305,6 +355,121 @@
                   <p class="empty-description">Los participantes aparecerán cuando hagan sus picks</p>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <!-- Pestaña: Evento Anterior (Solo para ligas privadas) -->
+          <div v-if="activeTab === 'previous' && isPrivateLeague" class="tab-content">
+            <div class="content-header">
+              <h2 class="content-title">📊 Evento Anterior</h2>
+              <p class="content-subtitle" v-if="previousEvent">
+                {{ formattedPreviousEventDate }}
+                <span v-if="previousEvent.location">• {{ previousEvent.location }}</span>
+              </p>
+              <p class="content-subtitle" v-else>
+                No hay eventos anteriores disponibles
+              </p>
+            </div>
+
+            <div v-if="isLoadingPreviousEvent" class="loading-section">
+              <div class="loading-spinner">
+                <span class="spinner"></span>
+                <p>Cargando evento anterior...</p>
+              </div>
+            </div>
+
+            <div v-else-if="previousEvent" class="event-leaderboard-section">
+              <div class="leaderboard">
+                <div 
+                  v-for="(member, index) in previousEventLeaderboard" 
+                  :key="member.id"
+                  class="leaderboard-item event-item enhanced"
+                  :class="{ 'is-you': member.isCurrentUser, 'top-three': index < 3 }"
+                >
+                  <!-- Posición -->
+                  <div class="position">
+                    <span class="position-number" :class="getPositionClass(index + 1)">
+                      #{{ index + 1 }}
+                    </span>
+                    <div v-if="index < 3" class="medal">
+                      {{ index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉' }}
+                    </div>
+                  </div>
+                  
+                  <!-- Info del Miembro -->
+                  <div class="member-info">
+                    <div class="member-avatar">
+                      <img 
+                        v-if="member.profileImageUrl" 
+                        :src="member.profileImageUrl" 
+                        :alt="member.username"
+                        class="avatar-image"
+                        @error="handleImageError"
+                      />
+                      <span v-else class="avatar-initials">
+                        {{ getUserInitials(member) }}
+                      </span>
+                    </div>
+                    <div class="member-details">
+                      <h4 class="member-name">
+                        {{ member.username }}
+                        <span v-if="member.isCurrentUser" class="you-badge">TÚ</span>
+                      </h4>
+                      <p class="member-subtitle">
+                        <span v-if="member.firstName && member.lastName">
+                          {{ member.firstName }} {{ member.lastName }}
+                        </span>
+                        <span v-else>{{ member.fightersSelected || 0 }} luchadores seleccionados</span>
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <!-- Estadísticas del Evento Anterior -->
+                  <div class="member-stats enhanced">
+                    <div class="stat-column">
+                      <div class="stat-item primary">
+                        <span class="stat-value">{{ member.eventPoints || 0 }}</span>
+                        <span class="stat-label">Puntos Evento</span>
+                      </div>
+                    </div>
+                    
+                    <div class="stat-column">
+                      <div class="stat-item">
+                        <span class="stat-value">{{ member.fightersSelected || 0 }}</span>
+                        <span class="stat-label">Luchadores</span>
+                      </div>
+                    </div>
+                    
+                    <div class="stat-column">
+                      <div class="stat-item">
+                        <span class="stat-value">{{ member.totalCost || 0 }}</span>
+                        <span class="stat-label">Costo Total</span>
+                      </div>
+                    </div>
+                    
+                    <div class="stat-column">
+                      <div class="stat-item">
+                        <span class="stat-value">{{ member.remainingBudget || 0 }}</span>
+                        <span class="stat-label">Restante</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Estado vacío para evento anterior -->
+                <div v-if="previousEventLeaderboard.length === 0" class="empty-leaderboard">
+                  <div class="empty-icon">📊</div>
+                  <h3 class="empty-title">No hay datos del evento anterior</h3>
+                  <p class="empty-description">No se encontraron participantes para el evento anterior</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- No hay evento anterior -->
+            <div v-else class="empty-leaderboard">
+              <div class="empty-icon">📅</div>
+              <h3 class="empty-title">No hay evento anterior</h3>
+              <p class="empty-description">Esta es la primera participación de la liga o no se han completado eventos anteriores</p>
             </div>
           </div>
 
@@ -327,7 +492,7 @@
       </div>
     </div>
 
-    <!-- 🆕 Modal: Confirmación para salir de la liga -->
+    <!-- Modal: Confirmación para salir de la liga -->
     <div v-if="showLeaveConfirmation" class="modal-overlay" @click="hideLeaveConfirmation">
       <div class="modal-content confirmation-modal" @click.stop>
         <div class="modal-header">
@@ -391,7 +556,7 @@
                 <span class="info-label">Creada:</span>
                 <span class="info-value">{{ formatDate(currentLeague.createdAt) }}</span>
               </div>
-              <!-- 🔥 MEJORADO: Código con botón de copiar -->
+              <!-- Código de invitación para ligas privadas -->
               <div class="info-item full-width" v-if="isPrivateLeague && currentLeague.invitationCode">
                 <span class="info-label">Código de Invitación:</span>
                 <div class="invitation-code-container">
@@ -427,7 +592,7 @@
         
         <div class="fighter-details">
           <div class="fighter-image">
-            <img v-if="selectedFighter.imageUrl" :src="selectedFighter.imageUrl" :alt="selectedFighter.name" />
+            <img v-if="selectedFighter.imageUrl" :src="selectedFighter.imageUrl" :alt="selectedFighter.name" @error="handleImageError" />
             <div v-else class="fighter-placeholder">
               {{ getFighterInitials(selectedFighter.name) }}
             </div>
@@ -503,8 +668,10 @@ export default {
       // Estados
       currentLeague,
       currentEvent,
+      previousEvent,
       globalLeaderboard,
       currentEventLeaderboard,
+      previousEventLeaderboard,
       currentUserPicks,
       myPosition,
       
@@ -512,7 +679,8 @@ export default {
       isLoadingLeague,
       isLoadingGlobal,
       isLoadingCurrentEvent,
-      isLeavingLeague, // 🆕
+      isLoadingPreviousEvent,
+      isLeavingLeague,
       
       // Estados UI
       activeTab,
@@ -520,29 +688,30 @@ export default {
       showLeagueInfo,
       showNotificationModal,
       notificationText,
-      showLeaveConfirmation, // 🆕
+      showLeaveConfirmation,
       
       // Computed
       isPublicLeague,
       isPrivateLeague,
       canMakePicks,
-      canLeaveLeague, // 🆕
+      canLeaveLeague,
       formattedEventDate,
+      formattedPreviousEventDate,
       
       // Funciones
       loadAllData,
       refreshTabData,
-      leaveLeague, // 🆕
-      copyInvitationCode, // 🆕
+      leaveLeague,
+      copyInvitationCode,
       getPositionClass,
       getFighterInitials,
-      getUserInitials, // 🆕
+      getUserInitials,
       showFighterDetails,
       hideNotification,
       goBackToDashboard,
       goToPicksSelection,
-      showLeaveLeagueConfirmation, // 🆕
-      hideLeaveConfirmation // 🆕
+      showLeaveLeagueConfirmation,
+      hideLeaveConfirmation
     } = useLeagueDetail(leagueId)
 
     // Funciones adicionales del componente
@@ -563,6 +732,11 @@ export default {
     const formatCurrency = (amount) => {
       if (!amount) return '0'
       return new Intl.NumberFormat('es-ES').format(amount)
+    }
+
+    const formatAverage = (average) => {
+      if (!average || average === 0) return '0.0'
+      return Number(average).toFixed(1)
     }
 
     const getEventStatusClass = (status) => {
@@ -594,6 +768,17 @@ export default {
       await refreshTabData(tabName)
     }
 
+    // Manejo de errores de imágenes
+    const handleImageError = (event) => {
+      console.warn('Error cargando imagen:', event.target.src)
+      event.target.style.display = 'none'
+      // Mostrar el avatar con iniciales en su lugar
+      const avatarContainer = event.target.parentElement
+      if (avatarContainer && avatarContainer.querySelector('.avatar-initials')) {
+        avatarContainer.querySelector('.avatar-initials').style.display = 'flex'
+      }
+    }
+
     // Cargar todos los datos al montar el componente
     onMounted(async () => {
       console.log('🚀 Montando LeagueDetailView para liga:', leagueId)
@@ -615,8 +800,10 @@ export default {
       // Estados del composable
       currentLeague,
       currentEvent,
+      previousEvent,
       globalLeaderboard,
       currentEventLeaderboard,
+      previousEventLeaderboard,
       currentUserPicks,
       myPosition,
       
@@ -624,7 +811,8 @@ export default {
       isLoadingLeague,
       isLoadingGlobal,
       isLoadingCurrentEvent,
-      isLeavingLeague, // 🆕
+      isLoadingPreviousEvent,
+      isLeavingLeague,
       
       // Estados UI
       activeTab,
@@ -632,395 +820,45 @@ export default {
       showLeagueInfo,
       showNotificationModal,
       notificationText,
-      showLeaveConfirmation, // 🆕
+      showLeaveConfirmation,
       
       // Computed
       isPublicLeague,
       isPrivateLeague,
       canMakePicks,
-      canLeaveLeague, // 🆕
+      canLeaveLeague,
       formattedEventDate,
+      formattedPreviousEventDate,
       
       // Funciones del composable
       loadAllData,
-      leaveLeague, // 🆕
-      copyInvitationCode, // 🆕
+      leaveLeague,
+      copyInvitationCode,
       getPositionClass,
       getFighterInitials,
-      getUserInitials, // 🆕
+      getUserInitials,
       showFighterDetails,
       hideNotification,
       goBackToDashboard,
       goToPicksSelection,
-      showLeaveLeagueConfirmation, // 🆕
-      hideLeaveConfirmation, // 🆕
+      showLeaveLeagueConfirmation,
+      hideLeaveConfirmation,
       
       // Funciones del componente
       formatDate,
       formatCurrency,
+      formatAverage,
       getEventStatusClass,
       getEventStatusText,
-      setActiveTab
+      setActiveTab,
+      handleImageError
     }
   }
 }
 </script>
 
 <style scoped>
-/* Todos los estilos existentes se mantienen + nuevos estilos */
-
-/* === 🆕 BOTÓN SALIR DE LIGA === */
-/* === 🆕 BOTÓN SALIR DE LIGA MEJORADO === */
-.btn-leave-improved {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.2) 100%);
-  border: 2px solid transparent;
-  color: var(--error);
-  font-size: 0.9rem;
-  padding: var(--space-md);
-  border-radius: var(--radius-lg);
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-  font-weight: 600;
-  min-width: 120px;
-  justify-content: center;
-}
-
-.btn-leave-improved::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.1), transparent);
-  transition: left 0.5s ease;
-}
-
-.btn-leave-improved:hover:not(:disabled)::before {
-  left: 100%;
-}
-
-.btn-leave-improved:hover:not(:disabled) {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.3) 100%);
-  border-color: var(--error);
-  color: var(--white);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
-}
-
-.btn-leave-improved:active:not(:disabled) {
-  transform: translateY(0);
-  transition: transform 0.1s ease;
-}
-
-.btn-leave-improved:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.leave-icon {
-  font-size: 1.1em;
-  transition: transform 0.3s ease;
-}
-
-.btn-leave-improved:hover:not(:disabled) .leave-icon {
-  transform: rotate(-10deg) scale(1.1);
-}
-
-.leave-text {
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
-
-.btn-leave {
-  background: transparent;
-  border: 2px solid var(--error);
-  color: var(--error);
-  font-size: 0.9rem;
-  padding: var(--space-sm) var(--space-md);
-}
-
-.btn-leave:hover:not(:disabled) {
-  background: var(--error);
-  color: var(--white);
-  transform: translateY(-2px);
-}
-
-.btn-leave:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* === 🆕 MODAL DE CONFIRMACIÓN === */
-.confirmation-modal {
-  max-width: 500px;
-}
-
-.confirmation-content {
-  padding: var(--space-xl);
-  text-align: center;
-}
-
-.warning-icon {
-  font-size: 3rem;
-  margin-bottom: var(--space-lg);
-}
-
-.warning-title {
-  font-family: var(--font-impact);
-  font-size: 1.5rem;
-  color: var(--white);
-  margin-bottom: var(--space-md);
-  text-transform: uppercase;
-}
-
-.warning-message {
-  color: var(--gray-light);
-  line-height: 1.6;
-  margin-bottom: var(--space-xl);
-}
-
-.confirmation-actions {
-  display: flex;
-  gap: var(--space-md);
-  justify-content: center;
-}
-
-.btn-cancel {
-  background: transparent;
-  border: 2px solid var(--gray);
-  color: var(--gray-light);
-}
-
-.btn-cancel:hover:not(:disabled) {
-  border-color: var(--white);
-  color: var(--white);
-}
-
-.btn-confirm-leave {
-  background: var(--error);
-  border: 2px solid var(--error);
-  color: var(--white);
-}
-
-.btn-confirm-leave:hover:not(:disabled) {
-  background: #dc2626;
-  border-color: #dc2626;
-  transform: translateY(-2px);
-}
-
-/* === 🆕 CÓDIGO DE INVITACIÓN MEJORADO === */
-.info-item.full-width {
-  grid-column: 1 / -1;
-}
-
-.invitation-code-container {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  background: rgba(255, 255, 255, 0.05);
-  padding: var(--space-md);
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 107, 53, 0.3);
-}
-
-.invitation-code {
-  font-family: var(--font-display);
-  font-size: 1.2rem;
-  color: var(--primary) !important;
-  font-weight: bold;
-  letter-spacing: 0.15em;
-  flex: 1;
-}
-
-.btn-copy {
-  background: var(--gradient-primary);
-  border: none;
-  color: var(--white);
-  padding: var(--space-sm);
-  border-radius: var(--radius-sm);
-  font-size: 1rem;
-  cursor: pointer;
-  min-width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  overflow: hidden;
-}
-
-.btn-copy:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(255, 107, 53, 0.3);
-}
-
-/* === 🔥 CLASIFICACIÓN GLOBAL MEJORADA === */
-.leaderboard-item.enhanced {
-  padding: var(--space-lg) var(--space-xl);
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.08) 0%, 
-    rgba(255, 255, 255, 0.04) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-xl);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.leaderboard-item.enhanced:hover {
-  transform: translateY(-4px) scale(1.02);
-  box-shadow: 
-    var(--shadow-lg), 
-    0 0 30px rgba(255, 107, 53, 0.15);
-  border-color: rgba(255, 107, 53, 0.4);
-}
-
-/* === 🔥 AVATARES MEJORADOS === */
-.member-avatar {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  overflow: hidden;
-  position: relative;
-  flex-shrink: 0;
-  border: 3px solid transparent;
-  background: var(--gradient-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.member-avatar.small {
-  width: 50px;
-  height: 50px;
-  border-width: 2px;
-}
-
-.avatar-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 50%;
-}
-
-.avatar-initials {
-  font-family: var(--font-impact);
-  font-size: 1.3rem;
-  color: var(--white);
-  font-weight: bold;
-}
-
-.member-avatar.small .avatar-initials {
-  font-size: 1.1rem;
-}
-
-/* === 🔥 ESTADÍSTICAS MEJORADAS === */
-.member-stats.enhanced {
-  display: flex;
-  gap: var(--space-lg);
-  align-items: center;
-}
-
-.stat-column {
-  text-align: center;
-  min-width: 80px;
-}
-
-.stat-item {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.stat-item.primary .stat-value {
-  font-family: var(--font-impact);
-  font-size: 1.8rem;
-  color: var(--primary);
-  line-height: 1;
-}
-
-.stat-value {
-  font-family: var(--font-impact);
-  font-size: 1.3rem;
-  color: var(--white);
-  line-height: 1;
-}
-
-.stat-label {
-  font-size: 0.8rem;
-  color: var(--gray-light);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 600;
-}
-
-/* === MEJORAS EN RESPONSIVE === */
-@media (max-width: 1024px) {
-  .member-stats.enhanced {
-    flex-direction: column;
-    gap: var(--space-sm);
-    align-items: flex-end;
-  }
-  
-  .stat-column {
-    min-width: auto;
-  }
-  
-  .stat-item.primary .stat-value {
-    font-size: 1.5rem;
-  }
-  
-  .stat-value {
-    font-size: 1.1rem;
-  }
-}
-
-@media (max-width: 768px) {
-  .league-actions {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-sm);
-    width: 100%;
-  }
-  
-  .btn-leave,
-  .btn-info {
-    width: 100%;
-    justify-content: center;
-  }
-  
-  .confirmation-actions {
-    flex-direction: column;
-  }
-  
-  .btn-cancel,
-  .btn-confirm-leave {
-    width: 100%;
-  }
-  
-  .invitation-code-container {
-    flex-direction: column;
-    gap: var(--space-sm);
-    text-align: center;
-  }
-  
-  .leaderboard-item.enhanced {
-    padding: var(--space-lg);
-  }
-  
-  .member-stats.enhanced {
-    flex-direction: row;
-    justify-content: space-around;
-    gap: var(--space-md);
-  }
-}
-
-/* === MANTENER TODOS LOS ESTILOS ORIGINALES === */
+/* === VARIABLES Y RESET === */
 .league-detail {
   position: relative;
   min-height: 100vh;
@@ -1152,13 +990,6 @@ export default {
   line-height: 1.5;
 }
 
-.btn-retry {
-  background: var(--gradient-primary);
-  color: var(--white);
-  margin-right: var(--space-md);
-  margin-bottom: var(--space-md);
-}
-
 /* === HEADER === */
 .league-header {
   position: relative;
@@ -1271,6 +1102,23 @@ export default {
   color: var(--white);
 }
 
+.btn-leave {
+  background: transparent;
+  border: 2px solid var(--error);
+  color: var(--error);
+}
+
+.btn-leave:hover:not(:disabled) {
+  background: var(--error);
+  color: var(--white);
+  transform: translateY(-2px);
+}
+
+.btn-leave:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .btn-picks {
   background: var(--gradient-primary);
   color: var(--white);
@@ -1287,6 +1135,56 @@ export default {
 .btn-picks:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-lg), var(--shadow-glow);
+}
+
+.btn-retry {
+  background: var(--gradient-primary);
+  color: var(--white);
+  margin-right: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.btn-cancel {
+  background: transparent;
+  border: 2px solid var(--gray);
+  color: var(--gray-light);
+}
+
+.btn-cancel:hover:not(:disabled) {
+  border-color: var(--white);
+  color: var(--white);
+}
+
+.btn-confirm-leave {
+  background: var(--error);
+  border: 2px solid var(--error);
+  color: var(--white);
+}
+
+.btn-confirm-leave:hover:not(:disabled) {
+  background: #dc2626;
+  border-color: #dc2626;
+  transform: translateY(-2px);
+}
+
+.btn-copy {
+  background: var(--gradient-primary);
+  border: none;
+  color: var(--white);
+  padding: var(--space-sm);
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  cursor: pointer;
+  min-width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-copy:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(255, 107, 53, 0.3);
 }
 
 /* === NAVEGACIÓN POR PESTAÑAS === */
@@ -1439,13 +1337,31 @@ export default {
 }
 
 /* === CLASIFICACIONES === */
-.leaderboard-container {
+.leaderboard-container,
+.event-leaderboard-section,
+.your-picks-section {
   background: var(--gradient-card);
   backdrop-filter: blur(15px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-xl);
   padding: var(--space-xl);
+  margin-bottom: var(--space-2xl);
   box-shadow: var(--shadow-lg);
+}
+
+.your-picks-section {
+  border: 2px solid rgba(255, 107, 53, 0.3);
+}
+
+.section-title {
+  font-family: var(--font-impact);
+  font-size: 1.5rem;
+  color: var(--white);
+  margin-bottom: var(--space-lg);
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
 }
 
 .leaderboard {
@@ -1463,13 +1379,30 @@ export default {
   align-items: center;
   gap: var(--space-lg);
   transition: all 0.3s ease;
-  cursor: pointer;
 }
 
 .leaderboard-item:hover {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 107, 53, 0.3);
   transform: translateY(-2px);
+}
+
+.leaderboard-item.enhanced {
+  padding: var(--space-lg) var(--space-xl);
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.08) 0%, 
+    rgba(255, 255, 255, 0.04) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-xl);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.leaderboard-item.enhanced:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 
+    var(--shadow-lg), 
+    0 0 30px rgba(255, 107, 53, 0.15);
+  border-color: rgba(255, 107, 53, 0.4);
 }
 
 .leaderboard-item.is-you {
@@ -1511,6 +1444,34 @@ export default {
   flex: 1;
 }
 
+.member-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+  border: 3px solid transparent;
+  background: var(--gradient-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.avatar-initials {
+  font-family: var(--font-impact);
+  font-size: 1.3rem;
+  color: var(--white);
+  font-weight: bold;
+}
+
 .member-details {
   flex: 1;
 }
@@ -1534,8 +1495,7 @@ export default {
   font-weight: bold;
 }
 
-.member-subtitle,
-.fighters-count {
+.member-subtitle {
   color: var(--gray-light);
   font-size: 0.9rem;
 }
@@ -1544,46 +1504,46 @@ export default {
   text-align: right;
 }
 
-.total-points,
-.event-points .points {
-  font-family: var(--font-impact);
-  font-size: 1.5rem;
-  color: var(--primary);
-  margin-bottom: var(--space-xs);
-}
-
-.last-event-points {
-  color: var(--gray-light);
-  font-size: 0.9rem;
-}
-
-/* === SECCIONES === */
-.your-picks-section,
-.event-leaderboard-section {
-  background: var(--gradient-card);
-  backdrop-filter: blur(15px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-xl);
-  padding: var(--space-xl);
-  margin-bottom: var(--space-2xl);
-  box-shadow: var(--shadow-lg);
-}
-
-.your-picks-section {
-  border: 2px solid rgba(255, 107, 53, 0.3);
-}
-
-.section-title {
-  font-family: var(--font-impact);
-  font-size: 1.5rem;
-  color: var(--white);
-  margin-bottom: var(--space-lg);
-  text-transform: uppercase;
+.member-stats.enhanced {
   display: flex;
+  gap: var(--space-lg);
   align-items: center;
-  gap: var(--space-sm);
 }
 
+.stat-column {
+  text-align: center;
+  min-width: 80px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.stat-item.primary .stat-value {
+  font-family: var(--font-impact);
+  font-size: 1.8rem;
+  color: var(--primary);
+  line-height: 1;
+}
+
+.stat-value {
+  font-family: var(--font-impact);
+  font-size: 1.3rem;
+  color: var(--white);
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: var(--gray-light);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+/* === PICKS DEL USUARIO === */
 .picks-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -1778,6 +1738,41 @@ export default {
   background: rgba(255, 255, 255, 0.1);
 }
 
+/* === CONFIRMACIÓN === */
+.confirmation-modal {
+  max-width: 500px;
+}
+
+.confirmation-content {
+  padding: var(--space-xl);
+  text-align: center;
+}
+
+.warning-icon {
+  font-size: 3rem;
+  margin-bottom: var(--space-lg);
+}
+
+.warning-title {
+  font-family: var(--font-impact);
+  font-size: 1.5rem;
+  color: var(--white);
+  margin-bottom: var(--space-md);
+  text-transform: uppercase;
+}
+
+.warning-message {
+  color: var(--gray-light);
+  line-height: 1.6;
+  margin-bottom: var(--space-xl);
+}
+
+.confirmation-actions {
+  display: flex;
+  gap: var(--space-md);
+  justify-content: center;
+}
+
 /* === INFO DE LA LIGA === */
 .league-info-content {
   padding: var(--space-xl);
@@ -1807,6 +1802,10 @@ export default {
   gap: var(--space-xs);
 }
 
+.info-item.full-width {
+  grid-column: 1 / -1;
+}
+
 .info-label {
   color: var(--gray-light);
   font-size: 0.9rem;
@@ -1818,6 +1817,25 @@ export default {
   font-weight: bold;
 }
 
+.invitation-code-container {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  background: rgba(255, 255, 255, 0.05);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 107, 53, 0.3);
+}
+
+.invitation-code {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  color: var(--primary) !important;
+  font-weight: bold;
+  letter-spacing: 0.15em;
+  flex: 1;
+}
+
 .rules-list {
   color: var(--gray-light);
   margin: 0;
@@ -1827,54 +1845,6 @@ export default {
 .rules-list li {
   margin-bottom: var(--space-sm);
   line-height: 1.5;
-}
-
-.current-event-info {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: var(--radius-md);
-  padding: var(--space-md);
-}
-
-.event-name {
-  font-family: var(--font-impact);
-  color: var(--primary);
-  margin-bottom: var(--space-sm);
-  text-transform: uppercase;
-  font-size: 1.1rem;
-}
-
-.event-details p {
-  margin-bottom: var(--space-xs);
-  font-size: 0.9rem;
-  line-height: 1.4;
-}
-
-.performance-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: var(--space-md);
-}
-
-.performance-stats .stat-item {
-  background: rgba(255, 255, 255, 0.05);
-  padding: var(--space-md);
-  border-radius: var(--radius-md);
-  text-align: center;
-}
-
-.performance-stats .stat-label {
-  display: block;
-  color: var(--gray-light);
-  font-size: 0.8rem;
-  margin-bottom: var(--space-xs);
-  text-transform: uppercase;
-}
-
-.performance-stats .stat-value {
-  display: block;
-  color: var(--primary);
-  font-weight: bold;
-  font-size: 1.2rem;
 }
 
 /* === DETALLES DEL LUCHADOR === */
@@ -2018,6 +1988,24 @@ export default {
     text-align: center;
     gap: var(--space-lg);
   }
+
+  .member-stats.enhanced {
+    flex-direction: column;
+    gap: var(--space-sm);
+    align-items: flex-end;
+  }
+  
+  .stat-column {
+    min-width: auto;
+  }
+  
+  .stat-item.primary .stat-value {
+    font-size: 1.5rem;
+  }
+  
+  .stat-value {
+    font-size: 1.1rem;
+  }
 }
 
 @media (max-width: 768px) {
@@ -2034,6 +2022,19 @@ export default {
   .league-meta {
     flex-direction: column;
     gap: var(--space-sm);
+  }
+
+  .league-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    width: 100%;
+  }
+  
+  .btn-leave,
+  .btn-info {
+    width: 100%;
+    justify-content: center;
   }
 
   .tabs {
@@ -2056,6 +2057,10 @@ export default {
     gap: var(--space-md);
   }
 
+  .leaderboard-item.enhanced {
+    padding: var(--space-lg);
+  }
+
   .member-info {
     flex-direction: column;
     text-align: center;
@@ -2063,6 +2068,12 @@ export default {
 
   .member-stats {
     text-align: center;
+  }
+
+  .member-stats.enhanced {
+    flex-direction: row;
+    justify-content: space-around;
+    gap: var(--space-md);
   }
 
   .fighter-pick {
@@ -2073,6 +2084,21 @@ export default {
   .fighter-points {
     justify-content: center;
     gap: var(--space-lg);
+  }
+
+  .confirmation-actions {
+    flex-direction: column;
+  }
+  
+  .btn-cancel,
+  .btn-confirm-leave {
+    width: 100%;
+  }
+  
+  .invitation-code-container {
+    flex-direction: column;
+    gap: var(--space-sm);
+    text-align: center;
   }
 }
 

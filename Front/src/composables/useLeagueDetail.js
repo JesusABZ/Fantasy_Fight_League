@@ -13,12 +13,12 @@ export function useLeagueDetail(leagueId) {
   // Estados reactivos
   const currentLeague = ref(null)
   const currentEvent = ref(null)
-  const previousEvent = ref(null)
+  const previousEvent = ref(null) // 🆕 Evento anterior
   const globalLeaderboard = ref([])
   const currentEventLeaderboard = ref([])
-  const previousEventLeaderboard = ref([])
+  const previousEventLeaderboard = ref([]) // 🆕 Clasificación del evento anterior
   const currentUserPicks = ref([])
-  const previousUserPicks = ref([])
+  const previousUserPicks = ref([]) // 🆕 Picks del evento anterior
   const myPosition = ref(null)
   const myHistory = ref(null)
 
@@ -26,8 +26,8 @@ export function useLeagueDetail(leagueId) {
   const isLoadingLeague = ref(false)
   const isLoadingGlobal = ref(false)
   const isLoadingCurrentEvent = ref(false)
-  const isLoadingPreviousEvent = ref(false)
-  const isLeavingLeague = ref(false) // 🆕 Estado para salir de liga
+  const isLoadingPreviousEvent = ref(false) // 🆕 Loading evento anterior
+  const isLeavingLeague = ref(false)
   
   // Estados UI
   const activeTab = ref('global')
@@ -35,7 +35,7 @@ export function useLeagueDetail(leagueId) {
   const showLeagueInfo = ref(false)
   const showNotificationModal = ref(false)
   const notificationText = ref('')
-  const showLeaveConfirmation = ref(false) // 🆕 Confirmación para salir
+  const showLeaveConfirmation = ref(false)
 
   // Computed properties
   const user = computed(() => authStore.user)
@@ -69,12 +69,17 @@ export function useLeagueDetail(leagueId) {
     return formatEventDate(previousEvent.value.startDate)
   })
 
-  // 🆕 Verificar si el usuario puede salir de la liga
+  // Verificar si el usuario puede salir de la liga
   const canLeaveLeague = computed(() => {
     if (!currentLeague.value || !user.value) return false
     
     // El creador no puede salir de su propia liga
     return currentLeague.value.creator?.id !== user.value.id
+  })
+
+  // 🆕 Verificar si hay evento anterior disponible
+  const hasPreviousEvent = computed(() => {
+    return !!previousEvent.value
   })
 
   // Funciones para cargar datos
@@ -105,6 +110,7 @@ export function useLeagueDetail(leagueId) {
     }
   }
 
+  // 🔥 FUNCIÓN MEJORADA: Cargar eventos actual y anterior
   async function loadEvents() {
     try {
       console.log('📅 Cargando eventos...')
@@ -113,22 +119,71 @@ export function useLeagueDetail(leagueId) {
       if (currentLeague.value?.event) {
         currentEvent.value = currentLeague.value.event
         console.log('✅ Evento de liga pública cargado:', currentEvent.value)
+        
+        // Para ligas públicas no hay evento anterior (son específicas de un evento)
+        previousEvent.value = null
         return
       }
       
-      // Para ligas privadas, obtener el próximo evento
-      const nextEvent = await eventsService.getNextEvent()
-      if (nextEvent) {
-        currentEvent.value = nextEvent
-        console.log('✅ Próximo evento cargado:', nextEvent)
+      // Para ligas privadas, obtener todos los eventos disponibles
+      const allEvents = await eventsService.getAllEvents()
+      console.log('📋 Todos los eventos obtenidos:', allEvents.length)
+      
+      if (allEvents.length === 0) {
+        console.warn('⚠️ No se encontraron eventos')
+        currentEvent.value = null
+        previousEvent.value = null
+        return
       }
       
-      // TODO: Implementar lógica para evento anterior
-      // Por ahora simulamos que no hay evento anterior
-      previousEvent.value = null
+      // Filtrar y ordenar eventos por fecha (más reciente primero)
+      const sortedEvents = allEvents
+        .filter(event => event.startDate) // Solo eventos con fecha
+        .sort((a, b) => new Date(b.startDate) - new Date(a.startDate))
+      
+      console.log('📊 Eventos ordenados por fecha:', sortedEvents.map(e => ({
+        name: e.name,
+        date: e.startDate,
+        status: e.status
+      })))
+      
+      // Determinar evento actual y anterior
+      const now = new Date()
+      
+      // Buscar el próximo evento o el evento actual
+      let currentEventIndex = -1
+      for (let i = 0; i < sortedEvents.length; i++) {
+        const eventDate = new Date(sortedEvents[i].startDate)
+        if (eventDate >= now || sortedEvents[i].status === 'UPCOMING' || sortedEvents[i].status === 'LIVE') {
+          currentEventIndex = i
+          break
+        }
+      }
+      
+      // Si no hay eventos futuros, tomar el más reciente
+      if (currentEventIndex === -1 && sortedEvents.length > 0) {
+        currentEventIndex = 0
+      }
+      
+      // Establecer evento actual
+      if (currentEventIndex >= 0) {
+        currentEvent.value = sortedEvents[currentEventIndex]
+        console.log('✅ Evento actual establecido:', currentEvent.value.name)
+      }
+      
+      // Establecer evento anterior (el siguiente en la lista)
+      if (currentEventIndex >= 0 && currentEventIndex < sortedEvents.length - 1) {
+        previousEvent.value = sortedEvents[currentEventIndex + 1]
+        console.log('✅ Evento anterior establecido:', previousEvent.value.name)
+      } else {
+        previousEvent.value = null
+        console.log('ℹ️ No hay evento anterior disponible')
+      }
       
     } catch (error) {
       console.error('❌ Error al cargar eventos:', error)
+      currentEvent.value = null
+      previousEvent.value = null
     }
   }
 
@@ -141,7 +196,7 @@ export function useLeagueDetail(leagueId) {
       
       const response = await leaderboardService.getGlobalLeaderboard(leagueId)
       
-      // 🔥 MEJORADO: Procesar los datos para incluir toda la información de miembros
+      // Procesar los datos para incluir toda la información de miembros
       const processedLeaderboard = response.leaderboard.map((entry, index) => ({
         id: entry.userId,
         username: entry.username,
@@ -149,12 +204,11 @@ export function useLeagueDetail(leagueId) {
         lastName: entry.lastName,
         profileImageUrl: entry.profileImageUrl,
         totalPoints: entry.totalPoints || 0,
-        lastEventPoints: 0, // TODO: Implementar último evento
+        lastEventPoints: entry.lastEventPoints || 0,
         eventsParticipated: entry.eventsParticipated || 0,
+        averagePointsPerEvent: entry.averagePointsPerEvent || 0,
         isCurrentUser: entry.userId === user.value?.id,
-        position: index + 1,
-        // 🆕 Calcular promedio de puntos por evento
-        averagePointsPerEvent: entry.averagePointsPerEvent || 0
+        position: index + 1
       }))
       
       globalLeaderboard.value = processedLeaderboard
@@ -173,7 +227,7 @@ export function useLeagueDetail(leagueId) {
     
     isLoadingCurrentEvent.value = true
     try {
-      console.log('⚡ Cargando clasificación del evento actual...')
+      console.log('⚡ Cargando clasificación del evento actual:', currentEvent.value.name)
       
       const response = await leaderboardService.getEventLeaderboard(leagueId, currentEvent.value.id)
       
@@ -186,18 +240,61 @@ export function useLeagueDetail(leagueId) {
         profileImageUrl: entry.profileImageUrl,
         eventPoints: entry.eventPoints || 0,
         fightersSelected: entry.selectedFighters?.length || 0,
+        totalCost: entry.totalCost || 0,
+        remainingBudget: entry.remainingBudget || 0,
+        selectedFighters: entry.selectedFighters || [],
         isCurrentUser: entry.userId === user.value?.id,
         position: index + 1
       }))
       
       currentEventLeaderboard.value = processedLeaderboard
-      console.log('✅ Clasificación del evento cargada:', processedLeaderboard.length, 'participantes')
+      console.log('✅ Clasificación del evento actual cargada:', processedLeaderboard.length, 'participantes')
       
     } catch (error) {
-      console.error('❌ Error al cargar clasificación del evento:', error)
+      console.error('❌ Error al cargar clasificación del evento actual:', error)
       currentEventLeaderboard.value = []
     } finally {
       isLoadingCurrentEvent.value = false
+    }
+  }
+
+  // 🆕 NUEVA FUNCIÓN: Cargar clasificación del evento anterior
+  async function loadPreviousEventLeaderboard() {
+    if (!currentLeague.value || !previousEvent.value || isPublicLeague.value) {
+      console.log('ℹ️ No se puede cargar evento anterior: liga pública o sin evento anterior')
+      return
+    }
+    
+    isLoadingPreviousEvent.value = true
+    try {
+      console.log('📊 Cargando clasificación del evento anterior:', previousEvent.value.name)
+      
+      const response = await leaderboardService.getEventLeaderboard(leagueId, previousEvent.value.id)
+      
+      // Procesar los datos similar al evento actual
+      const processedLeaderboard = response.leaderboard.map((entry, index) => ({
+        id: entry.userId,
+        username: entry.username,
+        firstName: entry.firstName,
+        lastName: entry.lastName,
+        profileImageUrl: entry.profileImageUrl,
+        eventPoints: entry.eventPoints || 0,
+        fightersSelected: entry.selectedFighters?.length || 0,
+        totalCost: entry.totalCost || 0,
+        remainingBudget: entry.remainingBudget || 0,
+        selectedFighters: entry.selectedFighters || [],
+        isCurrentUser: entry.userId === user.value?.id,
+        position: index + 1
+      }))
+      
+      previousEventLeaderboard.value = processedLeaderboard
+      console.log('✅ Clasificación del evento anterior cargada:', processedLeaderboard.length, 'participantes')
+      
+    } catch (error) {
+      console.error('❌ Error al cargar clasificación del evento anterior:', error)
+      previousEventLeaderboard.value = []
+    } finally {
+      isLoadingPreviousEvent.value = false
     }
   }
 
@@ -223,6 +320,7 @@ export function useLeagueDetail(leagueId) {
     }
   }
 
+  // 🔥 FUNCIÓN MEJORADA: Cargar historial con picks de eventos actual y anterior
   async function loadMyHistory() {
     if (!currentLeague.value) return
     
@@ -233,20 +331,43 @@ export function useLeagueDetail(leagueId) {
       myHistory.value = history
       
       // Buscar picks del evento actual
-      const currentEventPick = history.history?.find(pick => 
-        pick.eventId === currentEvent.value?.id
-      )
+      if (currentEvent.value) {
+        const currentEventPick = history.history?.find(pick => 
+          pick.eventId === currentEvent.value.id
+        )
+        
+        if (currentEventPick) {
+          currentUserPicks.value = currentEventPick.fighterNames?.map((name, index) => ({
+            id: index + 1,
+            name: name,
+            record: '0-0', // TODO: obtener datos reales
+            cost: 50000, // TODO: obtener datos reales
+            points: 0, // TODO: obtener datos reales
+            weightClass: 'Unknown' // TODO: obtener datos reales
+          })) || []
+          
+          console.log('✅ Picks del evento actual cargados:', currentUserPicks.value.length)
+        }
+      }
       
-      if (currentEventPick) {
-        // Simular estructura de picks (TODO: mejorar con datos reales)
-        currentUserPicks.value = currentEventPick.fighterNames?.map((name, index) => ({
-          id: index + 1,
-          name: name,
-          record: '0-0', // TODO: obtener datos reales
-          cost: 50000, // TODO: obtener datos reales
-          points: 0, // TODO: obtener datos reales
-          weightClass: 'Unknown' // TODO: obtener datos reales
-        })) || []
+      // 🆕 Buscar picks del evento anterior
+      if (previousEvent.value) {
+        const previousEventPick = history.history?.find(pick => 
+          pick.eventId === previousEvent.value.id
+        )
+        
+        if (previousEventPick) {
+          previousUserPicks.value = previousEventPick.fighterNames?.map((name, index) => ({
+            id: index + 1,
+            name: name,
+            record: '0-0', // TODO: obtener datos reales
+            cost: previousEventPick.totalCost || 0,
+            points: previousEventPick.eventPoints || 0,
+            weightClass: 'Unknown' // TODO: obtener datos reales
+          })) || []
+          
+          console.log('✅ Picks del evento anterior cargados:', previousUserPicks.value.length)
+        }
       }
       
       console.log('✅ Mi historial cargado:', history)
@@ -255,10 +376,11 @@ export function useLeagueDetail(leagueId) {
       console.error('❌ Error al cargar mi historial:', error)
       myHistory.value = null
       currentUserPicks.value = []
+      previousUserPicks.value = []
     }
   }
 
-  // 🆕 Función para salir de la liga
+  // Función para salir de la liga
   async function leaveLeague() {
     if (!currentLeague.value || !canLeaveLeague.value) {
       displayNotification('No puedes salir de esta liga')
@@ -288,7 +410,7 @@ export function useLeagueDetail(leagueId) {
     }
   }
 
-  // 🆕 Función para copiar código de invitación
+  // Función para copiar código de invitación
   async function copyInvitationCode() {
     if (!currentLeague.value?.invitationCode) return
     
@@ -349,7 +471,7 @@ export function useLeagueDetail(leagueId) {
     router.push(`/league/${leagueId}/picks/${currentEvent.value.id}`)
   }
 
-  // 🆕 Funciones para manejo de modales
+  // Funciones para manejo de modales
   function showLeaveLeagueConfirmation() {
     showLeaveConfirmation.value = true
   }
@@ -358,7 +480,7 @@ export function useLeagueDetail(leagueId) {
     showLeaveConfirmation.value = false
   }
 
-  // Función principal para cargar todos los datos
+  // 🔥 FUNCIÓN MEJORADA: Cargar todos los datos incluyendo evento anterior
   async function loadAllData() {
     try {
       console.log('🚀 Iniciando carga de datos de la liga...')
@@ -366,13 +488,14 @@ export function useLeagueDetail(leagueId) {
       // 1. Cargar detalles de la liga primero
       await loadLeagueDetails()
       
-      // 2. Cargar eventos
+      // 2. Cargar eventos (actual y anterior)
       await loadEvents()
       
       // 3. Cargar datos en paralelo
       await Promise.all([
         loadGlobalLeaderboard(),
         loadCurrentEventLeaderboard(),
+        loadPreviousEventLeaderboard(), // 🆕 Cargar evento anterior
         loadMyPosition(),
         loadMyHistory()
       ])
@@ -385,8 +508,10 @@ export function useLeagueDetail(leagueId) {
     }
   }
 
-  // Función para recargar datos específicos según la pestaña activa
+  // 🔥 FUNCIÓN MEJORADA: Recargar datos específicos según la pestaña activa
   async function refreshTabData(tabName) {
+    console.log('🔄 Recargando datos para pestaña:', tabName)
+    
     switch (tabName) {
       case 'global':
         await loadGlobalLeaderboard()
@@ -394,8 +519,8 @@ export function useLeagueDetail(leagueId) {
       case 'current':
         await loadCurrentEventLeaderboard()
         break
-      case 'previous':
-        // TODO: Implementar carga de evento anterior
+      case 'previous': // 🆕 Manejar pestaña del evento anterior
+        await loadPreviousEventLeaderboard()
         break
     }
   }
@@ -404,12 +529,12 @@ export function useLeagueDetail(leagueId) {
     // Estados
     currentLeague,
     currentEvent,
-    previousEvent,
+    previousEvent, // 🆕
     globalLeaderboard,
     currentEventLeaderboard,
-    previousEventLeaderboard,
+    previousEventLeaderboard, // 🆕
     currentUserPicks,
-    previousUserPicks,
+    previousUserPicks, // 🆕
     myPosition,
     myHistory,
     
@@ -417,8 +542,8 @@ export function useLeagueDetail(leagueId) {
     isLoadingLeague,
     isLoadingGlobal,
     isLoadingCurrentEvent,
-    isLoadingPreviousEvent,
-    isLeavingLeague, // 🆕
+    isLoadingPreviousEvent, // 🆕
+    isLeavingLeague,
     
     // Estados UI
     activeTab,
@@ -426,30 +551,31 @@ export function useLeagueDetail(leagueId) {
     showLeagueInfo,
     showNotificationModal,
     notificationText,
-    showLeaveConfirmation, // 🆕
+    showLeaveConfirmation,
     
     // Computed
     isPublicLeague,
     isPrivateLeague,
     canMakePicks,
-    canLeaveLeague, // 🆕
+    canLeaveLeague,
+    hasPreviousEvent, // 🆕
     formattedEventDate,
-    formattedPreviousEventDate,
+    formattedPreviousEventDate, // 🆕
     
     // Funciones
     loadAllData,
     refreshTabData,
-    leaveLeague, // 🆕
-    copyInvitationCode, // 🆕
+    leaveLeague,
+    copyInvitationCode,
     getPositionClass,
     getFighterInitials,
-    getUserInitials, // 🆕
+    getUserInitials,
     showFighterDetails,
     displayNotification,
     hideNotification,
     goBackToDashboard,
     goToPicksSelection,
-    showLeaveLeagueConfirmation, // 🆕
-    hideLeaveConfirmation // 🆕
+    showLeaveLeagueConfirmation,
+    hideLeaveConfirmation
   }
 }
