@@ -857,14 +857,8 @@ export default {
 }
 
 .btn-copy:hover {
-  background: var(--primary-dark);
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(255, 107, 53, 0.3);
-}
-
-.btn-copy:focus {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
 }
 
 /* === 🔥 CLASIFICACIÓN GLOBAL MEJORADA === */
