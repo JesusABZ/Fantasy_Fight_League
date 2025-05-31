@@ -60,7 +60,31 @@ export function useDateFormatter() {
       return false
     }
   }
-  
+  /**
+   * Formatea una fecha a formato de hora en español
+   * @param {string|Date} dateString - Fecha en formato ISO o objeto Date
+   * @returns {string} Hora formateada (ej: "20:00" o "8:00 PM")
+   */
+  const formatEventTime = (dateString) => {
+    if (!dateString) return ''
+    
+    try {
+      const date = new Date(dateString)
+      
+      return date.toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'UTC'
+      })
+    } catch (error) {
+      console.error('Error al formatear hora:', error)
+      return ''
+    }
+  }
+
+  /**
+   * Formatea una fecha a formato de fecha y hora en español
+   * @param {string|Date}  
   /**
    * Calcula los días restantes hasta una fecha
    * @param {string|Date} dateString - Fecha objetivo
@@ -83,6 +107,7 @@ export function useDateFormatter() {
   
   return {
     formatEventDate,
+    formatEventTime,
     formatShortDate,
     isFutureDate,
     getDaysUntil

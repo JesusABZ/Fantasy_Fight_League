@@ -59,6 +59,7 @@
                 <h4 class="event-subtitle">{{ nextEvent.description || 'Próximo evento UFC' }}</h4>
                 <div class="event-meta">
                   <span class="event-date">📅 {{ formattedDate }}</span>
+                  <span class="event-time">🕐 {{ formattedTime }}</span>
                   <span class="event-location">📍 {{ nextEvent.location || 'Por confirmar' }}</span>
                 </div>
               </div>
@@ -334,7 +335,7 @@ export default {
   setup() {
     const router = useRouter()
     const authStore = useAuthStore()
-    const { formatEventDate } = useDateFormatter()
+    const { formatEventDate, formatEventTime } = useDateFormatter()
 
     const user = computed(() => authStore.user)
 
@@ -382,6 +383,11 @@ export default {
       
       // Fallback
       return 'Usuario'
+    })
+
+    const formattedTime = computed(() => {
+      if (!nextEvent.value?.startDate) return ''
+      return formatEventTime(nextEvent.value.startDate)
     })
 
     const userInitials = computed(() => {
@@ -690,6 +696,7 @@ export default {
       eventBadge,
       eventTitle,
       formattedDate,
+      formattedTime,
       
       // Notificaciones
       showNotification,
@@ -1152,6 +1159,7 @@ export default {
   gap: var(--space-xs);
 }
 
+.event-time,
 .event-date,
 .event-location {
   color: var(--gray-light);
