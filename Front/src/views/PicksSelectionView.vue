@@ -1280,4 +1280,11 @@ export default {
 .no-fighters-title {
   letter-spacing: 0.05em; /* Añade esta línea */
 }
+/* === MEJORAR LEGIBILIDAD DEL PRECIO === */
+.fighter-cost,
+.cost-amount {
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8); /* Sombra para contraste */
+  font-weight: bold; /* Hacer el texto más grueso */
+  letter-spacing: 0.05em; /* Añade esta línea */
+}
 </style>

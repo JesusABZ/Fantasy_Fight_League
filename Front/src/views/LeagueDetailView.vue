@@ -2593,4 +2593,10 @@ export default {
   text-transform: uppercase;
 }
 
+/* === MEJORAR LEGIBILIDAD DE PUNTOS === */
+.points {
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8); /* Sombra para contraste */
+  letter-spacing: 0.05em; /* Añade esta línea */
+}
+
 </style>
