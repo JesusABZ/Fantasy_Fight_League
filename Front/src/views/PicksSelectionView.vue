@@ -1255,4 +1255,29 @@ export default {
     padding: var(--space-md);
   }
 }
+
+/* === TÍTULOS CON FONT-IMPACT - LETTER SPACING === */
+.event-name {
+  letter-spacing: 0.05em; /* Añade esta línea */
+}
+
+.panel-title {
+  letter-spacing: 0.05em; /* Añade esta línea */
+}
+
+.fighter-name {
+  letter-spacing: 0.05em; /* Añade esta línea */
+}
+
+.loading-title {
+  letter-spacing: 0.05em; /* Añade esta línea */
+}
+
+.empty-title {
+  letter-spacing: 0.05em; /* Añade esta línea */
+}
+
+.no-fighters-title {
+  letter-spacing: 0.05em; /* Añade esta línea */
+}
 </style>

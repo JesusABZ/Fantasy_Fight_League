@@ -338,13 +338,6 @@
                         <span class="stat-label">Costo Total</span>
                       </div>
                     </div>
-                    
-                    <div class="stat-column">
-                      <div class="stat-item">
-                        <span class="stat-value">{{ member.remainingBudget || 0 }}</span>
-                        <span class="stat-label">Restante</span>
-                      </div>
-                    </div>
                   </div>
                 </div>
 
@@ -444,13 +437,6 @@
                       <div class="stat-item">
                         <span class="stat-value">{{ member.totalCost || 0 }}</span>
                         <span class="stat-label">Costo Total</span>
-                      </div>
-                    </div>
-                    
-                    <div class="stat-column">
-                      <div class="stat-item">
-                        <span class="stat-value">{{ member.remainingBudget || 0 }}</span>
-                        <span class="stat-label">Restante</span>
                       </div>
                     </div>
                   </div>
@@ -749,6 +735,7 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useLeagueDetail } from '../composables/useLeagueDetail.js'
 import { useDateFormatter } from '../composables/useDateFormatter.js'
+import { useAuthStore } from '../store/auth.js'
 
 export default {
   name: 'LeagueDetailView',
@@ -756,6 +743,7 @@ export default {
     const route = useRoute()
     const leagueId = route.params.id
     const { formatEventDate } = useDateFormatter()
+    const authStore = useAuthStore()
     
     // Usar el composable con la lógica
     const {
@@ -2539,6 +2527,70 @@ export default {
   .btn-confirm-leave {
     width: 100%;
   }
+}
+
+.league-name {
+  letter-spacing: 0.05em; /* Cambia de 0.02em a 0.05em */
+}
+
+.content-title {
+  letter-spacing: 0.05em; /* Añade esta línea */
+}
+
+.modal-title {
+  letter-spacing: 0.05em; /* Añade esta línea */
+}
+
+.section-title {
+  letter-spacing: 0.05em; /* Añade esta línea */
+}
+
+.member-name {
+  letter-spacing: 0.05em; /* Añade esta línea */
+}
+
+.fighter-name {
+  letter-spacing: 0.05em; /* Añade esta línea */
+}
+
+/* === TÍTULOS EN MODALES === */
+.info-title {
+  letter-spacing: 0.05em; /* Añade esta línea */
+}
+
+.breakdown-title {
+  letter-spacing: 0.05em; /* Añade esta línea */
+}
+
+.stats-title {
+  letter-spacing: 0.05em; /* Añade esta línea */
+}
+
+.warning-title {
+  letter-spacing: 0.05em; /* Añade esta línea */
+}
+
+.loading-title {
+  letter-spacing: 0.05em; /* Añade esta línea */
+}
+
+.error-title {
+  letter-spacing: 0.05em; /* Añade esta línea */
+}
+
+.empty-title {
+  letter-spacing: 0.05em; /* Añade esta línea */
+}
+
+.cta-title {
+  letter-spacing: 0.05em; /* Añade esta línea */
+}
+
+/* === VALORES EN MODAL DE LUCHADOR CON FONT-IMPACT === */
+.stat-row .stat-value {
+  font-family: var(--font-impact);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 </style>
