@@ -13,8 +13,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -120,5 +123,48 @@ public class EventController {
         return eventService.findNextEvent()
                 .map(event -> ResponseEntity.ok(event))
                 .orElse(ResponseEntity.notFound().build());
+    }
+    
+    /**
+     * PÚBLICO - Obtener el evento anterior
+     */
+    @GetMapping("/events/previous")
+    public ResponseEntity<?> getPreviousEvent() {
+        return eventService.findPreviousEvent()
+                .map(event -> ResponseEntity.ok(event))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * PÚBLICO - Obtener evento actual y anterior juntos
+     */
+    @GetMapping("/events/current-and-previous")
+    public ResponseEntity<?> getCurrentAndPreviousEvents() {
+        try {
+            Map<String, Event> events = eventService.getCurrentAndPreviousEvents();
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("current", events.get("current"));
+            response.put("previous", events.get("previous"));
+            response.put("hasCurrentEvent", events.containsKey("current"));
+            response.put("hasPreviousEvent", events.containsKey("previous"));
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new MessageResponseDTO("Error: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * PÚBLICO - Obtener todos los eventos ordenados por fecha
+     */
+    @GetMapping("/events/ordered")
+    public ResponseEntity<List<Event>> getAllEventsOrdered() {
+        try {
+            List<Event> events = eventService.findAllEventsOrderByDate();
+            return ResponseEntity.ok(events);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(new ArrayList<>());
+        }
     }
 }

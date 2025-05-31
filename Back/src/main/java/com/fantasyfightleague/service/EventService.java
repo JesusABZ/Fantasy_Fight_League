@@ -4,6 +4,7 @@ import com.fantasyfightleague.model.Event;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface EventService {
@@ -37,4 +38,13 @@ public interface EventService {
     
     // Cambiar el estado de un evento
     Event updateStatus(Long id, String status);
+    
+    // Buscar el evento anterior al actual
+    Optional<Event> findPreviousEvent();
+
+    // Buscar eventos ordenados por fecha
+    List<Event> findAllEventsOrderByDate();
+
+    // Obtener el evento actual y el anterior juntos
+    Map<String, Event> getCurrentAndPreviousEvents();
 }

@@ -400,4 +400,124 @@ public class LeaderboardController {
             return ResponseEntity.badRequest().body("Error: " + e.getMessage());
         }
     }
+    
+    /**
+     * 🆕 NUEVO: Obtener historial completo con datos detallados de luchadores
+     */
+    @GetMapping("/my-history-detailed/{leagueId}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> getMyHistoryDetailed(@PathVariable Long leagueId) {
+        try {
+            UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            User user = userService.findByUsername(userDetails.getUsername())
+                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+            
+            League league = leagueService.findById(leagueId)
+                    .orElseThrow(() -> new RuntimeException("Liga no encontrada"));
+            
+            // Verificar que el usuario es miembro de la liga
+            if (!leagueService.isUserInLeague(league, user)) {
+                return ResponseEntity.badRequest().body("No eres miembro de esta liga");
+            }
+            
+            List<Pick> userPicks = pickService.findByUserAndLeague(user, league);
+            
+            // Ordenar por fecha del evento (más reciente primero)
+            userPicks.sort((a, b) -> {
+                Date dateA = a.getEvent().getStartDate() != null ? a.getEvent().getStartDate() : a.getEvent().getDate();
+                Date dateB = b.getEvent().getStartDate() != null ? b.getEvent().getStartDate() : b.getEvent().getDate();
+                return dateB.compareTo(dateA);
+            });
+            
+            List<Map<String, Object>> detailedHistory = new ArrayList<>();
+            int totalPoints = 0;
+            
+            for (Pick pick : userPicks) {
+                Map<String, Object> pickInfo = new HashMap<>();
+                pickInfo.put("pickId", pick.getId());
+                pickInfo.put("eventId", pick.getEvent().getId());
+                pickInfo.put("eventName", pick.getEvent().getName());
+                
+                Date eventDate = pick.getEvent().getStartDate() != null ? 
+                    pick.getEvent().getStartDate() : pick.getEvent().getDate();
+                pickInfo.put("eventDate", eventDate);
+                pickInfo.put("eventStatus", pick.getEvent().getStatus());
+                pickInfo.put("eventPoints", pick.getEventPoints());
+                pickInfo.put("totalCost", pick.getTotalCost());
+                pickInfo.put("remainingBudget", pick.getRemainingBudget());
+                pickInfo.put("isLocked", pick.isLocked());
+                
+                totalPoints += pick.getEventPoints();
+                
+                // 🔥 NUEVO: Lista detallada de luchadores con todos sus datos
+                List<Map<String, Object>> detailedFighters = new ArrayList<>();
+                for (Fighter fighter : pick.getSelectedFighters()) {
+                    Map<String, Object> fighterInfo = new HashMap<>();
+                    fighterInfo.put("id", fighter.getId());
+                    fighterInfo.put("name", fighter.getName());
+                    fighterInfo.put("record", fighter.getRecord() != null ? fighter.getRecord() : "N/A");
+                    fighterInfo.put("nationality", fighter.getNationality() != null ? fighter.getNationality() : "Unknown");
+                    fighterInfo.put("weightClass", fighter.getWeightClass() != null ? fighter.getWeightClass() : "Unknown");
+                    fighterInfo.put("imageUrl", fighter.getImageUrl());
+                    fighterInfo.put("price", fighter.getPrice() != null ? fighter.getPrice() : 0);
+                    
+                    // Buscar puntos obtenidos por este luchador en este evento
+                    Optional<FighterStats> statsOpt = fighterStatsRepository
+                        .findByFighter(fighter)
+                        .stream()
+                        .filter(stats -> {
+                            Date eventStart = pick.getEvent().getStartDate() != null ? 
+                                pick.getEvent().getStartDate() : pick.getEvent().getDate();
+                            return stats.getCreatedAt().after(eventStart);
+                        })
+                        .findFirst();
+                    
+                    if (statsOpt.isPresent()) {
+                        FighterStats stats = statsOpt.get();
+                        fighterInfo.put("pointsEarned", stats.getPoints());
+                        fighterInfo.put("hasStats", true);
+                        
+                        // Agregar estadísticas detalladas
+                        Map<String, Object> detailedStats = new HashMap<>();
+                        detailedStats.put("significantStrikes", stats.getSignificantStrikes());
+                        detailedStats.put("totalStrikes", stats.getTotalStrikes());
+                        detailedStats.put("takedowns", stats.getTakedowns());
+                        detailedStats.put("submissions", stats.getSubmissions());
+                        detailedStats.put("knockdowns", stats.getKnockdowns());
+                        detailedStats.put("minutesFought", stats.getMinutesFought());
+                        
+                        fighterInfo.put("fightStats", detailedStats);
+                    } else {
+                        fighterInfo.put("pointsEarned", 0);
+                        fighterInfo.put("hasStats", false);
+                        fighterInfo.put("fightStats", null);
+                    }
+                    
+                    detailedFighters.add(fighterInfo);
+                }
+                
+                pickInfo.put("selectedFighters", detailedFighters);
+                pickInfo.put("fightersCount", pick.getSelectedFighters().size());
+                
+                detailedHistory.add(pickInfo);
+            }
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("league", league);
+            response.put("totalEvents", userPicks.size());
+            response.put("totalPoints", totalPoints);
+            response.put("history", detailedHistory);
+            
+            if (!userPicks.isEmpty()) {
+                response.put("averagePointsPerEvent", Math.round((double) totalPoints / userPicks.size() * 100.0) / 100.0);
+            } else {
+                response.put("averagePointsPerEvent", 0.0);
+            }
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+        }
+    }
 }
