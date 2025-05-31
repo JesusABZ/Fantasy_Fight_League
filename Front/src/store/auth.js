@@ -177,34 +177,62 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true
     
     try {
-      // Verificar si hay un token guardado
-      if (authService.isAuthenticated()) {
-        console.log('🔑 Token encontrado, verificando validez...')
+      // Obtener el token almacenado
+      const storedToken = authService.getToken()
+      
+      if (!storedToken) {
+        console.log('ℹ️ No hay token almacenado')
+        user.value = null
+        return
+      }
+      
+      console.log('🔑 Token encontrado, verificando validez...')
+      
+      // Verificar si el token es válido estructuralmente
+      if (authService.isTokenExpired && authService.isTokenExpired(storedToken)) {
+        console.warn('❌ Token expirado, limpiando...')
+        authService.clearAuthToken()
+        user.value = null
+        return
+      }
+      
+      // Intentar validar el token con el servidor
+      try {
+        const { userService } = await import('../api/userService.js')
+        const userProfile = await userService.getProfile()
         
-        // Intentar recuperar el perfil del usuario para validar el token
-        try {
-          const { userService } = await import('../api/userService.js')
-          const userProfile = await userService.getProfile()
-          
-          // Asegurar que roles sea un array
-          if (userProfile.roles && !Array.isArray(userProfile.roles)) {
-            userProfile.roles = []
-          }
-          
-          user.value = userProfile
-          console.log('✅ Usuario autenticado recuperado:', userProfile.username)
-        } catch (error) {
-          console.warn('❌ Token inválido o expirado:', error.message)
-          // Si falla, limpiar el token porque probablemente expiró
+        // Verificar que el perfil tiene los datos mínimos requeridos
+        if (!userProfile || !userProfile.id || !userProfile.username) {
+          throw new Error('Perfil de usuario incompleto')
+        }
+        
+        // Asegurar que roles sea un array
+        if (!Array.isArray(userProfile.roles)) {
+          userProfile.roles = userProfile.roles ? [userProfile.roles] : []
+        }
+        
+        user.value = userProfile
+        console.log('✅ Usuario autenticado recuperado:', userProfile.username)
+        
+      } catch (profileError) {
+        console.warn('❌ Error al validar token con servidor:', profileError.message)
+        
+        // Si es error 401, el token no es válido en el servidor
+        if (profileError.message.includes('401') || profileError.message.includes('unauthorized')) {
+          console.log('🧹 Token inválido en servidor, limpiando...')
           authService.clearAuthToken()
           user.value = null
+        } else {
+          // Si es otro tipo de error (red, etc), mantener el token pero sin usuario
+          console.log('⚠️ Error de red, manteniendo token pero sin cargar usuario')
+          user.value = null
         }
-      } else {
-        console.log('ℹ️ No hay token de autenticación')
-        user.value = null
       }
+      
     } catch (error) {
-      console.error('💥 Error al inicializar autenticación:', error)
+      console.error('💥 Error crítico al inicializar autenticación:', error)
+      // En caso de error crítico, limpiar todo
+      authService.clearAuthToken()
       user.value = null
     } finally {
       isLoading.value = false
@@ -212,6 +240,7 @@ export const useAuthStore = defineStore('auth', () => {
       console.log('🏁 Inicialización de auth completada')
     }
   }
+
 
   // ✅ NUEVO: Función para verificar si el usuario puede acceder a una ruta
   function canAccessRoute(routeMeta) {

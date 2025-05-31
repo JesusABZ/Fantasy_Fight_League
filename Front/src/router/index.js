@@ -186,44 +186,53 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   console.log(`🧭 Navegando de ${from.name || 'ninguna'} a ${to.name}`)
   
-  // Actualizar título de la página
+  // Actualizar título
   if (to.meta.title) {
     document.title = to.meta.title
   } else {
     document.title = 'Fantasy Fight League'
   }
 
-  // Obtener el store de autenticación
   const authStore = useAuthStore()
   
-  // ✅ PASO 1: Verificar si la ruta requiere autenticación
+  // ✅ ESPERAR a que la autenticación se inicialice si aún no está lista
+  if (!authStore.isInitialized) {
+    console.log('⏳ Esperando inicialización de auth...')
+    
+    // Timeout para evitar espera infinita
+    const timeout = new Promise(resolve => setTimeout(resolve, 5000))
+    const authInit = new Promise(resolve => {
+      const checkInit = () => {
+        if (authStore.isInitialized) {
+          resolve()
+        } else {
+          setTimeout(checkInit, 100)
+        }
+      }
+      checkInit()
+    })
+    
+    try {
+      await Promise.race([authInit, timeout])
+    } catch (error) {
+      console.error('❌ Timeout esperando inicialización de auth')
+    }
+  }
+
+  // ✅ VERIFICAR si la ruta requiere autenticación
   if (to.meta.requiresAuth) {
     if (!authStore.isAuthenticated) {
       console.log('❌ Acceso denegado: Usuario no autenticado')
-      // Redirigir al login con la ruta de destino como query param
       next({
         name: 'Login',
         query: { redirect: to.fullPath }
       })
       return
     }
-  }
-
-  // ✅ PASO 2: Verificar si la ruta es solo para invitados (no autenticados)
-  if (to.meta.requiresGuest) {
-    if (authStore.isAuthenticated) {
-      console.log('ℹ️ Usuario autenticado redirigido del área de invitados al dashboard')
-      // Si está autenticado y trata de acceder a login/register, redirigir al dashboard
-      next({ name: 'Dashboard' })
-      return
-    }
-  }
-
-  // ✅ PASO 3: Verificar si la ruta requiere email verificado
-  if (to.meta.requiresEmailVerified) {
-    if (authStore.isAuthenticated && !authStore.isEmailConfirmed) {
+    
+    // Verificar email si es requerido
+    if (to.meta.requiresEmailVerified && !authStore.isEmailConfirmed) {
       console.log('⚠️ Acceso denegado: Email no verificado')
-      // Redirigir a la página de email no verificado
       next({
         name: 'EmailUnverified',
         query: { email: authStore.user?.email }
@@ -232,23 +241,26 @@ router.beforeEach(async (to, from, next) => {
     }
   }
 
-  // ✅ PASO 4: Validaciones especiales para rutas específicas
-  
-  // Para reset-password: verificar que tenga token válido
+  // ✅ VERIFICAR si la ruta es solo para invitados
+  if (to.meta.requiresGuest && authStore.isAuthenticated) {
+    console.log('ℹ️ Usuario autenticado redirigido del área de invitados')
+    next({ name: 'Dashboard' })
+    return
+  }
+
+  // Validaciones especiales para rutas específicas...
   if (to.name === 'ResetPassword' && !to.query.token) {
-    console.log('❌ Acceso denegado: Reset password sin token')
+    console.log('❌ Reset password sin token')
     next({ name: 'ForgotPassword' })
     return
   }
 
-  // Para confirm-email: verificar que tenga token válido
   if (to.name === 'ConfirmEmail' && !to.query.token) {
-    console.log('❌ Acceso denegado: Confirm email sin token')
+    console.log('❌ Confirm email sin token')
     next({ name: 'Home' })
     return
   }
 
-  // ✅ PASO 5: Permitir navegación
   console.log('✅ Navegación permitida')
   next()
 })

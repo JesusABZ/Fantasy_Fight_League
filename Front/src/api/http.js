@@ -58,17 +58,40 @@ class HttpService {
     if (!token) return true
     
     try {
-      // Decodificar el JWT para verificar la expiración
-      const payload = JSON.parse(atob(token.split('.')[1]))
-      const currentTime = Date.now() / 1000
+      // Verificar que el token tenga el formato correcto (3 partes separadas por punto)
+      const parts = token.split('.')
+      if (parts.length !== 3) {
+        console.warn('Token JWT malformado')
+        return true
+      }
       
-      // Verificar si el token expira en los próximos 30 segundos
-      return payload.exp < (currentTime + 30)
+      // Decodificar el payload
+      const payload = JSON.parse(atob(parts[1]))
+      
+      if (!payload.exp) {
+        console.warn('Token sin fecha de expiración')
+        return true
+      }
+      
+      const currentTime = Date.now() / 1000
+      const expirationTime = payload.exp
+      
+      // Verificar si el token expira en los próximos 30 segundos (buffer de seguridad)
+      const isExpired = expirationTime < (currentTime + 30)
+      
+      if (isExpired) {
+        console.warn('🔴 Token expirado detectado')
+      } else {
+        console.log('✅ Token válido, expira en:', Math.round((expirationTime - currentTime) / 60), 'minutos')
+      }
+      
+      return isExpired
     } catch (error) {
-      console.warn('Error al verificar token:', error)
+      console.error('Error al verificar token:', error)
       return true
     }
   }
+
 
   // Método base para hacer peticiones - MEJORADO
   async request(url, options = {}) {

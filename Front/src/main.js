@@ -11,36 +11,50 @@ import './assets/main.css'
 async function initializeApp() {
   console.log('🚀 Inicializando aplicación...')
   
-  // Crear la aplicación
-  const app = createApp(App)
+  try {
+    // Crear la aplicación
+    const app = createApp(App)
 
-  // Usar plugins
-  app.use(pinia)
-  app.use(router)
+    // Usar plugins
+    app.use(pinia)
+    app.use(router)
 
-  // ✅ CRÍTICO: Inicializar autenticación ANTES de montar la app
-  const authStore = useAuthStore()
-  
-  console.log('🔐 Inicializando autenticación...')
-  await authStore.initializeAuth()
-  console.log('✅ Autenticación inicializada')
-
-  // ✅ Agregar guard adicional para casos edge
-  // Esto maneja casos donde el usuario manipula directamente el localStorage
-  window.addEventListener('storage', (event) => {
-    if (event.key === 'ffl_token') {
-      if (!event.newValue) {
-        // Token removido desde otra pestaña
-        console.log('🔄 Token removido desde otra pestaña, limpiando estado...')
-        authStore.user = null
-        router.push('/')
-      }
+    // ✅ INICIALIZAR AUTENTICACIÓN con mejor manejo de errores
+    const authStore = useAuthStore()
+    
+    console.log('🔐 Inicializando autenticación...')
+    
+    try {
+      await authStore.initializeAuth()
+      console.log('✅ Autenticación inicializada correctamente')
+    } catch (authError) {
+      console.error('❌ Error al inicializar autenticación:', authError)
+      // No fallar la app por errores de auth, continuar sin usuario
     }
-  })
 
-  // Montar la aplicación
-  app.mount('#app')
-  console.log('✅ Aplicación montada correctamente')
+    // Event listener para cambios en localStorage desde otras pestañas
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'ffl_token') {
+        if (!event.newValue) {
+          console.log('🔄 Token removido desde otra pestaña, actualizando estado...')
+          authStore.user = null
+          // Solo redirigir si estamos en una ruta protegida
+          const currentRoute = router.currentRoute.value
+          if (currentRoute.meta?.requiresAuth) {
+            router.push('/')
+          }
+        }
+      }
+    })
+
+    // Montar la aplicación
+    app.mount('#app')
+    console.log('✅ Aplicación montada correctamente')
+    
+  } catch (error) {
+    console.error('💥 Error crítico al inicializar la aplicación:', error)
+    throw error // Re-lanzar para que se maneje en el catch externo
+  }
 }
 
 // Inicializar la aplicación
