@@ -70,11 +70,21 @@ export function useLeagueDetail(leagueId) {
   })
 
   // Verificar si el usuario puede salir de la liga
-  const canLeaveLeague = computed(() => {
+    const canLeaveLeague = computed(() => {
     if (!currentLeague.value || !user.value) return false
     
-    // El creador no puede salir de su propia liga
-    return currentLeague.value.creator?.id !== user.value.id
+    const isCreator = currentLeague.value.creator?.id === user.value.id
+    const isPrivateLeague = currentLeague.value.type === 'PRIVATE'
+    const isPublicLeague = currentLeague.value.type === 'PUBLIC'
+    
+    // El creador NO puede salir de ligas públicas (son específicas de evento)
+    if (isCreator && isPublicLeague) {
+      return false
+    }
+    
+    // El creador SÍ puede salir de ligas privadas
+    // Cualquier miembro puede salir de cualquier liga
+    return true
   })
 
   // 🆕 Verificar si hay evento anterior disponible

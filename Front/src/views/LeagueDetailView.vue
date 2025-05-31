@@ -503,10 +503,40 @@
         <div class="confirmation-content">
           <div class="warning-icon">⚠️</div>
           <h4 class="warning-title">¿Estás seguro?</h4>
-          <p class="warning-message">
-            Vas a salir de la liga "<strong>{{ currentLeague.name }}</strong>". 
-            Perderás acceso a todas las clasificaciones y picks de esta liga.
-          </p>
+          
+          <!-- 🔥 MENSAJES DINÁMICOS según el tipo de liga y rol -->
+          <div v-if="isCreatorLeaving" class="warning-message creator-leaving">
+            <p class="main-warning">
+              Vas a salir de la liga "<strong>{{ currentLeague.name }}</strong>" que tú creaste.
+            </p>
+            <div v-if="isPrivateLeague" class="creator-private-warning">
+              <div class="warning-box">
+                <p><strong>📋 ¿Qué sucederá?</strong></p>
+                <ul class="warning-list">
+                  <li v-if="hasOtherMembers">
+                    ✅ Los demás miembros podrán seguir participando en la liga
+                  </li>
+                  <li v-else>
+                    🗑️ La liga será <strong>eliminada automáticamente</strong> ya que no quedarán miembros
+                  </li>
+                  <li>❌ Perderás acceso a todas las clasificaciones y picks</li>
+                  <li v-if="hasOtherMembers">
+                    ⚠️ No podrás volver a unirte sin una nueva invitación
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <div v-else class="warning-message member-leaving">
+            <p>
+              Vas a salir de la liga "<strong>{{ currentLeague.name }}</strong>". 
+              Perderás acceso a todas las clasificaciones y picks de esta liga.
+            </p>
+            <div v-if="isPrivateLeague" class="member-private-note">
+              <p><em>💡 Nota: Necesitarás una nueva invitación para volver a unirte.</em></p>
+            </div>
+          </div>
           
           <div class="confirmation-actions">
             <button 
@@ -521,7 +551,7 @@
               @click="leaveLeague"
               :disabled="isLeavingLeague"
             >
-              {{ isLeavingLeague ? '⏳ Saliendo...' : '🚪 Sí, Salir' }}
+              {{ isLeavingLeague ? '⏳ Saliendo...' : getLeaveButtonText }}
             </button>
           </div>
         </div>
@@ -715,6 +745,7 @@
 
 <script>
 import { onMounted } from 'vue'
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useLeagueDetail } from '../composables/useLeagueDetail.js'
 import { useDateFormatter } from '../composables/useDateFormatter.js'
@@ -791,12 +822,36 @@ export default {
         return 'N/A'
       }
     }
+
+    const user = computed(() => authStore.user)
     
     // Funciones para calcular puntos por categoría
     const getWinLossPoints = (fighter) => {
       // Lógica basada en si ganó o perdió (20 pts por victoria, 0 por derrota)
       return fighter.won ? 20 : 0
     }
+
+    // 🆕 NUEVAS computed properties para el modal de confirmación
+    const isCreatorLeaving = computed(() => {
+      if (!currentLeague.value || !user.value) return false
+      return currentLeague.value.creator?.id === user.value?.id
+    })
+
+    const hasOtherMembers = computed(() => {
+      if (!currentLeague.value) return false
+      const memberCount = currentLeague.value.memberCount || currentLeague.value.members?.length || 0
+      return memberCount > 1
+    })
+
+    const getLeaveButtonText = computed(() => {
+      if (isCreatorLeaving.value && isPrivateLeague.value && !hasOtherMembers.value) {
+        return '🗑️ Sí, Eliminar Liga'
+      } else if (isCreatorLeaving.value) {
+        return '🚪 Sí, Salir de Mi Liga'
+      } else {
+        return '🚪 Sí, Salir'
+      }
+    })
 
     const getSignificantStrikesPoints = (fighter) => {
       // 0.3 puntos por golpe significante
@@ -938,6 +993,12 @@ export default {
       getTimePoints,
       formatFightTime,
       hasDetailedStats,
+
+      // 🆕 Nuevas computed properties para el modal de confirmación
+      isCreatorLeaving,
+      hasOtherMembers,
+      getLeaveButtonText,
+      user, // También agregamos el usuario
       
       // Estados de carga
       isLoadingLeague,
@@ -2387,6 +2448,96 @@ export default {
 @media (max-width: 480px) {
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* === CONFIRMACIÓN MEJORADA === */
+.confirmation-modal {
+  max-width: 550px;
+}
+
+.warning-message.creator-leaving {
+  text-align: left;
+}
+
+.main-warning {
+  color: var(--gray-light);
+  line-height: 1.6;
+  margin-bottom: var(--space-lg);
+  text-align: center;
+}
+
+.creator-private-warning {
+  margin-top: var(--space-lg);
+}
+
+.warning-box {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-lg);
+}
+
+.warning-box p {
+  color: var(--warning);
+  font-weight: bold;
+  margin-bottom: var(--space-md);
+  font-size: 1rem;
+}
+
+.warning-list {
+  color: var(--gray-light);
+  margin: 0;
+  padding-left: var(--space-lg);
+  line-height: 1.6;
+}
+
+.warning-list li {
+  margin-bottom: var(--space-sm);
+}
+
+.member-leaving {
+  text-align: center;
+}
+
+.member-private-note {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid var(--info);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  margin-top: var(--space-lg);
+}
+
+.member-private-note p {
+  color: var(--info);
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* === RESPONSIVE PARA EL MODAL MEJORADO === */
+@media (max-width: 768px) {
+  .confirmation-modal {
+    max-width: 95vw;
+    margin: var(--space-md);
+  }
+  
+  .warning-box {
+    padding: var(--space-md);
+  }
+  
+  .warning-list {
+    padding-left: var(--space-md);
+  }
+  
+  .confirmation-actions {
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+  
+  .btn-cancel,
+  .btn-confirm-leave {
+    width: 100%;
   }
 }
 

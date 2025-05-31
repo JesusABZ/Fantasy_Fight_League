@@ -18,6 +18,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Calendar;
 import java.util.HashMap;
@@ -30,6 +32,8 @@ import java.util.Optional;
 @RequestMapping("/api")
 public class LeagueController {
     
+	private static final Logger logger = LoggerFactory.getLogger(AdminController.class);
+	 
     @Autowired
     private LeagueService leagueService;
     
@@ -229,13 +233,45 @@ public class LeagueController {
                 return ResponseEntity.badRequest().body(new MessageResponseDTO("No eres miembro de esta liga"));
             }
             
-            if (league.getCreator().getId().equals(user.getId())) {
-                return ResponseEntity.badRequest().body(new MessageResponseDTO("El creador no puede abandonar su propia liga"));
+            // 🔥 CAMBIO PRINCIPAL: Remover la restricción del creador para ligas privadas
+            boolean isCreator = league.getCreator().getId().equals(user.getId());
+            boolean isPrivateLeague = "PRIVATE".equals(league.getType());
+            boolean isPublicLeague = "PUBLIC".equals(league.getType());
+            
+            // Solo prevenir que el creador salga de ligas PÚBLICAS
+            if (isCreator && isPublicLeague) {
+                return ResponseEntity.badRequest()
+                    .body(new MessageResponseDTO("El creador no puede abandonar una liga pública"));
             }
             
-            leagueService.leaveLeague(league, user);
-            return ResponseEntity.ok(new MessageResponseDTO("Has abandonado la liga: " + league.getName()));
+            logger.info("Usuario {} intentando salir de liga {} (tipo: {}, es creador: {})", 
+                       user.getUsername(), league.getName(), league.getType(), isCreator);
+            
+            // Proceder con la salida de la liga
+            League updatedLeague = leagueService.leaveLeague(league, user);
+            
+            // Verificar si la liga fue desactivada (quedó vacía)
+            if (!updatedLeague.isActive()) {
+                logger.info("Liga {} fue desactivada por quedarse sin miembros", league.getName());
+                return ResponseEntity.ok(new MessageResponseDTO(
+                    "Has salido de la liga '" + league.getName() + "'. " +
+                    "La liga ha sido eliminada automáticamente por quedarse sin miembros."
+                ));
+            } else {
+                // Mensaje especial si el creador sale de su liga privada
+                String message;
+                if (isCreator && isPrivateLeague) {
+                    message = "Has salido de tu liga privada '" + league.getName() + "'. " +
+                             "Los demás miembros pueden continuar participando.";
+                } else {
+                    message = "Has abandonado la liga: " + league.getName();
+                }
+                
+                return ResponseEntity.ok(new MessageResponseDTO(message));
+            }
+            
         } catch (Exception e) {
+            logger.error("Error al salir de la liga {}: {}", leagueId, e.getMessage(), e);
             return ResponseEntity.badRequest().body(new MessageResponseDTO("Error: " + e.getMessage()));
         }
     }

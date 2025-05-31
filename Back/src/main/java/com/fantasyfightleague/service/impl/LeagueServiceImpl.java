@@ -1,4 +1,4 @@
-// Crear: src/main/java/com/fantasyfightleague/service/impl/LeagueServiceImpl.java
+// Actualizar: src/main/java/com/fantasyfightleague/service/impl/LeagueServiceImpl.java
 package com.fantasyfightleague.service.impl;
 
 import com.fantasyfightleague.model.Event;
@@ -6,8 +6,11 @@ import com.fantasyfightleague.model.League;
 import com.fantasyfightleague.model.User;
 import com.fantasyfightleague.repository.LeagueRepository;
 import com.fantasyfightleague.service.LeagueService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Calendar;
 import java.util.Date;
@@ -17,6 +20,8 @@ import java.util.UUID;
 
 @Service
 public class LeagueServiceImpl implements LeagueService {
+    
+    private static final Logger logger = LoggerFactory.getLogger(LeagueServiceImpl.class);
     
     private final LeagueRepository leagueRepository;
     
@@ -36,7 +41,7 @@ public class LeagueServiceImpl implements LeagueService {
         
         // Las ligas públicas se eliminan automáticamente 2 días después del evento
         Calendar cal = Calendar.getInstance();
-        cal.setTime(event.getEndDate()); // ✅ CAMBIO AQUÍ
+        cal.setTime(event.getEndDate());
         cal.add(Calendar.DAY_OF_MONTH, 2);
         league.setAutoDeleteDate(cal.getTime());
         
@@ -100,11 +105,39 @@ public class LeagueServiceImpl implements LeagueService {
         return league;
     }
     
+    // 🆕 MÉTODO MEJORADO: Ahora maneja la eliminación automática de ligas privadas vacías
     @Override
+    @Transactional
     public League leaveLeague(League league, User user) {
         if (isUserInLeague(league, user)) {
+            logger.info("Usuario {} saliendo de la liga {} ({})", 
+                       user.getUsername(), league.getName(), league.getType());
+            
+            // Remover el usuario de la liga
             league.removeMember(user);
-            return leagueRepository.save(league);
+            
+            // 🔥 NUEVO: Verificar si la liga privada se quedó sin miembros
+            if ("PRIVATE".equals(league.getType()) && league.getMembers().isEmpty()) {
+                logger.info("Liga privada {} se quedó sin miembros, eliminando...", league.getName());
+                
+                // Marcar como inactiva en lugar de eliminar físicamente por integridad referencial
+                league.setActive(false);
+                
+                // Opcional: También podríamos eliminar físicamente si no hay dependencias
+                // leagueRepository.delete(league);
+                
+                League savedLeague = leagueRepository.save(league);
+                logger.info("Liga privada {} marcada como inactiva", league.getName());
+                
+                return savedLeague;
+            } else {
+                // Liga aún tiene miembros, solo guardar
+                League savedLeague = leagueRepository.save(league);
+                logger.info("Usuario {} removido de la liga {}. Miembros restantes: {}", 
+                           user.getUsername(), league.getName(), savedLeague.getMembers().size());
+                
+                return savedLeague;
+            }
         }
         return league;
     }
@@ -131,6 +164,31 @@ public class LeagueServiceImpl implements LeagueService {
     @Override
     public List<League> findExpiredPublicLeagues() {
         return leagueRepository.findByTypeAndActiveTrueAndAutoDeleteDateBefore("PUBLIC", new Date());
+    }
+    
+    // 🆕 NUEVO MÉTODO: Encontrar ligas privadas vacías para limpieza
+    public List<League> findEmptyPrivateLeagues() {
+        List<League> allPrivateLeagues = leagueRepository.findByTypeAndActiveTrue("PRIVATE");
+        return allPrivateLeagues.stream()
+                .filter(league -> league.getMembers().isEmpty())
+                .toList();
+    }
+    
+    // 🆕 NUEVO MÉTODO: Limpiar ligas privadas vacías
+    @Transactional
+    public int cleanupEmptyPrivateLeagues() {
+        List<League> emptyLeagues = findEmptyPrivateLeagues();
+        int cleanedCount = 0;
+        
+        for (League league : emptyLeagues) {
+            logger.info("Limpiando liga privada vacía: {}", league.getName());
+            league.setActive(false);
+            leagueRepository.save(league);
+            cleanedCount++;
+        }
+        
+        logger.info("Limpiadas {} ligas privadas vacías", cleanedCount);
+        return cleanedCount;
     }
     
     @Override
