@@ -485,19 +485,59 @@ export default {
     const loadPublicLeagues = async () => {
       isLoadingPublicLeagues.value = true
       try {
-        const leagues = await leaguesService.getPublicLeagues()
+        console.log('🔄 Cargando ligas públicas...')
         
+        // 1. Obtener todas las ligas públicas del servidor
+        const leagues = await leaguesService.getPublicLeagues()
+        console.log('📊 Ligas públicas obtenidas del servidor:', leagues.length)
+        
+        // 2. 🆕 MEJORADO: Filtrar ligas donde ya soy miembro usando IDs
         const myLeagueIds = myLeagues.value.map(league => league.id)
-        const filteredLeagues = leagues.filter(league => !myLeagueIds.includes(league.id))
+        console.log('🔍 Mis ligas actuales (IDs):', myLeagueIds)
+        
+        const filteredLeagues = leagues.filter(league => {
+          const isNotMember = !myLeagueIds.includes(league.id)
+          if (!isNotMember) {
+            console.log(`⚠️ Liga ${league.name} (ID: ${league.id}) filtrada - ya soy miembro`)
+          }
+          return isNotMember
+        })
         
         publicLeagues.value = filteredLeagues
-        console.log('🔍 Ligas públicas cargadas (filtradas):', filteredLeagues.length)
+        console.log('✅ Ligas públicas cargadas y filtradas:', filteredLeagues.length)
+        
+        // 3. 🆕 DEBUG: Mostrar qué ligas están disponibles
+        if (filteredLeagues.length > 0) {
+          console.log('📋 Ligas públicas disponibles:', 
+            filteredLeagues.map(league => `${league.name} (ID: ${league.id})`))
+        } else {
+          console.log('ℹ️ No hay ligas públicas disponibles para unirse')
+        }
+        
       } catch (error) {
-        console.error('Error al cargar ligas públicas:', error)
+        console.error('❌ Error al cargar ligas públicas:', error)
         showFloatingNotification('error', 'Error al cargar ligas públicas')
+        publicLeagues.value = [] // Limpiar en caso de error
       } finally {
         isLoadingPublicLeagues.value = false
       }
+    }
+
+    // 🆕 OPCIONAL: Función helper para refrescar solo las ligas públicas
+    const refreshPublicLeagues = async () => {
+      console.log('🔄 Refrescando ligas públicas...')
+      await loadPublicLeagues()
+    }
+
+    // 🆕 OPCIONAL: Función para verificar si una liga específica ya no debería estar en públicas
+    const checkAndRemoveLeagueFromPublic = (leagueId) => {
+      const wasRemoved = publicLeagues.value.some(league => league.id === leagueId)
+      if (wasRemoved) {
+        publicLeagues.value = publicLeagues.value.filter(league => league.id !== leagueId)
+        console.log(`✅ Liga ${leagueId} removida de lista pública`)
+        return true
+      }
+      return false
     }
 
     // Funciones de acción
@@ -530,6 +570,7 @@ export default {
     }
 
     const joinPublicLeague = async (league) => {
+      // Verificar si ya es miembro
       const alreadyMember = myLeagues.value.some(myLeague => myLeague.id === league.id)
       if (alreadyMember) {
         showFloatingNotification('error', 'Ya eres miembro de esta liga')
@@ -538,24 +579,64 @@ export default {
       
       isJoiningPublic.value = league.id
       try {
+        console.log('🔄 Uniéndose a liga pública:', league.name)
+        
+        // 1. Llamar al API para unirse
         const response = await leaguesService.joinPublicLeague(league.id)
+        
+        // 2. 🆕 INMEDIATAMENTE remover la liga de la lista pública ANTES de recargar datos
+        publicLeagues.value = publicLeagues.value.filter(pubLeague => pubLeague.id !== league.id)
+        console.log('✅ Liga removida inmediatamente de la lista pública')
+        
+        // 3. Mostrar notificación de éxito
         showFloatingNotification('success', `¡Te has unido a ${league.name}!`)
         
-        await Promise.all([
-          loadMyLeagues(),
-          loadPublicLeagues()
-        ])
+        // 4. 🆕 OPCIONAL: Agregar inmediatamente la liga a "Mis Ligas" sin esperar la recarga
+        // Esto da feedback visual instantáneo al usuario
+        const newMyLeague = {
+          ...league,
+          userPosition: null,
+          userPoints: 0,
+          memberCount: (league.memberCount || 0) + 1 // Incrementar el contador
+        }
+        myLeagues.value.push(newMyLeague)
+        console.log('✅ Liga agregada inmediatamente a "Mis Ligas"')
+        
+        // 5. Recargar datos en segundo plano para obtener datos actualizados del servidor
+        // Esto es para sincronizar con el servidor y obtener datos completos
+        setTimeout(async () => {
+          try {
+            await loadMyLeagues() // Esto actualizará con datos reales del servidor
+            console.log('🔄 Datos de "Mis Ligas" sincronizados con el servidor')
+          } catch (error) {
+            console.error('Error al sincronizar "Mis Ligas":', error)
+            // Si falla la sincronización, al menos el usuario ya ve el cambio visual
+          }
+        }, 500) // Pequeño delay para que el usuario vea el cambio inmediato
+        
       } catch (error) {
-        console.error('Error al unirse a liga pública:', error)
+        console.error('❌ Error al unirse a liga pública:', error)
+        
+        // 🆕 Si hay error, REVERTIR los cambios visuales
+        // Esto es importante para mantener la UI consistente
         
         if (error.message.includes('miembro') || error.message.includes('member')) {
           showFloatingNotification('error', 'Ya eres miembro de esta liga')
+          
+          // Recargar ambas listas para sincronizar estado
           await Promise.all([
             loadMyLeagues(),
             loadPublicLeagues()
           ])
         } else {
           showFloatingNotification('error', error.message || 'Error al unirse a la liga')
+          
+          // 🆕 Si la liga fue removida visualmente pero falló la unión, restaurarla
+          const leagueWasRemoved = !publicLeagues.value.some(pubLeague => pubLeague.id === league.id)
+          if (leagueWasRemoved) {
+            publicLeagues.value.push(league)
+            console.log('🔄 Liga restaurada en lista pública tras error')
+          }
         }
       } finally {
         isJoiningPublic.value = null
