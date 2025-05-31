@@ -8,11 +8,11 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
   const isLoading = ref(false)
   const error = ref(null)
+  const isInitialized = ref(false) // ✅ NUEVO: Para saber si ya se inicializó
 
   // Getters (computed)
   const isAuthenticated = computed(() => !!user.value)
   const userRoles = computed(() => {
-    // 🔥 CORRECCIÓN: Verificar que roles sea un array antes de procesarlo
     if (!user.value?.roles || !Array.isArray(user.value.roles)) {
       return []
     }
@@ -20,6 +20,11 @@ export const useAuthStore = defineStore('auth', () => {
   })
   const isAdmin = computed(() => userRoles.value.includes('ROLE_ADMIN'))
   const isEmailConfirmed = computed(() => user.value?.emailConfirmed || false)
+
+  // ✅ NUEVO: Computed para verificar si el usuario puede acceder a áreas protegidas
+  const canAccessProtectedRoutes = computed(() => {
+    return isAuthenticated.value && isEmailConfirmed.value
+  })
 
   // Actions
   async function login(credentials) {
@@ -40,7 +45,7 @@ export const useAuthStore = defineStore('auth', () => {
           username: response.username,
           email: response.email,
           emailConfirmed: response.emailConfirmed,
-          roles: Array.isArray(response.roles) ? response.roles : [], // 🔥 SEGURIDAD: Asegurar que roles sea array
+          roles: Array.isArray(response.roles) ? response.roles : [],
           // Agregar datos del perfil
           firstName: userProfile.firstName,
           lastName: userProfile.lastName,
@@ -55,10 +60,11 @@ export const useAuthStore = defineStore('auth', () => {
           username: response.username,
           email: response.email,
           emailConfirmed: response.emailConfirmed,
-          roles: Array.isArray(response.roles) ? response.roles : [] // 🔥 SEGURIDAD: Asegurar que roles sea array
+          roles: Array.isArray(response.roles) ? response.roles : []
         }
       }
       
+      console.log('✅ Usuario logueado:', user.value)
       return response
     } catch (err) {
       error.value = err.message
@@ -95,14 +101,13 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  // 🔥 FUNCIÓN CORREGIDA - logout ahora SÍ llama al endpoint del backend
   async function logout() {
     isLoading.value = true
     
     try {
       console.log('🔄 Iniciando logout...')
       
-      // ✅ LLAMAR al endpoint de logout del backend
+      // Llamar al endpoint de logout del backend
       await authService.logout()
       console.log('✅ Logout exitoso en el backend')
       
@@ -110,7 +115,7 @@ export const useAuthStore = defineStore('auth', () => {
       console.error('❌ Error durante logout en backend:', err)
       // Continuar con la limpieza local aunque falle el backend
     } finally {
-      // ✅ SIEMPRE limpiar estado local independientemente del resultado del backend
+      // Siempre limpiar estado local independientemente del resultado del backend
       console.log('🧹 Limpiando estado local...')
       user.value = null
       error.value = null
@@ -161,30 +166,76 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
   }
 
-  // Inicializar el estado cuando se carga la app
+  // ✅ MEJORADO: Inicializar el estado cuando se carga la app
   async function initializeAuth() {
-    // Verificar si hay un token guardado
-    if (authService.isAuthenticated()) {
-      console.log('Usuario previamente autenticado encontrado')
-      
-      // Intentar recuperar el perfil del usuario
-      try {
-        const { userService } = await import('../api/userService.js')
-        const userProfile = await userService.getProfile()
-        
-        // 🔥 SEGURIDAD: Asegurar que roles sea un array
-        if (userProfile.roles && !Array.isArray(userProfile.roles)) {
-          userProfile.roles = []
-        }
-        
-        user.value = userProfile
-        console.log('Perfil de usuario recuperado:', userProfile)
-      } catch (error) {
-        console.warn('No se pudo recuperar el perfil del usuario:', error)
-        // Si falla, limpiar el token porque probablemente expiró
-        authService.clearAuthToken()
-      }
+    if (isInitialized.value) {
+      console.log('🔄 Auth ya inicializado, omitiendo...')
+      return
     }
+
+    console.log('🚀 Inicializando autenticación...')
+    isLoading.value = true
+    
+    try {
+      // Verificar si hay un token guardado
+      if (authService.isAuthenticated()) {
+        console.log('🔑 Token encontrado, verificando validez...')
+        
+        // Intentar recuperar el perfil del usuario para validar el token
+        try {
+          const { userService } = await import('../api/userService.js')
+          const userProfile = await userService.getProfile()
+          
+          // Asegurar que roles sea un array
+          if (userProfile.roles && !Array.isArray(userProfile.roles)) {
+            userProfile.roles = []
+          }
+          
+          user.value = userProfile
+          console.log('✅ Usuario autenticado recuperado:', userProfile.username)
+        } catch (error) {
+          console.warn('❌ Token inválido o expirado:', error.message)
+          // Si falla, limpiar el token porque probablemente expiró
+          authService.clearAuthToken()
+          user.value = null
+        }
+      } else {
+        console.log('ℹ️ No hay token de autenticación')
+        user.value = null
+      }
+    } catch (error) {
+      console.error('💥 Error al inicializar autenticación:', error)
+      user.value = null
+    } finally {
+      isLoading.value = false
+      isInitialized.value = true
+      console.log('🏁 Inicialización de auth completada')
+    }
+  }
+
+  // ✅ NUEVO: Función para verificar si el usuario puede acceder a una ruta
+  function canAccessRoute(routeMeta) {
+    // Si no requiere autenticación, permitir acceso
+    if (!routeMeta.requiresAuth) {
+      return true
+    }
+
+    // Si requiere autenticación pero no está autenticado
+    if (!isAuthenticated.value) {
+      return false
+    }
+
+    // Si requiere email verificado pero no lo está
+    if (routeMeta.requiresEmailVerified && !isEmailConfirmed.value) {
+      return false
+    }
+
+    // Si es una ruta solo para invitados y está autenticado
+    if (routeMeta.requiresGuest && isAuthenticated.value) {
+      return false
+    }
+
+    return true
   }
 
   return {
@@ -192,12 +243,14 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     isLoading,
     error,
+    isInitialized, // ✅ NUEVO
     
     // Getters
     isAuthenticated,
     userRoles,
     isAdmin,
     isEmailConfirmed,
+    canAccessProtectedRoutes, // ✅ NUEVO
     
     // Actions
     login,
@@ -206,6 +259,7 @@ export const useAuthStore = defineStore('auth', () => {
     confirmEmail,
     resendVerificationEmail,
     clearError,
-    initializeAuth
+    initializeAuth,
+    canAccessRoute // ✅ NUEVO
   }
 })
