@@ -6,201 +6,233 @@
       <div class="background-overlay"></div>
     </div>
 
-    <!-- Header -->
-    <div class="picks-header">
-      <div class="container">
-        <div class="header-content">
-          <button class="btn btn-back" @click="goBack">
-            ← Volver a Liga
-          </button>
-          
-          <div class="event-info">
-            <h1 class="event-name">{{ currentEvent.name }}</h1>
-            <p class="event-details">{{ formatDate(currentEvent.date) }} • {{ currentEvent.location }}</p>
-          </div>
-          
-          <div class="league-info-small">
-            <span class="league-name-small">{{ currentLeague.name }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Panel de estado del presupuesto -->
-    <div class="budget-panel">
-      <div class="container">
-        <div class="budget-content">
-          <div class="budget-info">
-            <div class="budget-item">
-              <span class="budget-label">Presupuesto Total:</span>
-              <span class="budget-value total">${{ formatMoney(totalBudget) }}</span>
-            </div>
-            <div class="budget-item">
-              <span class="budget-label">Gastado:</span>
-              <span class="budget-value spent">${{ formatMoney(spentBudget) }}</span>
-            </div>
-            <div class="budget-item">
-              <span class="budget-label">Disponible:</span>
-              <span class="budget-value available" :class="{ 'low': availableBudget < 20000, 'empty': availableBudget <= 0 }">
-                ${{ formatMoney(availableBudget) }}
-              </span>
-            </div>
-          </div>
-          <div class="picks-count">
-            <span class="picks-label">Luchadores seleccionados:</span>
-            <span class="picks-value" :class="{ 'max': selectedFighters.length >= maxFighters }">
-              {{ selectedFighters.length }}/{{ maxFighters }}
-            </span>
-          </div>
-        </div>
+    <!-- Loading overlay -->
+    <div v-if="isLoadingLeague || isLoadingEvent || isLoadingFighters" class="loading-overlay">
+      <div class="loading-content">
+        <div class="loading-spinner">⏳</div>
+        <h3 class="loading-title">Cargando datos del evento...</h3>
+        <p class="loading-text">
+          <span v-if="isLoadingLeague">Cargando liga...</span>
+          <span v-else-if="isLoadingEvent">Cargando evento...</span>
+          <span v-else-if="isLoadingFighters">Cargando luchadores...</span>
+        </p>
       </div>
     </div>
 
     <!-- Contenido principal -->
-    <div class="main-content">
-      <div class="container">
-        <div class="picks-layout">
-          
-          <!-- Panel izquierdo: Tus picks actuales -->
-          <div class="selected-picks-panel">
-            <div class="panel-header">
-              <h2 class="panel-title">🎯 Tus Picks</h2>
-              <span class="panel-subtitle">Luchadores seleccionados para este evento</span>
+    <div v-else class="content-wrapper">
+      <!-- Header -->
+      <div class="picks-header">
+        <div class="container">
+          <div class="header-content">
+            <button class="btn btn-back" @click="goBack">
+              ← Volver a Liga
+            </button>
+            
+            <div class="event-info">
+              <h1 class="event-name">{{ currentEvent?.name || 'Cargando evento...' }}</h1>
+              <p v-if="currentEvent?.startDate" class="event-details">
+                {{ formatDate(currentEvent.startDate) }} • {{ currentEvent.location || 'TBD' }}
+              </p>
             </div>
             
-            <div class="selected-picks-container">
-              <!-- Lista de luchadores seleccionados -->
-              <div v-if="selectedFighters.length > 0" class="selected-fighters-list">
-                <div 
-                  v-for="fighter in selectedFighters" 
-                  :key="fighter.id"
-                  class="selected-fighter-card"
-                >
-                  <div class="fighter-avatar-section">
-                    <div class="fighter-avatar">
-                      <img v-if="fighter.imageUrl" :src="fighter.imageUrl" :alt="fighter.name" />
-                      <span v-else class="fighter-initials">{{ getFighterInitials(fighter.name) }}</span>
-                    </div>
-                  </div>
-                  
-                  <div class="fighter-info-section">
-                    <h4 class="fighter-name">{{ fighter.name }}</h4>
-                    <div class="fighter-record">{{ fighter.record }}</div>
-                    <div class="fighter-badges">
-                      <span class="weight-class-badge">{{ fighter.weightClass }}</span>
-                      <span class="fight-type-badge">{{ fighter.fightType }}</span>
-                    </div>
-                  </div>
-                  
-                  <div class="fighter-actions-section">
-                    <div class="fighter-cost">${{ formatMoney(fighter.cost) }}</div>
-                    <button 
-                      class="btn-remove" 
-                      @click="removeFighter(fighter)"
-                      title="Quitar luchador"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Estado vacío -->
-              <div v-else class="empty-picks">
-                <div class="empty-icon">🥊</div>
-                <h3 class="empty-title">No hay luchadores seleccionados</h3>
-                <p class="empty-description">Elige hasta {{ maxFighters }} luchadores de la lista</p>
-              </div>
+            <div class="league-info-small">
+              <span class="league-name-small">{{ currentLeague?.name || 'Cargando...' }}</span>
             </div>
           </div>
+        </div>
+      </div>
 
-          <!-- Panel derecho: Luchadores disponibles -->
-          <div class="available-fighters-panel">
-            <div class="panel-header">
-              <h2 class="panel-title">⚔️ Luchadores Disponibles</h2>
+      <!-- Panel de estado del presupuesto -->
+      <div class="budget-panel">
+        <div class="container">
+          <div class="budget-content">
+            <div class="budget-info">
+              <div class="budget-item">
+                <span class="budget-label">Presupuesto Total:</span>
+                <span class="budget-value total">${{ formatMoney(totalBudget) }}</span>
+              </div>
+              <div class="budget-item">
+                <span class="budget-label">Gastado:</span>
+                <span class="budget-value spent">${{ formatMoney(spentBudget) }}</span>
+              </div>
+              <div class="budget-item">
+                <span class="budget-label">Disponible:</span>
+                <span class="budget-value available" :class="{ 'low': availableBudget < 20000, 'empty': availableBudget <= 0 }">
+                  ${{ formatMoney(availableBudget) }}
+                </span>
+              </div>
             </div>
+            <div class="picks-count">
+              <span class="picks-label">Luchadores seleccionados:</span>
+              <span class="picks-value" :class="{ 'max': selectedFighters.length >= maxFighters }">
+                {{ selectedFighters.length }}/{{ maxFighters }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contenido principal -->
+      <div class="main-content">
+        <div class="container">
+          <div class="picks-layout">
             
-            <div class="available-fighters-container">
-              <div class="fighters-list">
-                <div 
-                  v-for="fighter in filteredAvailableFighters" 
-                  :key="fighter.id"
-                  class="fighter-card"
-                  :class="{ 
-                    'selected': isSelected(fighter.id),
-                    'too-expensive': !canAfford(fighter.cost),
-                    'max-reached': selectedFighters.length >= maxFighters && !isSelected(fighter.id)
-                  }"
-                  @click="toggleFighter(fighter)"
-                >
-                  <div class="fighter-main-info">
-                    <div class="fighter-avatar">
-                      <img v-if="fighter.imageUrl" :src="fighter.imageUrl" :alt="fighter.name" />
-                      <span v-else class="fighter-initials">{{ getFighterInitials(fighter.name) }}</span>
+            <!-- Panel izquierdo: Tus picks actuales -->
+            <div class="selected-picks-panel">
+              <div class="panel-header">
+                <h2 class="panel-title">🎯 Tus Picks</h2>
+                <span class="panel-subtitle">Luchadores seleccionados para este evento</span>
+              </div>
+              
+              <div class="selected-picks-container">
+                <!-- Loading de picks existentes -->
+                <div v-if="isLoadingPick" class="loading-picks">
+                  <div class="loading-spinner-small">⏳</div>
+                  <p>Cargando tus picks...</p>
+                </div>
+                
+                <!-- Lista de luchadores seleccionados -->
+                <div v-else-if="selectedFighters.length > 0" class="selected-fighters-list">
+                  <div 
+                    v-for="fighter in selectedFighters" 
+                    :key="fighter.id"
+                    class="selected-fighter-card"
+                  >
+                    <div class="fighter-avatar-section">
+                      <div class="fighter-avatar">
+                        <img v-if="fighter.imageUrl" :src="fighter.imageUrl" :alt="fighter.name" />
+                        <span v-else class="fighter-initials">{{ getFighterInitials(fighter.name) }}</span>
+                      </div>
                     </div>
-                    <div class="fighter-details">
+                    
+                    <div class="fighter-info-section">
                       <h4 class="fighter-name">{{ fighter.name }}</h4>
-                      <p class="fighter-record">{{ fighter.record }}</p>
-                      <div class="fighter-meta">
-                        <span class="weight-class">{{ fighter.weightClass }}</span>
-                        <span class="fight-type">{{ fighter.fightType }}</span>
+                      <div class="fighter-record">{{ fighter.record }}</div>
+                      <div class="fighter-nationality">🌍 {{ fighter.nationality }}</div>
+                      <div class="fighter-badges">
+                        <span class="weight-class-badge">{{ fighter.weightClass }}</span>
+                        <span class="fight-type-badge">{{ fighter.fightType }}</span>
+                      </div>
+                    </div>
+                    
+                    <div class="fighter-actions-section">
+                      <div class="fighter-cost">${{ formatMoney(fighter.price || fighter.cost) }}</div>
+                      <button 
+                        class="btn-remove" 
+                        @click="removeFighter(fighter)"
+                        title="Quitar luchador"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Estado vacío -->
+                <div v-else class="empty-picks">
+                  <div class="empty-icon">🥊</div>
+                  <h3 class="empty-title">No hay luchadores seleccionados</h3>
+                  <p class="empty-description">Elige entre {{ minFighters }} y {{ maxFighters }} luchadores de la lista</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Panel derecho: Luchadores disponibles -->
+            <div class="available-fighters-panel">
+              <div class="panel-header">
+                <h2 class="panel-title">⚔️ Luchadores Disponibles</h2>
+                <span class="panel-subtitle">{{ filteredAvailableFighters.length }} luchadores en esta cartelera</span>
+              </div>
+              
+              <div class="available-fighters-container">
+                <div v-if="filteredAvailableFighters.length > 0" class="fighters-list">
+                  <div 
+                    v-for="fighter in filteredAvailableFighters" 
+                    :key="fighter.id"
+                    class="fighter-card"
+                    :class="{ 
+                      'selected': isSelected(fighter.id),
+                      'too-expensive': !canAfford(fighter.price || fighter.cost),
+                      'max-reached': selectedFighters.length >= maxFighters && !isSelected(fighter.id)
+                    }"
+                    @click="toggleFighter(fighter)"
+                  >
+                    <div class="fighter-main-info">
+                      <div class="fighter-avatar">
+                        <img v-if="fighter.imageUrl" :src="fighter.imageUrl" :alt="fighter.name" />
+                        <span v-else class="fighter-initials">{{ getFighterInitials(fighter.name) }}</span>
+                      </div>
+                      <div class="fighter-details">
+                        <h4 class="fighter-name">{{ fighter.name }}</h4>
+                        <p class="fighter-record">{{ fighter.record }}</p>
+                        <p class="fighter-nationality">🌍 {{ fighter.nationality }}</p>
+                        <div class="fighter-meta">
+                          <span class="weight-class">{{ fighter.weightClass }}</span>
+                          <span class="fight-type">{{ fighter.fightType }}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="fighter-selection">
+                      <div class="fighter-cost">
+                        <span class="cost-amount">${{ formatMoney(fighter.price || fighter.cost) }}</span>
+                      </div>
+                      <div class="selection-indicator">
+                        <span v-if="isSelected(fighter.id)" class="selected-check">✓</span>
+                        <span v-else-if="!canAfford(fighter.price || fighter.cost)" class="too-expensive-icon">💰</span>
+                        <span v-else-if="selectedFighters.length >= maxFighters" class="max-reached-icon">🚫</span>
+                        <span v-else class="add-icon">+</span>
                       </div>
                     </div>
                   </div>
-                  
-                  <div class="fighter-selection">
-                    <div class="fighter-cost">
-                      <span class="cost-amount">${{ formatMoney(fighter.cost) }}</span>
-                    </div>
-                    <div class="selection-indicator">
-                      <span v-if="isSelected(fighter.id)" class="selected-check">✓</span>
-                      <span v-else-if="!canAfford(fighter.cost)" class="too-expensive-icon">💰</span>
-                      <span v-else-if="selectedFighters.length >= maxFighters" class="max-reached-icon">🚫</span>
-                      <span v-else class="add-icon">+</span>
-                    </div>
-                  </div>
+                </div>
+                
+                <!-- Estado sin luchadores -->
+                <div v-else class="no-fighters">
+                  <div class="no-fighters-icon">🔍</div>
+                  <h3 class="no-fighters-title">No se encontraron luchadores</h3>
+                  <p class="no-fighters-description">No hay luchadores disponibles para este evento</p>
                 </div>
               </div>
-              
-              <!-- Estado de carga o sin resultados -->
-              <div v-if="filteredAvailableFighters.length === 0" class="no-fighters">
-                <div class="no-fighters-icon">🔍</div>
-                <h3 class="no-fighters-title">No se encontraron luchadores</h3>
-                <p class="no-fighters-description">Intenta cambiar los filtros de búsqueda</p>
-              </div>
             </div>
-          </div>
 
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Panel de acciones flotante -->
-    <div class="floating-actions">
-      <div class="container">
-        <div class="actions-content">
-          <div class="picks-summary">
-            <span class="summary-text">
-              {{ selectedFighters.length }} de {{ maxFighters }} luchadores • 
-              ${{ formatMoney(spentBudget) }} gastado
-            </span>
-          </div>
-          <div class="action-buttons">
-            <button 
-              class="btn btn-cancel"
-              @click="cancelChanges"
-            >
-              Cancelar
-            </button>
-            <button 
-              class="btn btn-save"
-              :disabled="!canSavePicks"
-              :class="{ 'disabled': !canSavePicks }"
-              @click="savePicks"
-            >
-              <span v-if="isSaving">Guardando...</span>
-              <span v-else>💾 Guardar Picks</span>
-            </button>
+      <!-- Panel de acciones flotante -->
+      <div class="floating-actions">
+        <div class="container">
+          <div class="actions-content">
+            <div class="picks-summary">
+              <span class="summary-text">
+                {{ selectedFighters.length }} de {{ maxFighters }} luchadores • 
+                ${{ formatMoney(spentBudget) }} gastado
+                <span v-if="hasChanges" class="changes-indicator">• Cambios sin guardar</span>
+              </span>
+            </div>
+            <div class="action-buttons">
+              <button 
+                class="btn btn-cancel"
+                @click="cancelChanges"
+                :disabled="isSaving"
+              >
+                Cancelar
+              </button>
+              <button 
+                class="btn btn-save"
+                :disabled="!canSavePicks"
+                :class="{ 'disabled': !canSavePicks }"
+                @click="savePicks"
+              >
+                <span v-if="isSaving">
+                  <span class="loading-spinner-inline">⏳</span>
+                  Guardando...
+                </span>
+                <span v-else>💾 Guardar Picks</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -219,311 +251,23 @@
 </template>
 
 <script>
-import { ref, reactive, computed, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { onMounted } from 'vue'
+import { usePicksSelection } from '../composables/usePicksSelection.js'
 
 export default {
   name: 'PicksSelectionView',
   setup() {
-    const router = useRouter()
-    const route = useRoute()
-    
-    // Estados principales
-    const isSaving = ref(false)
-    const showNotification = ref(false)
-    const notificationType = ref('success')
-    const notificationText = ref('')
+    // Usar el composable que maneja toda la lógica
+    const picksSelection = usePicksSelection()
 
-    // Configuración de la liga y evento
-    const currentLeague = reactive({
-      id: 1,
-      name: 'Liga Oficina',
-      maxFighters: 3,
-      budget: 100000
-    })
-
-    const currentEvent = reactive({
-      id: 1,
-      name: 'UFC Vegas 107',
-      date: '2025-05-31',
-      location: 'Las Vegas, Nevada'
-    })
-
-    // Presupuesto
-    const totalBudget = ref(100000)
-    const maxFighters = ref(3)
-
-    // Luchadores seleccionados actualmente
-    const selectedFighters = ref([
-      {
-        id: 1,
-        name: 'Jon Jones',
-        record: '27-1',
-        cost: 75000,
-        weightClass: 'Heavyweight',
-        fightType: 'Main Event',
-        imageUrl: 'https://dynl.mktgcdn.com/p/xnYGAGWMpbap_gSsJDIFPvBDPsTv5j_W3V0gCeAFyIQ/200x1.png'
-      },
-      {
-        id: 2,
-        name: 'Ilia Topuria',
-        record: '14-0',
-        cost: 65000,
-        weightClass: 'Featherweight',
-        fightType: 'Co-Main Event',
-        imageUrl: 'https://dynl.mktgcdn.com/p/jMTyWWXdzwWDaswQzek-X6JLObRd1otuQaU4KQZElfw/200x1.png'
-      }
-    ])
-
-    // Lista completa de luchadores disponibles para el evento
-    const availableFighters = ref([
-      {
-        id: 1,
-        name: 'Jon Jones',
-        record: '27-1',
-        cost: 75000,
-        weightClass: 'Heavyweight',
-        fightType: 'Main Event',
-        imageUrl: 'https://dynl.mktgcdn.com/p/xnYGAGWMpbap_gSsJDIFPvBDPsTv5j_W3V0gCeAFyIQ/200x1.png'
-      },
-      {
-        id: 2,
-        name: 'Ilia Topuria',
-        record: '14-0',
-        cost: 65000,
-        weightClass: 'Featherweight',
-        fightType: 'Co-Main Event',
-        imageUrl: 'https://dynl.mktgcdn.com/p/jMTyWWXdzwWDaswQzek-X6JLObRd1otuQaU4KQZElfw/200x1.png'
-      },
-      {
-        id: 3,
-        name: 'Ciryl Gane',
-        record: '11-2',
-        cost: 45000,
-        weightClass: 'Heavyweight',
-        fightType: 'Main Card'
-      },
-      {
-        id: 4,
-        name: 'Alexander Volkov',
-        record: '35-10',
-        cost: 35000,
-        weightClass: 'Heavyweight',
-        fightType: 'Main Card'
-      },
-      {
-        id: 5,
-        name: 'Sean O\'Malley',
-        record: '17-1',
-        cost: 55000,
-        weightClass: 'Bantamweight',
-        fightType: 'Main Card'
-      },
-      {
-        id: 6,
-        name: 'Marlon Vera',
-        record: '21-8',
-        cost: 40000,
-        weightClass: 'Bantamweight',
-        fightType: 'Main Card'
-      },
-      {
-        id: 7,
-        name: 'Islam Makhachev',
-        record: '25-1',
-        cost: 70000,
-        weightClass: 'Lightweight',
-        fightType: 'Main Card'
-      },
-      {
-        id: 8,
-        name: 'Charles Oliveira',
-        record: '34-9',
-        cost: 60000,
-        weightClass: 'Lightweight',
-        fightType: 'Main Card'
-      },
-      {
-        id: 9,
-        name: 'Leon Edwards',
-        record: '21-3',
-        cost: 50000,
-        weightClass: 'Welterweight',
-        fightType: 'Prelims'
-      },
-      {
-        id: 10,
-        name: 'Jorge Masvidal',
-        record: '35-16',
-        cost: 30000,
-        weightClass: 'Welterweight',
-        fightType: 'Prelims'
-      }
-    ])
-
-    // Computed properties
-    const spentBudget = computed(() => {
-      return selectedFighters.value.reduce((total, fighter) => total + fighter.cost, 0)
-    })
-
-    const availableBudget = computed(() => {
-      return totalBudget.value - spentBudget.value
-    })
-
-    const filteredAvailableFighters = computed(() => {
-      return availableFighters.value
-    })
-
-    const canSavePicks = computed(() => {
-      return selectedFighters.value.length >= 1 && 
-             selectedFighters.value.length <= maxFighters.value &&
-             spentBudget.value <= totalBudget.value
-    })
-
-    // Funciones
-    const formatMoney = (amount) => {
-      return new Intl.NumberFormat('en-US').format(amount)
-    }
-
-    const formatDate = (dateString) => {
-      const date = new Date(dateString)
-      return date.toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })
-    }
-
-    const getFighterInitials = (name) => {
-      return name.split(' ').map(word => word[0]).join('').toUpperCase()
-    }
-
-    const isSelected = (fighterId) => {
-      return selectedFighters.value.some(fighter => fighter.id === fighterId)
-    }
-
-    const canAfford = (cost) => {
-      return cost <= availableBudget.value
-    }
-
-    const addFighter = (fighter) => {
-      // Verificar si ya está seleccionado
-      if (isSelected(fighter.id)) return
-
-      // Verificar límite de luchadores
-      if (selectedFighters.value.length >= maxFighters.value) {
-        showFloatingNotification('error', `Solo puedes seleccionar ${maxFighters.value} luchadores`)
-        return
-      }
-
-      // Verificar presupuesto
-      if (!canAfford(fighter.cost)) {
-        showFloatingNotification('error', 'No tienes suficiente presupuesto para este luchador')
-        return
-      }
-
-      selectedFighters.value.push(fighter)
-      showFloatingNotification('success', `${fighter.name} agregado a tus picks`)
-    }
-
-    const removeFighter = (fighter) => {
-      const index = selectedFighters.value.findIndex(f => f.id === fighter.id)
-      if (index > -1) {
-        selectedFighters.value.splice(index, 1)
-        showFloatingNotification('info', `${fighter.name} removido de tus picks`)
-      }
-    }
-
-    const toggleFighter = (fighter) => {
-      if (isSelected(fighter.id)) {
-        removeFighter(fighter)
-      } else {
-        addFighter(fighter)
-      }
-    }
-
-    const savePicks = async () => {
-      if (!canSavePicks.value) return
-
-      isSaving.value = true
-
-      try {
-        // TODO: Conectar con backend
-        console.log('Guardando picks:', selectedFighters.value)
-        
-        // Simular llamada al API
-        await new Promise(resolve => setTimeout(resolve, 2000))
-        
-        showFloatingNotification('success', '¡Picks guardados correctamente!')
-        
-        // Ya NO redirigir, quedarse en la pantalla
-        // setTimeout(() => {
-        //   router.push(`/league/${currentLeague.id}`)
-        // }, 1500)
-        
-      } catch (error) {
-        showFloatingNotification('error', 'Error al guardar los picks. Inténtalo de nuevo.')
-      } finally {
-        isSaving.value = false
-      }
-    }
-
-    const cancelChanges = () => {
-      // TODO: Restaurar picks originales si había cambios
-      router.push(`/league/${currentLeague.id}`)
-    }
-
-    const goBack = () => {
-      router.push(`/league/${currentLeague.id}`)
-    }
-
-    const showFloatingNotification = (type, text) => {
-      notificationType.value = type
-      notificationText.value = text
-      showNotification.value = true
-      
-      setTimeout(() => {
-        hideNotification()
-      }, 3000)
-    }
-
-    const hideNotification = () => {
-      showNotification.value = false
-    }
-
-    // Cargar datos al montar
+    // Cargar datos cuando se monta el componente
     onMounted(() => {
-      // TODO: Cargar datos reales basándose en route.params
-      const leagueId = route.params.id
-      const eventId = route.params.eventId
-      console.log('Cargando picks para liga:', leagueId, 'evento:', eventId)
+      picksSelection.loadAllData()
     })
 
+    // Retornar todas las propiedades y funciones del composable
     return {
-      isSaving,
-      showNotification,
-      notificationType,
-      notificationText,
-      currentLeague,
-      currentEvent,
-      totalBudget,
-      maxFighters,
-      selectedFighters,
-      spentBudget,
-      availableBudget,
-      filteredAvailableFighters,
-      canSavePicks,
-      formatMoney,
-      formatDate,
-      getFighterInitials,
-      isSelected,
-      canAfford,
-      toggleFighter,
-      removeFighter,
-      savePicks,
-      cancelChanges,
-      goBack,
-      hideNotification
+      ...picksSelection
     }
   }
 }
@@ -575,6 +319,77 @@ export default {
     rgba(10, 10, 10, 0.95) 100%
   );
   backdrop-filter: blur(1px);
+}
+
+/* === LOADING OVERLAY === */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.loading-content {
+  text-align: center;
+  background: var(--gradient-card);
+  padding: var(--space-2xl);
+  border-radius: var(--radius-xl);
+  border: 2px solid rgba(255, 107, 53, 0.3);
+  backdrop-filter: blur(15px);
+  max-width: 400px;
+}
+
+.loading-spinner {
+  font-size: 3rem;
+  margin-bottom: var(--space-lg);
+  animation: spin 2s linear infinite;
+}
+
+.loading-title {
+  font-family: var(--font-impact);
+  font-size: 1.5rem;
+  color: var(--white);
+  margin-bottom: var(--space-md);
+  text-transform: uppercase;
+}
+
+.loading-text {
+  color: var(--gray-light);
+  font-size: 1rem;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* === LOADING PICKS === */
+.loading-picks {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2xl);
+  text-align: center;
+}
+
+.loading-spinner-small {
+  font-size: 2rem;
+  margin-bottom: var(--space-md);
+  animation: spin 1s linear infinite;
+}
+
+.loading-spinner-inline {
+  display: inline-block;
+  margin-right: var(--space-sm);
+  animation: spin 1s linear infinite;
 }
 
 /* === HEADER === */
@@ -863,6 +678,12 @@ export default {
   color: var(--gray-light);
   font-weight: 600;
   font-size: 1rem;
+  margin-bottom: var(--space-xs);
+}
+
+.fighter-nationality {
+  color: var(--gray-light);
+  font-size: 0.9rem;
   margin-bottom: var(--space-md);
 }
 
@@ -965,48 +786,6 @@ export default {
   flex-direction: column;
 }
 
-.panel-controls {
-  display: flex;
-  gap: var(--space-md);
-  margin-top: var(--space-md);
-}
-
-.panel-controls {
-  display: flex;
-  gap: var(--space-md);
-  margin-top: var(--space-md);
-}
-
-.search-input,
-.filter-select {
-  padding: var(--space-sm) var(--space-md);
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: var(--radius-md);
-  color: var(--white);
-  font-size: 0.9rem;
-  transition: all 0.3s ease;
-}
-
-.search-input {
-  flex: 1;
-}
-
-.filter-select {
-  min-width: 200px;
-}
-
-.search-input::placeholder {
-  color: var(--gray-light);
-}
-
-.search-input:focus,
-.filter-select:focus {
-  outline: none;
-  border-color: var(--primary);
-  background: rgba(255, 255, 255, 0.15);
-}
-
 .available-fighters-container {
   flex: 1;
   overflow-y: auto;
@@ -1107,6 +886,12 @@ export default {
   margin-bottom: var(--space-xs);
 }
 
+.fighter-nationality {
+  color: var(--gray-light);
+  font-size: 0.85rem;
+  margin-bottom: var(--space-xs);
+}
+
 .fighter-meta {
   display: flex;
   gap: var(--space-md);
@@ -1189,26 +974,6 @@ export default {
   font-size: 1.5rem;
 }
 
-.btn-remove {
-  background: transparent;
-  border: 1px solid var(--error);
-  color: var(--error);
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 0.8rem;
-  transition: all 0.3s ease;
-}
-
-.btn-remove:hover {
-  background: var(--error);
-  color: var(--white);
-}
-
 /* === SIN RESULTADOS === */
 .no-fighters {
   text-align: center;
@@ -1264,6 +1029,11 @@ export default {
   font-weight: 500;
 }
 
+.changes-indicator {
+  color: var(--warning);
+  font-weight: 600;
+}
+
 .action-buttons {
   display: flex;
   gap: var(--space-md);
@@ -1276,10 +1046,15 @@ export default {
   padding: var(--space-md) var(--space-xl);
 }
 
-.btn-cancel:hover {
+.btn-cancel:hover:not(:disabled) {
   color: var(--white);
   border-color: rgba(255, 255, 255, 0.4);
   background: rgba(255, 255, 255, 0.05);
+}
+
+.btn-cancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .btn-save {
@@ -1385,14 +1160,6 @@ export default {
 
   .budget-info {
     justify-content: center;
-  }
-
-  .panel-controls {
-    flex-direction: column;
-  }
-
-  .filter-select {
-    min-width: auto;
   }
 }
 
