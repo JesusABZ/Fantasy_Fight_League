@@ -2,8 +2,8 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../store/auth.js'
-import { leagueDetailService, eventsService, leaderboardService, leaguesService } from '../api/index.js'
 import { useDateFormatter } from './useDateFormatter.js'
+import { leagueDetailService, eventsService, leaderboardService, leaguesService, picksService } from '../api/index.js'
 
 export function useLeagueDetail(leagueId) {
   const router = useRouter()
@@ -322,63 +322,91 @@ export function useLeagueDetail(leagueId) {
 
   // 🔥 FUNCIÓN MEJORADA: Cargar historial con picks de eventos actual y anterior
   async function loadMyHistory() {
-    if (!currentLeague.value) return
+  if (!currentLeague.value) return
+  
+  try {
+    console.log('📈 Cargando mi historial...')
     
+    const history = await leaderboardService.getMyHistory(leagueId)
+    myHistory.value = history
+    
+    // 🆕 NUEVA LÓGICA: Buscar picks del evento actual con datos completos
+    if (currentEvent.value) {
+      await loadPicksForEvent(currentEvent.value, 'current')
+    }
+    
+    // 🆕 NUEVA LÓGICA: Buscar picks del evento anterior con datos completos
+    if (previousEvent.value) {
+      await loadPicksForEvent(previousEvent.value, 'previous')
+    }
+    
+    console.log('✅ Mi historial cargado:', history)
+    
+  } catch (error) {
+    console.error('❌ Error al cargar mi historial:', error)
+    myHistory.value = null
+    currentUserPicks.value = []
+    previousUserPicks.value = []
+  }
+}
+
+// 🆕 NUEVA FUNCIÓN: Cargar picks específicos para un evento
+async function loadPicksForEvent(event, eventType) {
     try {
-      console.log('📈 Cargando mi historial...')
+      console.log(`🎯 Cargando picks para evento ${eventType}:`, event.name)
       
-      const history = await leaderboardService.getMyHistory(leagueId)
-      myHistory.value = history
+      // Obtener el pick específico para este evento y liga
+      const pickData = await picksService.getMyPick(leagueId, event.id)
       
-      // Buscar picks del evento actual
-      if (currentEvent.value) {
-        const currentEventPick = history.history?.find(pick => 
-          pick.eventId === currentEvent.value.id
-        )
+      if (pickData && pickData.selectedFighters && pickData.selectedFighters.length > 0) {
+        // Mapear los luchadores con todos sus datos
+        const fightersWithCompleteData = pickData.selectedFighters.map(fighter => ({
+          id: fighter.id,
+          name: fighter.name,
+          record: fighter.record || 'N/A',
+          nationality: fighter.nationality || 'Unknown',
+          weightClass: fighter.weightClass || 'Unknown',
+          imageUrl: fighter.imageUrl,
+          price: fighter.price || 0,
+          cost: fighter.price || 0, // Alias para compatibilidad
+          points: 0, // Se actualizará con los resultados
+          // Datos adicionales del pick
+          pickId: pickData.id,
+          totalCost: pickData.totalCost || 0,
+          eventPoints: pickData.eventPoints || 0,
+          isLocked: pickData.isLocked || false
+        }))
         
-        if (currentEventPick) {
-          currentUserPicks.value = currentEventPick.fighterNames?.map((name, index) => ({
-            id: index + 1,
-            name: name,
-            record: '0-0', // TODO: obtener datos reales
-            cost: 50000, // TODO: obtener datos reales
-            points: 0, // TODO: obtener datos reales
-            weightClass: 'Unknown' // TODO: obtener datos reales
-          })) || []
-          
-          console.log('✅ Picks del evento actual cargados:', currentUserPicks.value.length)
+        // Asignar a la variable correspondiente
+        if (eventType === 'current') {
+          currentUserPicks.value = fightersWithCompleteData
+          console.log('✅ Picks del evento actual cargados:', fightersWithCompleteData.length)
+        } else if (eventType === 'previous') {
+          previousUserPicks.value = fightersWithCompleteData
+          console.log('✅ Picks del evento anterior cargados:', fightersWithCompleteData.length)
+        }
+        
+      } else {
+        console.log(`ℹ️ No hay picks para el evento ${eventType}`)
+        
+        if (eventType === 'current') {
+          currentUserPicks.value = []
+        } else if (eventType === 'previous') {
+          previousUserPicks.value = []
         }
       }
-      
-      // 🆕 Buscar picks del evento anterior
-      if (previousEvent.value) {
-        const previousEventPick = history.history?.find(pick => 
-          pick.eventId === previousEvent.value.id
-        )
-        
-        if (previousEventPick) {
-          previousUserPicks.value = previousEventPick.fighterNames?.map((name, index) => ({
-            id: index + 1,
-            name: name,
-            record: '0-0', // TODO: obtener datos reales
-            cost: previousEventPick.totalCost || 0,
-            points: previousEventPick.eventPoints || 0,
-            weightClass: 'Unknown' // TODO: obtener datos reales
-          })) || []
-          
-          console.log('✅ Picks del evento anterior cargados:', previousUserPicks.value.length)
-        }
-      }
-      
-      console.log('✅ Mi historial cargado:', history)
       
     } catch (error) {
-      console.error('❌ Error al cargar mi historial:', error)
-      myHistory.value = null
-      currentUserPicks.value = []
-      previousUserPicks.value = []
+      console.error(`❌ Error al cargar picks del evento ${eventType}:`, error)
+      
+      if (eventType === 'current') {
+        currentUserPicks.value = []
+      } else if (eventType === 'previous') {
+        previousUserPicks.value = []
+      }
     }
   }
+
 
   // Función para salir de la liga
   async function leaveLeague() {
@@ -495,9 +523,9 @@ export function useLeagueDetail(leagueId) {
       await Promise.all([
         loadGlobalLeaderboard(),
         loadCurrentEventLeaderboard(),
-        loadPreviousEventLeaderboard(), // 🆕 Cargar evento anterior
+        loadPreviousEventLeaderboard(),
         loadMyPosition(),
-        loadMyHistory()
+        loadMyHistory() // Esta función ahora carga los picks con datos completos
       ])
       
       console.log('✅ Todos los datos de la liga cargados correctamente')

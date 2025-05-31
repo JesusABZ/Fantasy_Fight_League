@@ -598,7 +598,7 @@
             </div>
           </div>
           
-          <div class="fighter-stats">
+          <div class="fighter-basic-stats">
             <div class="stat-row">
               <span class="stat-label">Record:</span>
               <span class="stat-value">{{ selectedFighter.record || 'N/A' }}</span>
@@ -607,9 +607,14 @@
               <span class="stat-label">Categoría:</span>
               <span class="stat-value">{{ selectedFighter.weightClass || 'N/A' }}</span>
             </div>
+            <!-- 🆕 NUEVA: Nacionalidad -->
+            <div class="stat-row">
+              <span class="stat-label">Nacionalidad:</span>
+              <span class="stat-value">🌍 {{ selectedFighter.nationality || 'Unknown' }}</span>
+            </div>
             <div class="stat-row">
               <span class="stat-label">Costo:</span>
-              <span class="stat-value">${{ formatCurrency(selectedFighter.cost || 0) }}</span>
+              <span class="stat-value">${{ formatCurrency(selectedFighter.cost || selectedFighter.price || 0) }}</span>
             </div>
           </div>
           
@@ -618,23 +623,81 @@
             <div class="points-list">
               <div class="points-item">
                 <span class="points-category">Victoria/Derrota:</span>
-                <span class="points-value">{{ selectedFighter.winPoints || 0 }} pts</span>
+                <span class="points-value">{{ getWinLossPoints(selectedFighter) }} pts</span>
               </div>
+              
+              <!-- 🆕 NUEVAS: Estadísticas de golpes -->
               <div class="points-item">
-                <span class="points-category">Knockdowns:</span>
-                <span class="points-value">{{ selectedFighter.knockdownPoints || 0 }} pts</span>
+                <span class="points-category">Golpes Significantes:</span>
+                <span class="points-value">{{ getSignificantStrikesPoints(selectedFighter) }} pts</span>
+                <span class="points-detail">({{ selectedFighter.significantStrikes || 0 }} golpes)</span>
               </div>
+              
+              <div class="points-item">
+                <span class="points-category">Total de Golpes:</span>
+                <span class="points-value">{{ getTotalStrikesPoints(selectedFighter) }} pts</span>
+                <span class="points-detail">({{ selectedFighter.totalStrikes || 0 }} golpes)</span>
+              </div>
+              
               <div class="points-item">
                 <span class="points-category">Takedowns:</span>
-                <span class="points-value">{{ selectedFighter.takedownPoints || 0 }} pts</span>
+                <span class="points-value">{{ getTakedownPoints(selectedFighter) }} pts</span>
+                <span class="points-detail">({{ selectedFighter.takedowns || 0 }} takedowns)</span>
               </div>
+              
+              <div class="points-item">
+                <span class="points-category">Knockdowns:</span>
+                <span class="points-value">{{ getKnockdownPoints(selectedFighter) }} pts</span>
+                <span class="points-detail">({{ selectedFighter.knockdowns || 0 }} knockdowns)</span>
+              </div>
+              
               <div class="points-item">
                 <span class="points-category">Sumisiones:</span>
-                <span class="points-value">{{ selectedFighter.submissionPoints || 0 }} pts</span>
+                <span class="points-value">{{ getSubmissionPoints(selectedFighter) }} pts</span>
+                <span class="points-detail">({{ selectedFighter.submissions || 0 }} intentos)</span>
               </div>
+              
+              <!-- 🆕 NUEVA: Minutos luchados -->
+              <div class="points-item">
+                <span class="points-category">Tiempo de Pelea:</span>
+                <span class="points-value">{{ getTimePoints(selectedFighter) }} pts</span>
+                <span class="points-detail">({{ formatFightTime(selectedFighter.minutesFought) }})</span>
+              </div>
+              
               <div class="points-item total">
                 <span class="points-category">Total:</span>
                 <span class="points-value">{{ selectedFighter.finalPoints || selectedFighter.points || 0 }} pts</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 🆕 NUEVA: Sección de estadísticas detalladas -->
+          <div v-if="hasDetailedStats(selectedFighter)" class="detailed-stats">
+            <h4 class="stats-title">📈 Estadísticas Detalladas</h4>
+            <div class="stats-grid">
+              <div class="stat-box">
+                <div class="stat-number">{{ selectedFighter.significantStrikes || 0 }}</div>
+                <div class="stat-name">Golpes Significantes</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-number">{{ selectedFighter.totalStrikes || 0 }}</div>
+                <div class="stat-name">Total Golpes</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-number">{{ selectedFighter.takedowns || 0 }}</div>
+                <div class="stat-name">Takedowns</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-number">{{ selectedFighter.knockdowns || 0 }}</div>
+                <div class="stat-name">Knockdowns</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-number">{{ selectedFighter.submissions || 0 }}</div>
+                <div class="stat-name">Sumisiones</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-number">{{ formatFightTime(selectedFighter.minutesFought) }}</div>
+                <div class="stat-name">Tiempo de Pelea</div>
               </div>
             </div>
           </div>
@@ -728,6 +791,64 @@ export default {
         return 'N/A'
       }
     }
+    
+    // Funciones para calcular puntos por categoría
+    const getWinLossPoints = (fighter) => {
+      // Lógica basada en si ganó o perdió (20 pts por victoria, 0 por derrota)
+      return fighter.won ? 20 : 0
+    }
+
+    const getSignificantStrikesPoints = (fighter) => {
+      // 0.3 puntos por golpe significante
+      const strikes = fighter.significantStrikes || 0
+      return Math.round(strikes * 0.3)
+    }
+
+    const getTotalStrikesPoints = (fighter) => {
+      // Los golpes totales no suelen dar puntos directos, pero podemos mostrar info
+      return 0 // O implementar lógica específica si lo deseas
+    }
+
+    const getTakedownPoints = (fighter) => {
+      // 3 puntos por takedown
+      const takedowns = fighter.takedowns || 0
+      return takedowns * 3
+    }
+
+    const getKnockdownPoints = (fighter) => {
+      // 8 puntos por knockdown
+      const knockdowns = fighter.knockdowns || 0
+      return knockdowns * 8
+    }
+
+    const getSubmissionPoints = (fighter) => {
+      // 2 puntos por intento de sumisión
+      const submissions = fighter.submissions || 0
+      return submissions * 2
+    }
+
+    const getTimePoints = (fighter) => {
+      // Puntos por tiempo luchado (puedes ajustar la lógica)
+      const minutes = fighter.minutesFought || 0
+      return Math.round(minutes * 0.5) // 0.5 puntos por minuto
+    }
+
+    // Función para formatear el tiempo de pelea
+    const formatFightTime = (minutes) => {
+      if (!minutes || minutes === 0) return '0:00'
+      
+      const mins = Math.floor(minutes)
+      const secs = Math.round((minutes - mins) * 60)
+      
+      return `${mins}:${secs.toString().padStart(2, '0')}`
+    }
+
+    // Función para verificar si tiene estadísticas detalladas
+    const hasDetailedStats = (fighter) => {
+      return fighter.significantStrikes || fighter.totalStrikes || fighter.takedowns || 
+            fighter.knockdowns || fighter.submissions || fighter.minutesFought
+    }
+
 
     const formatCurrency = (amount) => {
       if (!amount) return '0'
@@ -806,6 +927,17 @@ export default {
       previousEventLeaderboard,
       currentUserPicks,
       myPosition,
+
+      // 🆕 Nuevas funciones para el modal
+      getWinLossPoints,
+      getSignificantStrikesPoints,
+      getTotalStrikesPoints,
+      getTakedownPoints,
+      getKnockdownPoints,
+      getSubmissionPoints,
+      getTimePoints,
+      formatFightTime,
+      hasDetailedStats,
       
       // Estados de carga
       isLoadingLeague,
@@ -2119,4 +2251,143 @@ export default {
     max-width: none;
   }
 }
+
+/* === MODAL MEJORADO === */
+.fighter-modal {
+  max-width: 700px; /* Aumentar ancho para más contenido */
+}
+
+.fighter-basic-stats {
+  margin-bottom: var(--space-xl);
+}
+
+.points-detail {
+  font-size: 0.8rem;
+  color: var(--gray-light);
+  margin-left: var(--space-sm);
+  font-style: italic;
+}
+
+.points-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-sm) var(--space-md);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-xs);
+}
+
+.points-item:last-child {
+  margin-bottom: 0;
+}
+
+.points-item.total {
+  background: rgba(255, 107, 53, 0.2);
+  border: 1px solid var(--primary);
+  font-weight: bold;
+  margin-top: var(--space-md);
+}
+
+.points-category {
+  color: var(--gray-light);
+  flex: 1;
+}
+
+.points-value {
+  color: var(--primary);
+  font-weight: bold;
+  margin-right: var(--space-sm);
+}
+
+/* === ESTADÍSTICAS DETALLADAS === */
+.detailed-stats {
+  margin-top: var(--space-xl);
+  padding-top: var(--space-xl);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stats-title {
+  font-family: var(--font-impact);
+  font-size: 1.3rem;
+  color: var(--white);
+  margin-bottom: var(--space-lg);
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+}
+
+.stat-box {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.stat-box:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 107, 53, 0.3);
+  transform: translateY(-2px);
+}
+
+.stat-number {
+  font-family: var(--font-impact);
+  font-size: 2rem;
+  color: var(--primary);
+  margin-bottom: var(--space-sm);
+  line-height: 1;
+}
+
+.stat-name {
+  font-size: 0.9rem;
+  color: var(--gray-light);
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+/* === RESPONSIVE PARA EL MODAL === */
+@media (max-width: 768px) {
+  .fighter-modal {
+    max-width: 95vw;
+    margin: var(--space-md);
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-sm);
+  }
+  
+  .stat-box {
+    padding: var(--space-md);
+  }
+  
+  .stat-number {
+    font-size: 1.5rem;
+  }
+  
+  .points-item {
+    flex-direction: column;
+    text-align: center;
+    gap: var(--space-xs);
+  }
+  
+  .points-detail {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 </style>
